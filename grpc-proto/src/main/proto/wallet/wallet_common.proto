@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package wallet;
+
+option java_multiple_files = true;
+option java_package = "com.example.proto.wallet.common";
+
+enum OwnerTypePb {
+  OwnerTypePb_Unknown = 0;
+  OwnerTypePb_System = 1;
+  OwnerTypePb_User = 2;
+}
+
+enum ServiceIdPb {
+  ServiceIdPb_Unknown = 0;
+  ServiceIdPb_System = 1;
+  ServiceIdPb_User = 2;
+}

@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package ledger;
+
+option java_multiple_files = true;
+option java_package = "com.example.proto.ledger.post";
+
+import "ledger/ledger_common.proto";
+
+service PostService {
+  rpc postTransaction(PostTransactionRequestPb) returns (PostTransactionReplyPb) {}
+}
+
+message PostTransactionRequestPb {
+  string legerTransactionId = 1;
+  string referenceId = 2;
+  string description = 3;
+  repeated LedgerEntryPb entries = 4;
+}
+
+message PostTransactionReplyPb {
+  int32 code = 1;
+  string msg = 2;
+}
+
+message LedgerEntryPb {
+  string accountId = 1;
+  LedgerDirectionPb direction = 2;
+  int64 amount = 3;
+  string assetId = 4;
+}

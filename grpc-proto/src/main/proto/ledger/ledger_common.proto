@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package ledger;
+
+option java_multiple_files = true;
+option java_package = "com.example.proto.ledger.common";
+
+enum LedgerDirectionPb {
+  LedgerDirection_Unknown = 0;
+  LedgerDirection_Credit = 1;
+  LedgerDirection_Debit = 2;
+}
+
+enum AccountCategoryPb {
+  AccountCategory_Unknown = 0;
+  AccountCategory_Asset = 1;
+  AccountCategory_Liability = 2;
+}
+
+enum NormalSidePb {
+  NormalSidePb_Unknown = 0;
+  NormalSidePb_Debit = 1;
+  NormalSidePb_Credit = 2;
+}
+
+enum OwnerTypePb {
+  OwnerTypePb_Unknown = 0;
+  OwnerTypePb_System = 1;
+  OwnerTypePb_User = 2;
+}
+
+enum ServiceIdPb {
+  ServiceIdPb_Unknown = 0;
+  ServiceIdPb_System = 1;
+  ServiceIdPb_Wallet = 2;
+}
