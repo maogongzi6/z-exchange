@@ -5,13 +5,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.example</groupId>
+        <groupId>com.exchange</groupId>
         <artifactId>z-exchange-parent</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
 
     <!--    <groupId>org.example</groupId>-->
-    <artifactId>ledger-com.example.service</artifactId>
+    <artifactId>ledger-service</artifactId>
     <!--    <version>1.0-SNAPSHOT</version>-->
 
     <!--    <parent>-->
@@ -76,8 +76,8 @@
         </dependency>
 
         <dependency>
-            <groupId>com.example</groupId>
-            <artifactId>grpc-proto</artifactId>
+            <groupId>com.exchange</groupId>
+            <artifactId>ledger-proto</artifactId>
         </dependency>
     </dependencies>
 </project>

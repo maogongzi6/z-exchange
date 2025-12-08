@@ -50,8 +50,6 @@
             <artifactId>grpc-proto</artifactId>
         </dependency>
 
-
-
     </dependencies>
 
 </project>

@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package wallet;
+
+option java_multiple_files = true;
+option java_package = "com.exchange.proto.wallet.wallet";
+
+import "wallet/create_wallet.proto";
+
+service WalletService {
+  rpc createWallet(CreateWalletRequestPb) returns (CreateWalletReplyPb) {}
+}
+
+

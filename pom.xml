@@ -10,7 +10,7 @@
         <version>2.7.15</version>
     </parent>
 
-    <groupId>com.example</groupId>
+    <groupId>com.exchange</groupId>
     <artifactId>z-exchange-parent</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
@@ -21,7 +21,9 @@
         <module>grpc-proto</module>
         <module>client-test</module>
         <module>common-util</module>
-        <module>grpc-proto/ledger-internal-api</module>
+        <module>grpc-proto/ledger-proto</module>
+        <module>grpc-proto/common-proto</module>
+        <module>grpc-proto/wallet-proto</module>
     </modules>
 
     <properties>
@@ -74,18 +76,28 @@
             </dependency>
 
             <dependency>
-                <groupId>com.example</groupId>
-                <artifactId>grpc-proto</artifactId>
-                <version>1.0-SNAPSHOT</version>
-            </dependency>
-            <dependency>
-                <groupId>com.example</groupId>
+                <groupId>com.exchange</groupId>
                 <artifactId>common-util</artifactId>
                 <version>1.0-SNAPSHOT</version>
             </dependency>
             <dependency>
-                <groupId>com.example</groupId>
+                <groupId>com.exchange</groupId>
+                <artifactId>ledger-proto</artifactId>
+                <version>1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>com.exchange</groupId>
+                <artifactId>wallet-proto</artifactId>
+                <version>1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>com.exchange</groupId>
                 <artifactId>ledeger-service</artifactId>
+                <version>1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>com.exchange</groupId>
+                <artifactId>wallet-service</artifactId>
                 <version>1.0-SNAPSHOT</version>
             </dependency>
 

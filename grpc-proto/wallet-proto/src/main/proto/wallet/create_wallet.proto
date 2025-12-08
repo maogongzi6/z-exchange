@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package wallet;
+
+option java_multiple_files = true;
+option java_package = "com.exchange.proto.wallet.wallet";
+
+import "wallet/wallet_common.proto";
+
+message CreateWalletRequestPb {
+  ServiceIdPb service_id = 1;
+  string reference_id = 2;
+  string asset_id = 3;
+  OwnerTypePb owner_type = 4;
+  string owner_id = 5;
+}
+
+message CreateWalletReplyPb {
+  int32 code = 1;
+  string msg = 2;
+}
