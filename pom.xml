@@ -21,6 +21,7 @@
         <module>grpc-proto</module>
         <module>client-test</module>
         <module>common-util</module>
+        <module>grpc-proto/ledger-internal-api</module>
     </modules>
 
     <properties>

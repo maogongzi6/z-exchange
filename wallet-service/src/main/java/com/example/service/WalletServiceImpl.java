@@ -34,4 +34,6 @@ public class WalletServiceImpl extends WalletServiceGrpc.WalletServiceImplBase {
         responseObserver.onNext(b.build());
         responseObserver.onCompleted();
     }
+
+
 }

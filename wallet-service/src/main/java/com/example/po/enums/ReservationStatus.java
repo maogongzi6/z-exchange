@@ -2,16 +2,16 @@ package com.example.po.enums;
 
 import com.baomidou.mybatisplus.annotation.EnumValue;
 
-public enum TransactionStatus {
+public enum ReservationStatus {
     UNKNOWN(0),
-    PENDING(1),
-    COMPLETE(2),
+    ACTIVE(1),
+    FINISHED(2),
     CLOSED(3),;
 
     @EnumValue
     final public int code;
 
-    TransactionStatus(int code) {
+    ReservationStatus(int code) {
         this.code = code;
     }
 }
