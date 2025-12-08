@@ -1,7 +1,7 @@
 package com.exchange.app.ledger.utils;
 
 import com.exchange.app.ledger.exception.CustomException;
-import com.exchange.app.ledger.exception.ErrorCode;
+import com.exchange.app.ledger.result.ErrorCode;
 import com.exchange.app.ledger.exception.ServerError;
 
 public class ErrorHelper {

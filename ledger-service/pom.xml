@@ -79,5 +79,9 @@
             <groupId>com.exchange</groupId>
             <artifactId>ledger-proto</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.exchange</groupId>
+            <artifactId>common-util</artifactId>
+        </dependency>
     </dependencies>
 </project>

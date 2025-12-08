@@ -5,7 +5,7 @@ package ledger;
 option java_multiple_files = true;
 option java_package = "com.exchange.proto.ledger.post";
 
-import "ledger/ledger_common.proto";
+import "com/exchange/proto/ledger/ledger_common.proto";
 
 service PostService {
   rpc postTransaction(PostTransactionRequestPb) returns (PostTransactionReplyPb) {}

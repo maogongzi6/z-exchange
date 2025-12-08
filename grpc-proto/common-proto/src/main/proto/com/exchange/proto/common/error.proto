@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package common;
+
+option java_multiple_files = true;
+option java_package = "com.exchange.proto.common.error";
+
+message ErrorPb {
+  ErrorCodePb code = 1;
+  string message = 2;
+  string detail = 3;
+}
+
+enum ErrorCodePb {
+  ERROR_OK = 0;
+
+  // internal
+  ERROR_INTERNAL = 1;
+  ERROR_UNAVAILABLE = 2;
+
+  // 1xxx validation
+  ERROR_INVALID_ARGUMENT = 1000;
+  ERROR_UNAUTHENTICATED = 1001;
+  ERROR_UNAUTHORIZED = 1002;
+
+  // 2xxx resource issues
+  ERROR_NOT_FOUND = 2000;
+  ERROR_ALREADY_EXISTS = 2001;
+
+  // 3xxx business condition violations
+  ERROR_FAILED_PRECONDITION = 3000;  // e.g. balance not enough, cannot modify order in FINAL state
+  ERROR_CONFLICT = 3001;
+}

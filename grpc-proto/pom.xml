@@ -19,11 +19,11 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
-    <modules>
-        <module>ledger-proto</module>
-        <module>wallet-proto</module>
-        <module>common-proto</module>
-    </modules>
+<!--    <modules>-->
+<!--        <module>ledger-proto</module>-->
+<!--        <module>wallet-proto</module>-->
+<!--        <module>common-proto</module>-->
+<!--    </modules>-->
 
     <dependencyManagement>
         <dependencies>

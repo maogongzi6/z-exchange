@@ -19,7 +19,7 @@ import static io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall;
  */
 @javax.annotation.Generated(
     value = "by gRPC proto compiler (version 1.34.1)",
-    comments = "Source: ledger/post_service.proto")
+    comments = "Source: com/exchange/proto/ledger/post_service.proto")
 public final class PostServiceGrpc {
 
   private PostServiceGrpc() {}

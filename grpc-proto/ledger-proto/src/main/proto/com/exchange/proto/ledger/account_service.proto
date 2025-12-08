@@ -5,7 +5,8 @@ package ledger;
 option java_multiple_files = true;
 option java_package = "com.exchange.proto.ledger.account";
 
-import "ledger/ledger_common.proto";
+import "com/exchange/proto/ledger/ledger_common.proto";
+import "com/exchange/proto/common/error.proto";
 
 service AccountService {
   rpc createAccount(CreateAccountRequestPb) returns (CreateAccountReplyPb) {}
@@ -22,6 +23,5 @@ message CreateAccountRequestPb {
 }
 
 message CreateAccountReplyPb {
-  int32 code = 1;
-  string msg = 2;
+  common.ErrorPb error = 1;
 }

@@ -1,7 +1,7 @@
 package com.exchange.app.ledger.service;
 
 
-import com.exchange.app.ledger.exception.ErrorCode;
+import com.exchange.app.ledger.result.ErrorCode;
 import com.exchange.app.ledger.processor.post.PostLedgerProcessor;
 import com.exchange.proto.ledger.post.PostServiceGrpc;
 import com.exchange.proto.ledger.post.PostTransactionReplyPb;

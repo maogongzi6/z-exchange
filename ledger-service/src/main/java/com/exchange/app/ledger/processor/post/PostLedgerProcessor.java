@@ -3,7 +3,7 @@ package com.exchange.app.ledger.processor.post;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.exchange.app.ledger.exception.AccountException;
 import com.exchange.app.ledger.exception.CommonException;
-import com.exchange.app.ledger.exception.ErrorCode;
+import com.exchange.app.ledger.result.ErrorCode;
 import com.exchange.app.ledger.exception.LedgerException;
 import com.exchange.app.ledger.dao.mapper.AccountMapper;
 import com.exchange.app.ledger.dao.mapper.LedgerEntryMapper;

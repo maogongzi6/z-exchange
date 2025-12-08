@@ -1,5 +1,6 @@
 package com.exchange.app.ledger.exception;
 
+import com.exchange.app.ledger.result.ErrorCode;
 import lombok.Getter;
 import lombok.Setter;
 

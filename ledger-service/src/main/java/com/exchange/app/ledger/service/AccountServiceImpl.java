@@ -1,9 +1,11 @@
 package com.exchange.app.ledger.service;
 
-import com.exchange.app.ledger.exception.ErrorCode;
+import com.exchange.app.ledger.result.ErrorCode;
 
 import com.exchange.app.ledger.processor.account.CreateAccountProcessor;
 
+import com.exchange.app.ledger.result.PbErrorBuilder;
+import com.exchange.app.ledger.result.Result;
 import com.exchange.proto.ledger.account.AccountServiceGrpc;
 import com.exchange.proto.ledger.account.CreateAccountReplyPb;
 import com.exchange.proto.ledger.account.CreateAccountRequestPb;
@@ -21,15 +23,13 @@ public class AccountServiceImpl extends AccountServiceGrpc.AccountServiceImplBas
     @Override
     public void createAccount(CreateAccountRequestPb request, StreamObserver<CreateAccountReplyPb> responseObserver) {
         System.out.println(request.toString());
-        CreateAccountReplyPb.Builder b;
+        CreateAccountReplyPb reply;
         try {
-            CreateAccountReplyPb resp = createAccountProcessor.createAccount(request);
-            b = resp.toBuilder();
+            reply = createAccountProcessor.createAccount(request);
         } catch (Exception e) {
-            ErrorCode replyCode = ErrorHelper.getErrorCode(e);
-            b = CreateAccountReplyPb.newBuilder().setCode(replyCode.code).setMsg(replyCode.message);
+            reply = CreateAccountReplyPb.newBuilder().setError(PbErrorBuilder.build(ErrorCode.SERVER_ERROR)).build();
         }
-        responseObserver.onNext(b.build());
+        responseObserver.onNext(reply);
         responseObserver.onCompleted();
     }
 }
