@@ -10,7 +10,7 @@ import com.exchange.app.ledger.result.PbErrorBuilder;
 import com.exchange.app.ledger.result.Result;
 import com.exchange.proto.ledger.account.CreateAccountReplyPb;
 import com.exchange.proto.ledger.account.CreateAccountRequestPb;
-import com.exchange.app.ledger.utils.EnumConvertHelper;
+import com.exchange.app.ledger.utils.EnumMappers;
 import com.exchange.app.ledger.utils.IdGenerator;
 import com.exchange.app.ledger.utils.ValidateHelper;
 import com.exchange.app.ledger.po.enums.*;
@@ -30,10 +30,10 @@ public class CreateAccountProcessor {
 
     public CreateAccountReplyPb createAccount(CreateAccountRequestPb req) {
 
-        ServiceId serviceId = EnumConvertHelper.serviceIdPbToPo(req.getServiceId());
-        AccountCategory category = EnumConvertHelper.accountCategoryPbToPo(req.getCategory());
-        NormalSide normalSide = EnumConvertHelper.normalSidePbToPo(req.getNormalSide());
-        OwnerType ownerType = EnumConvertHelper.ownerTypePbToPo(req.getOwnerType());
+        ServiceId serviceId = EnumMappers.serviceIdPbMapper.to(req.getServiceId());
+        AccountCategory category = EnumMappers.accountCategoryPbMapper.to(req.getCategory());
+        NormalSide normalSide = EnumMappers.normalSidePbMapper.to(req.getNormalSide());
+        OwnerType ownerType = EnumMappers.ownerTypePbMapper.to(req.getOwnerType());
 
         Result<Void> result = validateReq(req, serviceId, category, normalSide, ownerType);
         if (!Result.isSuccess(result)) {

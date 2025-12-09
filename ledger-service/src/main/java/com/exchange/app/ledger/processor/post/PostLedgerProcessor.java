@@ -16,13 +16,12 @@ import com.exchange.app.ledger.utils.DbTransactionHelper;
 import com.exchange.proto.ledger.post.LedgerEntryPb;
 import com.exchange.proto.ledger.post.PostTransactionReplyPb;
 import com.exchange.proto.ledger.post.PostTransactionRequestPb;
-import com.exchange.app.ledger.utils.EnumConvertHelper;
+import com.exchange.app.ledger.utils.EnumMappers;
 import com.exchange.app.ledger.utils.EntryHelper;
 import com.exchange.app.ledger.utils.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -88,7 +87,7 @@ public class PostLedgerProcessor {
             if (entry.getAmount() == 0) {
                 return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "zero_amount: " + entry);
             }
-            Direction d = EnumConvertHelper.directionPbToPo(entry.getDirection());
+            Direction d = EnumMappers.directionPbMapper.to(entry.getDirection());
             String assetId = entry.getAssetId();
             if (d == null || d == Direction.UNKNOWN) {
                 return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid_direction: " + Direction.UNKNOWN);

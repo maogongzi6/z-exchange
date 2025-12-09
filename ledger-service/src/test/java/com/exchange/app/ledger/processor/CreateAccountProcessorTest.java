@@ -10,7 +10,7 @@ import com.exchange.proto.ledger.common.AccountCategoryPb;
 import com.exchange.proto.ledger.common.NormalSidePb;
 import com.exchange.proto.ledger.common.OwnerTypePb;
 import com.exchange.proto.ledger.common.ServiceIdPb;
-import com.exchange.app.ledger.utils.EnumConvertHelper;
+import com.exchange.app.ledger.utils.EnumMappers;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Assert;
 import org.junit.Test;
@@ -41,7 +41,7 @@ public class CreateAccountProcessorTest {
         CreateAccountReplyPb reply = createAccountProcessor.createAccount(request);
         log.info(reply.toString());
         LambdaQueryWrapper<Account> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.select(Account::getReferenceId).eq(Account::getServiceId, EnumConvertHelper.serviceIdPbToPo(serviceId)).eq(Account::getReferenceId, refId);
+        queryWrapper.select(Account::getReferenceId).eq(Account::getServiceId, EnumMappers.serviceIdPbMapper.to(serviceId)).eq(Account::getReferenceId, refId);
         List<Account> list = accountMapper.selectList(queryWrapper);
         Assert.assertEquals(1, list.size());
         Assert.assertEquals(refId, list.get(0).getReferenceId());
