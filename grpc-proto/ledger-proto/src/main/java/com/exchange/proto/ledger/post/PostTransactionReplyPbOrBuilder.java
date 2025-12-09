@@ -8,20 +8,17 @@ public interface PostTransactionReplyPbOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>int32 code = 1;</code>
-   * @return The code.
+   * <code>.common.ErrorPb error = 1;</code>
+   * @return Whether the error field is set.
    */
-  int getCode();
-
+  boolean hasError();
   /**
-   * <code>string msg = 2;</code>
-   * @return The msg.
+   * <code>.common.ErrorPb error = 1;</code>
+   * @return The error.
    */
-  java.lang.String getMsg();
+  com.exchange.proto.common.error.ErrorPb getError();
   /**
-   * <code>string msg = 2;</code>
-   * @return The bytes for msg.
+   * <code>.common.ErrorPb error = 1;</code>
    */
-  com.google.protobuf.ByteString
-      getMsgBytes();
+  com.exchange.proto.common.error.ErrorPbOrBuilder getErrorOrBuilder();
 }

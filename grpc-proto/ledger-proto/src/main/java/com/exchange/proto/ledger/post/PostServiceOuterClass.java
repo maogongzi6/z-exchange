@@ -40,23 +40,25 @@ public final class PostServiceOuterClass {
     java.lang.String[] descriptorData = {
       "\n,com/exchange/proto/ledger/post_service" +
       ".proto\022\006ledger\032-com/exchange/proto/ledge" +
-      "r/ledger_common.proto\"l\n\030PostTransaction" +
-      "RequestPb\022\023\n\013referenceId\030\001 \001(\t\022\023\n\013descri" +
-      "ption\030\002 \001(\t\022&\n\007entries\030\003 \003(\0132\025.ledger.Le" +
-      "dgerEntryPb\"3\n\026PostTransactionReplyPb\022\014\n" +
-      "\004code\030\001 \001(\005\022\013\n\003msg\030\002 \001(\t\"q\n\rLedgerEntryP" +
-      "b\022\021\n\taccountId\030\001 \001(\t\022,\n\tdirection\030\002 \001(\0162" +
-      "\031.ledger.LedgerDirectionPb\022\016\n\006amount\030\003 \001" +
-      "(\003\022\017\n\007assetId\030\004 \001(\t2d\n\013PostService\022U\n\017po" +
-      "stTransaction\022 .ledger.PostTransactionRe" +
-      "questPb\032\036.ledger.PostTransactionReplyPb\"" +
-      "\000B\"\n\036com.exchange.proto.ledger.postP\001b\006p" +
-      "roto3"
+      "r/ledger_common.proto\032%com/exchange/prot" +
+      "o/common/error.proto\"l\n\030PostTransactionR" +
+      "equestPb\022\023\n\013referenceId\030\001 \001(\t\022\023\n\013descrip" +
+      "tion\030\002 \001(\t\022&\n\007entries\030\003 \003(\0132\025.ledger.Led" +
+      "gerEntryPb\"8\n\026PostTransactionReplyPb\022\036\n\005" +
+      "error\030\001 \001(\0132\017.common.ErrorPb\"q\n\rLedgerEn" +
+      "tryPb\022\021\n\taccountId\030\001 \001(\t\022,\n\tdirection\030\002 " +
+      "\001(\0162\031.ledger.LedgerDirectionPb\022\016\n\006amount" +
+      "\030\003 \001(\003\022\017\n\007assetId\030\004 \001(\t2d\n\013PostService\022U" +
+      "\n\017postTransaction\022 .ledger.PostTransacti" +
+      "onRequestPb\032\036.ledger.PostTransactionRepl" +
+      "yPb\"\000B\"\n\036com.exchange.proto.ledger.postP" +
+      "\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.exchange.proto.ledger.common.LedgerCommon.getDescriptor(),
+          com.exchange.proto.common.error.Error.getDescriptor(),
         });
     internal_static_ledger_PostTransactionRequestPb_descriptor =
       getDescriptor().getMessageTypes().get(0);
@@ -69,7 +71,7 @@ public final class PostServiceOuterClass {
     internal_static_ledger_PostTransactionReplyPb_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_ledger_PostTransactionReplyPb_descriptor,
-        new java.lang.String[] { "Code", "Msg", });
+        new java.lang.String[] { "Error", });
     internal_static_ledger_LedgerEntryPb_descriptor =
       getDescriptor().getMessageTypes().get(2);
     internal_static_ledger_LedgerEntryPb_fieldAccessorTable = new
@@ -77,6 +79,7 @@ public final class PostServiceOuterClass {
         internal_static_ledger_LedgerEntryPb_descriptor,
         new java.lang.String[] { "AccountId", "Direction", "Amount", "AssetId", });
     com.exchange.proto.ledger.common.LedgerCommon.getDescriptor();
+    com.exchange.proto.common.error.Error.getDescriptor();
   }
 
   // @@protoc_insertion_point(outer_class_scope)

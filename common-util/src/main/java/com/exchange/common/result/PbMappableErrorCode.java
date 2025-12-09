@@ -1,4 +1,4 @@
-package com.exchange.common;
+package com.exchange.common.result;
 
 import com.exchange.proto.common.error.ErrorCodePb;
 

@@ -29,16 +29,15 @@ public class CreateAccountProcessor {
     final private AssetMapper assetMapper;
 
     public CreateAccountReplyPb createAccount(CreateAccountRequestPb req) {
-        CreateAccountReplyPb.Builder builder = CreateAccountReplyPb.newBuilder();
 
         ServiceId serviceId = EnumConvertHelper.serviceIdPbToPo(req.getServiceId());
         AccountCategory category = EnumConvertHelper.accountCategoryPbToPo(req.getCategory());
         NormalSide normalSide = EnumConvertHelper.normalSidePbToPo(req.getNormalSide());
         OwnerType ownerType = EnumConvertHelper.ownerTypePbToPo(req.getOwnerType());
 
-        Result<ErrorCode> errorResult = validateReq(req, serviceId, category, normalSide, ownerType);
-        if (!errorResult.success) {
-            return builder.setError(PbErrorBuilder.build(errorResult)).build();
+        Result<Void> result = validateReq(req, serviceId, category, normalSide, ownerType);
+        if (!Result.isSuccess(result)) {
+            return replyError(result);
         }
 
         LambdaQueryWrapper<Asset> wrapper = new LambdaQueryWrapper<>();
@@ -47,35 +46,49 @@ public class CreateAccountProcessor {
         wrapper.clear();
 
         if (asset.isEmpty()) {
-            return builder.setError(PbErrorBuilder.build(ErrorCode.ASSET_NOT_FOUND, req.getAssetId())).build();
+            return replyError(ErrorCode.ASSET_NOT_FOUND, req.getAssetId());
         }
 
         String accountId = IdGenerator.generateAccountId();
-        errorResult = accountManager.insertWithDuplicateException(Account.create(accountId, serviceId, req.getReferenceId(), category, normalSide, req.getOwnerId(), ownerType, req.getAssetId(), AccountStatus.OPEN));
-        if (errorResult.errorCode == ErrorCode.ACCOUNT_DUPLICATED) {
-            return builder.setError(PbErrorBuilder.success("account already exists")).build();
+        if (accountManager.insertIgnore(Account.create(accountId, serviceId, req.getReferenceId(), category, normalSide, req.getOwnerId(), ownerType, req.getAssetId(), AccountStatus.OPEN))
+                == 0) {
+            return replySuccess("account already exists");
         }
-        return builder.setError(PbErrorBuilder.success()).build();
+        return replySuccess("success");
     }
 
-    private Result<ErrorCode> validateReq(CreateAccountRequestPb req, ServiceId serviceId, AccountCategory category, NormalSide normalSide, OwnerType ownerType) {
+    private Result<Void> validateReq(CreateAccountRequestPb req, ServiceId serviceId, AccountCategory category, NormalSide normalSide, OwnerType ownerType) {
         if (serviceId == null || serviceId == ServiceId.UNKNOWN) {
-            return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETERS, "invalid_service_id: " + req.getServiceId());
+            return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid_service_id: " + req.getServiceId());
         }
         if (category == null || category == AccountCategory.UNKNOWN) {
-            return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETERS, "invalid_category: " + req.getCategory());
+            return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid_category: " + req.getCategory());
         }
         if (normalSide == null || normalSide == NormalSide.UNKNOWN) {
-            return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETERS, "invalid_normal_side: " + req.getNormalSide());
+            return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid_normal_side: " + req.getNormalSide());
         }
         if (ownerType == null || ownerType == OwnerType.UNKNOWN) {
-            return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETERS, "invalid_owner_type: " + req.getOwnerType());
+            return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid_owner_type: " + req.getOwnerType());
         }
 
         if (!ValidateHelper.validateNormalSideAndCategory(normalSide, category)) {
-            return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETERS, "invalid_normal_side_category_pair: " + req.getNormalSide());
+            return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid_normal_side_category_pair: " + req.getNormalSide());
         }
 
         return Result.success();
+    }
+
+    private CreateAccountReplyPb replySuccess(String detail) {
+        return replyError(ErrorCode.SUCCESS, detail);
+    }
+
+    private CreateAccountReplyPb replyError(ErrorCode errorCode, String detail) {
+        CreateAccountReplyPb.Builder builder = CreateAccountReplyPb.newBuilder();
+        return builder.setError(PbErrorBuilder.build(errorCode, detail)).build();
+    }
+
+    private CreateAccountReplyPb replyError(Result<?> result) {
+        result = Result.requireNotNull(result);
+        return replyError(result.errorCode, result.errorDetail);
     }
 }

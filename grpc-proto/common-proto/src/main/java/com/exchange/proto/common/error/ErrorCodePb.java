@@ -26,44 +26,44 @@ public enum ErrorCodePb
   ERROR_UNAVAILABLE(2),
   /**
    * <pre>
-   * 1xxx validation
+   * 1xxx business condition violations
    * </pre>
    *
-   * <code>ERROR_INVALID_ARGUMENT = 1000;</code>
+   * <code>ERROR_FAILED_PRECONDITION = 1000;</code>
    */
-  ERROR_INVALID_ARGUMENT(1000),
+  ERROR_FAILED_PRECONDITION(1000),
   /**
-   * <code>ERROR_UNAUTHENTICATED = 1001;</code>
+   * <code>ERROR_CONFLICT = 1001;</code>
    */
-  ERROR_UNAUTHENTICATED(1001),
+  ERROR_CONFLICT(1001),
   /**
-   * <code>ERROR_UNAUTHORIZED = 1002;</code>
+   * <pre>
+   * 2xxx validation
+   * </pre>
+   *
+   * <code>ERROR_INVALID_ARGUMENT = 2000;</code>
    */
-  ERROR_UNAUTHORIZED(1002),
+  ERROR_INVALID_ARGUMENT(2000),
+  /**
+   * <code>ERROR_UNAUTHENTICATED = 2001;</code>
+   */
+  ERROR_UNAUTHENTICATED(2001),
+  /**
+   * <code>ERROR_UNAUTHORIZED = 2002;</code>
+   */
+  ERROR_UNAUTHORIZED(2002),
   /**
    * <pre>
    * 2xxx resource issues
    * </pre>
    *
-   * <code>ERROR_NOT_FOUND = 2000;</code>
+   * <code>ERROR_NOT_FOUND = 3000;</code>
    */
-  ERROR_NOT_FOUND(2000),
+  ERROR_NOT_FOUND(3000),
   /**
-   * <code>ERROR_ALREADY_EXISTS = 2001;</code>
+   * <code>ERROR_ALREADY_EXISTS = 3001;</code>
    */
-  ERROR_ALREADY_EXISTS(2001),
-  /**
-   * <pre>
-   * 3xxx business condition violations
-   * </pre>
-   *
-   * <code>ERROR_FAILED_PRECONDITION = 3000;</code>
-   */
-  ERROR_FAILED_PRECONDITION(3000),
-  /**
-   * <code>ERROR_CONFLICT = 3001;</code>
-   */
-  ERROR_CONFLICT(3001),
+  ERROR_ALREADY_EXISTS(3001),
   UNRECOGNIZED(-1),
   ;
 
@@ -85,44 +85,44 @@ public enum ErrorCodePb
   public static final int ERROR_UNAVAILABLE_VALUE = 2;
   /**
    * <pre>
-   * 1xxx validation
+   * 1xxx business condition violations
    * </pre>
    *
-   * <code>ERROR_INVALID_ARGUMENT = 1000;</code>
+   * <code>ERROR_FAILED_PRECONDITION = 1000;</code>
    */
-  public static final int ERROR_INVALID_ARGUMENT_VALUE = 1000;
+  public static final int ERROR_FAILED_PRECONDITION_VALUE = 1000;
   /**
-   * <code>ERROR_UNAUTHENTICATED = 1001;</code>
+   * <code>ERROR_CONFLICT = 1001;</code>
    */
-  public static final int ERROR_UNAUTHENTICATED_VALUE = 1001;
+  public static final int ERROR_CONFLICT_VALUE = 1001;
   /**
-   * <code>ERROR_UNAUTHORIZED = 1002;</code>
+   * <pre>
+   * 2xxx validation
+   * </pre>
+   *
+   * <code>ERROR_INVALID_ARGUMENT = 2000;</code>
    */
-  public static final int ERROR_UNAUTHORIZED_VALUE = 1002;
+  public static final int ERROR_INVALID_ARGUMENT_VALUE = 2000;
+  /**
+   * <code>ERROR_UNAUTHENTICATED = 2001;</code>
+   */
+  public static final int ERROR_UNAUTHENTICATED_VALUE = 2001;
+  /**
+   * <code>ERROR_UNAUTHORIZED = 2002;</code>
+   */
+  public static final int ERROR_UNAUTHORIZED_VALUE = 2002;
   /**
    * <pre>
    * 2xxx resource issues
    * </pre>
    *
-   * <code>ERROR_NOT_FOUND = 2000;</code>
+   * <code>ERROR_NOT_FOUND = 3000;</code>
    */
-  public static final int ERROR_NOT_FOUND_VALUE = 2000;
+  public static final int ERROR_NOT_FOUND_VALUE = 3000;
   /**
-   * <code>ERROR_ALREADY_EXISTS = 2001;</code>
+   * <code>ERROR_ALREADY_EXISTS = 3001;</code>
    */
-  public static final int ERROR_ALREADY_EXISTS_VALUE = 2001;
-  /**
-   * <pre>
-   * 3xxx business condition violations
-   * </pre>
-   *
-   * <code>ERROR_FAILED_PRECONDITION = 3000;</code>
-   */
-  public static final int ERROR_FAILED_PRECONDITION_VALUE = 3000;
-  /**
-   * <code>ERROR_CONFLICT = 3001;</code>
-   */
-  public static final int ERROR_CONFLICT_VALUE = 3001;
+  public static final int ERROR_ALREADY_EXISTS_VALUE = 3001;
 
 
   public final int getNumber() {
@@ -152,13 +152,13 @@ public enum ErrorCodePb
       case 0: return ERROR_OK;
       case 1: return ERROR_INTERNAL;
       case 2: return ERROR_UNAVAILABLE;
-      case 1000: return ERROR_INVALID_ARGUMENT;
-      case 1001: return ERROR_UNAUTHENTICATED;
-      case 1002: return ERROR_UNAUTHORIZED;
-      case 2000: return ERROR_NOT_FOUND;
-      case 2001: return ERROR_ALREADY_EXISTS;
-      case 3000: return ERROR_FAILED_PRECONDITION;
-      case 3001: return ERROR_CONFLICT;
+      case 1000: return ERROR_FAILED_PRECONDITION;
+      case 1001: return ERROR_CONFLICT;
+      case 2000: return ERROR_INVALID_ARGUMENT;
+      case 2001: return ERROR_UNAUTHENTICATED;
+      case 2002: return ERROR_UNAUTHORIZED;
+      case 3000: return ERROR_NOT_FOUND;
+      case 3001: return ERROR_ALREADY_EXISTS;
       default: return null;
     }
   }

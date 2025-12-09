@@ -1,8 +1,9 @@
 package com.exchange.app.wallet.service;
 
-import com.exchange.app.wallet.exception.ErrorCode;
 import com.exchange.app.wallet.processor.CreateWalletProcessor;
-import com.exchange.app.wallet.utils.ErrorHelper;
+import com.exchange.app.wallet.result.ErrorCode;
+import com.exchange.app.wallet.result.PbErrorBuilder;
+import com.exchange.proto.ledger.account.CreateAccountReplyPb;
 import com.exchange.proto.wallet.wallet.CreateWalletReplyPb;
 import com.exchange.proto.wallet.wallet.CreateWalletRequestPb;
 import com.exchange.proto.wallet.wallet.WalletServiceGrpc;
@@ -18,15 +19,13 @@ public class WalletServiceImpl extends WalletServiceGrpc.WalletServiceImplBase {
 
     @Override
     public void createWallet(CreateWalletRequestPb request, StreamObserver<CreateWalletReplyPb> responseObserver) {
-        CreateWalletReplyPb.Builder b;
+        CreateWalletReplyPb reply;
         try {
-            CreateWalletReplyPb resp = createWalletProcessor.createWallet(request);
-            b = resp.toBuilder();
+            reply = createWalletProcessor.createWallet(request);
         } catch (Exception e) {
-            ErrorCode replyCode = ErrorHelper.getErrorCode(e);
-            b = CreateWalletReplyPb.newBuilder().setCode(replyCode.code).setMsg(replyCode.message);
+            reply = CreateWalletReplyPb.newBuilder().setError(PbErrorBuilder.build(ErrorCode.SERVER_ERROR)).build();
         }
-        responseObserver.onNext(b.build());
+        responseObserver.onNext(reply);
         responseObserver.onCompleted();
     }
 

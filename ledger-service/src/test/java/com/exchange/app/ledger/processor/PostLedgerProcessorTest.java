@@ -9,6 +9,7 @@ import com.exchange.app.ledger.dao.mapper.LedgerTxnMapper;
 import com.exchange.app.ledger.po.ledger.LedgerTxn;
 import com.exchange.app.ledger.processor.post.PostLedgerProcessor;
 import com.exchange.app.ledger.po.ledger.LedgerEntry;
+import com.exchange.proto.common.error.ErrorCodePb;
 import com.exchange.proto.ledger.common.LedgerDirectionPb;
 import com.exchange.proto.ledger.post.LedgerEntryPb;
 import com.exchange.proto.ledger.post.PostTransactionReplyPb;
@@ -52,13 +53,15 @@ public class PostLedgerProcessorTest {
 
     @Test
     public void testPostTxnSuccess() {
-        String refId = "txn-8";
+        String refId = "txn-13";
         PostTransactionRequestPb request = PostTransactionRequestPb.newBuilder().setReferenceId(refId).setDescription("description").addAllEntries(List.of(
                 LedgerEntryPb.newBuilder().setAccountId("   5632161").setDirection(LedgerDirectionPb.LedgerDirection_Debit).setAmount(100).setAssetId("asset-1").build(),
                 LedgerEntryPb.newBuilder().setAccountId("   5797651").setDirection(LedgerDirectionPb.LedgerDirection_Credit).setAmount(100).setAssetId("asset-1").build()
         )).build();
         PostTransactionReplyPb reply = postLedgerProcessor.postTransaction(request);
-        Assert.assertEquals(0, reply.getCode());
+
+        log.info("reply: {}", reply);
+        Assert.assertEquals(ErrorCodePb.ERROR_OK, reply.getError().getCode());
 
         LambdaQueryWrapper<LedgerTxn> queryWrapper = (new LambdaQueryWrapper<LedgerTxn>()).eq(LedgerTxn::getReferenceId, refId);
         List<LedgerTxn> txn = ledgerTxnMapper.selectList(queryWrapper);
@@ -75,5 +78,6 @@ public class PostLedgerProcessorTest {
 
         log.info("txn: {}", txn);
         log.info("entry: {}", entries);
+        log.info("reply: {}", reply);
     }
 }

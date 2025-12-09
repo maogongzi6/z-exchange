@@ -1,8 +1,10 @@
 package com.exchange.app.wallet.dao.manager;
 
 import com.exchange.app.wallet.dao.mapper.WalletMapper;
-import com.exchange.app.wallet.exception.WalletException;
 import com.exchange.app.wallet.po.wallet.Wallet;
+import com.exchange.app.wallet.result.ErrorCode;
+import com.exchange.app.wallet.result.Result;
+import com.exchange.common.db.DbBaseManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,33 +13,19 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor(onConstructor_ = @Autowired)
-public class WalletManager {
-    final private WalletMapper walletMapper;
-
-    public void insertWithDuplicateException(Wallet wallet) {
-        int success;
-        try {
-            success = walletMapper.insert(wallet);
-            if (success == 0) {
-                throw WalletException.walletDuplicated("wallet_duplicated" + wallet);
-            }
-        } catch (Exception e) {
-            if (e instanceof DuplicateKeyException) {
-                throw (WalletException) WalletException.walletDuplicated("wallet_duplicated" + wallet).initCause(e);
-            }
-            throw e;
-
-        }
+public class WalletManager extends DbBaseManager<Wallet, WalletMapper> {
+    @Autowired
+    public WalletManager(WalletMapper mapper) {
+        super(mapper);
     }
-
-//    public int updateWalletStatus(String walletId, WalletStatus oldStatus, WalletStatus newStatus) {
-//        if (Strings.isEmpty(walletId)) {
-//            throw ServerError.invalidDbParameter("empty_wallet_id");
+//    public int insertIgnoreDuplicateError(Wallet wallet) {
+//        try {
+//            return walletMapper.insert(wallet);
+//        } catch (Exception e) {
+//            if (e instanceof DuplicateKeyException) {
+//                return 0;
+//            }
+//            throw e;
 //        }
-//
-//        LambdaUpdateWrapper<Wallet> updateWrapper = new LambdaUpdateWrapper<>();
-//        updateWrapper.eq(Wallet::getWalletId, walletId).eq(Wallet::getWalletStatus, oldStatus).set(Wallet::getWalletStatus, newStatus);
-//        return walletMapper.update(updateWrapper);
 //    }
 }

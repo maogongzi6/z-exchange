@@ -1,4 +1,4 @@
-package com.exchange.app.ledger.result;
+package com.exchange.app.wallet.result;
 
 import com.exchange.common.result.PbMappableErrorCode;
 import com.exchange.proto.common.error.ErrorCodePb;
@@ -9,15 +9,14 @@ public enum ErrorCode implements PbMappableErrorCode {
     SERVER_ERROR(2, ErrorCodePb.ERROR_INTERNAL,"server_error"),
     NULL_RESULT(3, ErrorCodePb.ERROR_INTERNAL, "null_result"),
     DB_ERROR(4, ErrorCodePb.ERROR_INTERNAL, "db_error"),
-//    BAD_REQUEST(1, "bad_request"),
-//    BAD_REPLY(2, "bad_reply"),
+
     INVALID_REQUEST_PARAMETER(100, ErrorCodePb.ERROR_INVALID_ARGUMENT, "invalid_request_parameter"),
-//    INVALID_LEDGER_DIRECTION(1000, "invalid_ledger_direction"),
-//    IMBALANCED_LEDGER_TXN(1010, "imbalanced_ledger_txn"),
-    LEDGER_DUPLICATED(1020, ErrorCodePb.ERROR_ALREADY_EXISTS, "ledger_duplicated"),
-    ACCOUNT_NOT_FOUND(1100, ErrorCodePb.ERROR_NOT_FOUND, "account_not_found"),
-    ACCOUNT_DUPLICATED(1101, ErrorCodePb.ERROR_ALREADY_EXISTS, "account_duplicated"),
-    ASSET_NOT_FOUND(1200, ErrorCodePb.ERROR_NOT_FOUND, "asset_not_found"),;
+    WALLET_NOT_FOUND(1000, ErrorCodePb.ERROR_NOT_FOUND,"wallet_not_found"),
+    WALLET_DUPLICATED(1001, ErrorCodePb.ERROR_ALREADY_EXISTS, "wallet_duplicated"),
+    WALLET_STATUS_MISMATCH(1002, ErrorCodePb.ERROR_CONFLICT,"wallet_status_mismatch"),
+    BALANCE_SNAPSHOT_DUPLICATED(1100, ErrorCodePb.ERROR_ALREADY_EXISTS, "balance_snapshot_duplicated"),
+    WALLET_ACCOUNT_MAPPING_DUPLICATED(1200, ErrorCodePb.ERROR_ALREADY_EXISTS, "wallet_account_mapping_duplicated"),
+    CREATE_ACCOUNT_FAILED(10000, ErrorCodePb.ERROR_FAILED_PRECONDITION, "fail_to_create_account"),;
 
     final public int code;
     final ErrorCodePb protoCode;

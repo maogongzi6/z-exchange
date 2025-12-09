@@ -1,10 +1,11 @@
 package com.exchange.app.wallet.processor;
 
 import com.exchange.app.wallet.dao.mapper.WalletMapper;
-import com.exchange.app.wallet.exception.ErrorCode;
 import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.enums.WalletStatus;
 import com.exchange.app.wallet.po.wallet.Wallet;
+import com.exchange.app.wallet.result.ErrorCode;
+import com.exchange.proto.common.error.ErrorCodePb;
 import com.exchange.proto.wallet.common.ServiceIdPb;
 import com.exchange.proto.wallet.common.OwnerTypePb;
 import com.exchange.proto.wallet.wallet.CreateWalletReplyPb;
@@ -28,7 +29,7 @@ public class CreateWalletProcessorTest {
 
     @Test
     public void testCreateWalletProcessor() {
-        String ref = "create-wallet-test-6";
+        String ref = "create-wallet-test-7";
         String asset = "1";
         CreateWalletRequestPb request = CreateWalletRequestPb.newBuilder()
                 .setReferenceId(ref)
@@ -38,9 +39,10 @@ public class CreateWalletProcessorTest {
                 .setOwnerType(OwnerTypePb.OwnerTypePb_User).build();
 
         CreateWalletReplyPb reply = createWalletProcessor.createWallet(request);
-        Assert.assertEquals(ErrorCode.SUCCESS.code, reply.getCode());
+        System.out.println(reply);
+        Assert.assertEquals(ErrorCodePb.ERROR_OK, reply.getError().getCode());
         Wallet wallet = walletMapper.selectByReferenceId(ServiceId.USER, ref);
         Assert.assertEquals(WalletStatus.OPEN, wallet.getWalletStatus());
-        System.out.println(reply);
+
     }
 }

@@ -34,19 +34,21 @@ public final class CreateWallet {
   static {
     java.lang.String[] descriptorData = {
       "\n\032wallet/create_wallet.proto\022\006wallet\032\032wa" +
-      "llet/wallet_common.proto\"\243\001\n\025CreateWalle" +
-      "tRequestPb\022\'\n\nservice_id\030\001 \001(\0162\023.wallet." +
-      "ServiceIdPb\022\024\n\014reference_id\030\002 \001(\t\022\020\n\010ass" +
-      "et_id\030\003 \001(\t\022\'\n\nowner_type\030\004 \001(\0162\023.wallet" +
-      ".OwnerTypePb\022\020\n\010owner_id\030\005 \001(\t\"0\n\023Create" +
-      "WalletReplyPb\022\014\n\004code\030\001 \001(\005\022\013\n\003msg\030\002 \001(\t" +
-      "B$\n com.exchange.proto.wallet.walletP\001b\006" +
-      "proto3"
+      "llet/wallet_common.proto\032%com/exchange/p" +
+      "roto/common/error.proto\"\243\001\n\025CreateWallet" +
+      "RequestPb\022\'\n\nservice_id\030\001 \001(\0162\023.wallet.S" +
+      "erviceIdPb\022\024\n\014reference_id\030\002 \001(\t\022\020\n\010asse" +
+      "t_id\030\003 \001(\t\022\'\n\nowner_type\030\004 \001(\0162\023.wallet." +
+      "OwnerTypePb\022\020\n\010owner_id\030\005 \001(\t\"5\n\023CreateW" +
+      "alletReplyPb\022\036\n\005error\030\001 \001(\0132\017.common.Err" +
+      "orPbB$\n com.exchange.proto.wallet.wallet" +
+      "P\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.exchange.proto.wallet.common.WalletCommon.getDescriptor(),
+          com.exchange.proto.common.error.Error.getDescriptor(),
         });
     internal_static_wallet_CreateWalletRequestPb_descriptor =
       getDescriptor().getMessageTypes().get(0);
@@ -59,8 +61,9 @@ public final class CreateWallet {
     internal_static_wallet_CreateWalletReplyPb_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_wallet_CreateWalletReplyPb_descriptor,
-        new java.lang.String[] { "Code", "Msg", });
+        new java.lang.String[] { "Error", });
     com.exchange.proto.wallet.common.WalletCommon.getDescriptor();
+    com.exchange.proto.common.error.Error.getDescriptor();
   }
 
   // @@protoc_insertion_point(outer_class_scope)

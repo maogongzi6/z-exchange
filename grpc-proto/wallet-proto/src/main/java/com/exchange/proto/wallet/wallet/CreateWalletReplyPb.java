@@ -16,7 +16,6 @@ private static final long serialVersionUID = 0L;
     super(builder);
   }
   private CreateWalletReplyPb() {
-    msg_ = "";
   }
 
   @java.lang.Override
@@ -49,15 +48,17 @@ private static final long serialVersionUID = 0L;
           case 0:
             done = true;
             break;
-          case 8: {
+          case 10: {
+            com.exchange.proto.common.error.ErrorPb.Builder subBuilder = null;
+            if (error_ != null) {
+              subBuilder = error_.toBuilder();
+            }
+            error_ = input.readMessage(com.exchange.proto.common.error.ErrorPb.parser(), extensionRegistry);
+            if (subBuilder != null) {
+              subBuilder.mergeFrom(error_);
+              error_ = subBuilder.buildPartial();
+            }
 
-            code_ = input.readInt32();
-            break;
-          }
-          case 18: {
-            java.lang.String s = input.readStringRequireUtf8();
-
-            msg_ = s;
             break;
           }
           default: {
@@ -92,53 +93,30 @@ private static final long serialVersionUID = 0L;
             com.exchange.proto.wallet.wallet.CreateWalletReplyPb.class, com.exchange.proto.wallet.wallet.CreateWalletReplyPb.Builder.class);
   }
 
-  public static final int CODE_FIELD_NUMBER = 1;
-  private int code_;
+  public static final int ERROR_FIELD_NUMBER = 1;
+  private com.exchange.proto.common.error.ErrorPb error_;
   /**
-   * <code>int32 code = 1;</code>
-   * @return The code.
+   * <code>.common.ErrorPb error = 1;</code>
+   * @return Whether the error field is set.
    */
   @java.lang.Override
-  public int getCode() {
-    return code_;
-  }
-
-  public static final int MSG_FIELD_NUMBER = 2;
-  private volatile java.lang.Object msg_;
-  /**
-   * <code>string msg = 2;</code>
-   * @return The msg.
-   */
-  @java.lang.Override
-  public java.lang.String getMsg() {
-    java.lang.Object ref = msg_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs = 
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      msg_ = s;
-      return s;
-    }
+  public boolean hasError() {
+    return error_ != null;
   }
   /**
-   * <code>string msg = 2;</code>
-   * @return The bytes for msg.
+   * <code>.common.ErrorPb error = 1;</code>
+   * @return The error.
    */
   @java.lang.Override
-  public com.google.protobuf.ByteString
-      getMsgBytes() {
-    java.lang.Object ref = msg_;
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      msg_ = b;
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
-    }
+  public com.exchange.proto.common.error.ErrorPb getError() {
+    return error_ == null ? com.exchange.proto.common.error.ErrorPb.getDefaultInstance() : error_;
+  }
+  /**
+   * <code>.common.ErrorPb error = 1;</code>
+   */
+  @java.lang.Override
+  public com.exchange.proto.common.error.ErrorPbOrBuilder getErrorOrBuilder() {
+    return getError();
   }
 
   private byte memoizedIsInitialized = -1;
@@ -155,11 +133,8 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
-    if (code_ != 0) {
-      output.writeInt32(1, code_);
-    }
-    if (!getMsgBytes().isEmpty()) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 2, msg_);
+    if (error_ != null) {
+      output.writeMessage(1, getError());
     }
     unknownFields.writeTo(output);
   }
@@ -170,12 +145,9 @@ private static final long serialVersionUID = 0L;
     if (size != -1) return size;
 
     size = 0;
-    if (code_ != 0) {
+    if (error_ != null) {
       size += com.google.protobuf.CodedOutputStream
-        .computeInt32Size(1, code_);
-    }
-    if (!getMsgBytes().isEmpty()) {
-      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, msg_);
+        .computeMessageSize(1, getError());
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -192,10 +164,11 @@ private static final long serialVersionUID = 0L;
     }
     com.exchange.proto.wallet.wallet.CreateWalletReplyPb other = (com.exchange.proto.wallet.wallet.CreateWalletReplyPb) obj;
 
-    if (getCode()
-        != other.getCode()) return false;
-    if (!getMsg()
-        .equals(other.getMsg())) return false;
+    if (hasError() != other.hasError()) return false;
+    if (hasError()) {
+      if (!getError()
+          .equals(other.getError())) return false;
+    }
     if (!unknownFields.equals(other.unknownFields)) return false;
     return true;
   }
@@ -207,10 +180,10 @@ private static final long serialVersionUID = 0L;
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
-    hash = (37 * hash) + CODE_FIELD_NUMBER;
-    hash = (53 * hash) + getCode();
-    hash = (37 * hash) + MSG_FIELD_NUMBER;
-    hash = (53 * hash) + getMsg().hashCode();
+    if (hasError()) {
+      hash = (37 * hash) + ERROR_FIELD_NUMBER;
+      hash = (53 * hash) + getError().hashCode();
+    }
     hash = (29 * hash) + unknownFields.hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -344,10 +317,12 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
-      code_ = 0;
-
-      msg_ = "";
-
+      if (errorBuilder_ == null) {
+        error_ = null;
+      } else {
+        error_ = null;
+        errorBuilder_ = null;
+      }
       return this;
     }
 
@@ -374,8 +349,11 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.exchange.proto.wallet.wallet.CreateWalletReplyPb buildPartial() {
       com.exchange.proto.wallet.wallet.CreateWalletReplyPb result = new com.exchange.proto.wallet.wallet.CreateWalletReplyPb(this);
-      result.code_ = code_;
-      result.msg_ = msg_;
+      if (errorBuilder_ == null) {
+        result.error_ = error_;
+      } else {
+        result.error_ = errorBuilder_.build();
+      }
       onBuilt();
       return result;
     }
@@ -424,12 +402,8 @@ private static final long serialVersionUID = 0L;
 
     public Builder mergeFrom(com.exchange.proto.wallet.wallet.CreateWalletReplyPb other) {
       if (other == com.exchange.proto.wallet.wallet.CreateWalletReplyPb.getDefaultInstance()) return this;
-      if (other.getCode() != 0) {
-        setCode(other.getCode());
-      }
-      if (!other.getMsg().isEmpty()) {
-        msg_ = other.msg_;
-        onChanged();
+      if (other.hasError()) {
+        mergeError(other.getError());
       }
       this.mergeUnknownFields(other.unknownFields);
       onChanged();
@@ -460,111 +434,123 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private int code_ ;
+    private com.exchange.proto.common.error.ErrorPb error_;
+    private com.google.protobuf.SingleFieldBuilderV3<
+        com.exchange.proto.common.error.ErrorPb, com.exchange.proto.common.error.ErrorPb.Builder, com.exchange.proto.common.error.ErrorPbOrBuilder> errorBuilder_;
     /**
-     * <code>int32 code = 1;</code>
-     * @return The code.
+     * <code>.common.ErrorPb error = 1;</code>
+     * @return Whether the error field is set.
      */
-    @java.lang.Override
-    public int getCode() {
-      return code_;
+    public boolean hasError() {
+      return errorBuilder_ != null || error_ != null;
     }
     /**
-     * <code>int32 code = 1;</code>
-     * @param value The code to set.
-     * @return This builder for chaining.
+     * <code>.common.ErrorPb error = 1;</code>
+     * @return The error.
      */
-    public Builder setCode(int value) {
-      
-      code_ = value;
-      onChanged();
-      return this;
+    public com.exchange.proto.common.error.ErrorPb getError() {
+      if (errorBuilder_ == null) {
+        return error_ == null ? com.exchange.proto.common.error.ErrorPb.getDefaultInstance() : error_;
+      } else {
+        return errorBuilder_.getMessage();
+      }
     }
     /**
-     * <code>int32 code = 1;</code>
-     * @return This builder for chaining.
+     * <code>.common.ErrorPb error = 1;</code>
      */
-    public Builder clearCode() {
-      
-      code_ = 0;
-      onChanged();
-      return this;
-    }
+    public Builder setError(com.exchange.proto.common.error.ErrorPb value) {
+      if (errorBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        error_ = value;
+        onChanged();
+      } else {
+        errorBuilder_.setMessage(value);
+      }
 
-    private java.lang.Object msg_ = "";
+      return this;
+    }
     /**
-     * <code>string msg = 2;</code>
-     * @return The msg.
+     * <code>.common.ErrorPb error = 1;</code>
      */
-    public java.lang.String getMsg() {
-      java.lang.Object ref = msg_;
-      if (!(ref instanceof java.lang.String)) {
-        com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        msg_ = s;
-        return s;
+    public Builder setError(
+        com.exchange.proto.common.error.ErrorPb.Builder builderForValue) {
+      if (errorBuilder_ == null) {
+        error_ = builderForValue.build();
+        onChanged();
       } else {
-        return (java.lang.String) ref;
+        errorBuilder_.setMessage(builderForValue.build());
+      }
+
+      return this;
+    }
+    /**
+     * <code>.common.ErrorPb error = 1;</code>
+     */
+    public Builder mergeError(com.exchange.proto.common.error.ErrorPb value) {
+      if (errorBuilder_ == null) {
+        if (error_ != null) {
+          error_ =
+            com.exchange.proto.common.error.ErrorPb.newBuilder(error_).mergeFrom(value).buildPartial();
+        } else {
+          error_ = value;
+        }
+        onChanged();
+      } else {
+        errorBuilder_.mergeFrom(value);
+      }
+
+      return this;
+    }
+    /**
+     * <code>.common.ErrorPb error = 1;</code>
+     */
+    public Builder clearError() {
+      if (errorBuilder_ == null) {
+        error_ = null;
+        onChanged();
+      } else {
+        error_ = null;
+        errorBuilder_ = null;
+      }
+
+      return this;
+    }
+    /**
+     * <code>.common.ErrorPb error = 1;</code>
+     */
+    public com.exchange.proto.common.error.ErrorPb.Builder getErrorBuilder() {
+      
+      onChanged();
+      return getErrorFieldBuilder().getBuilder();
+    }
+    /**
+     * <code>.common.ErrorPb error = 1;</code>
+     */
+    public com.exchange.proto.common.error.ErrorPbOrBuilder getErrorOrBuilder() {
+      if (errorBuilder_ != null) {
+        return errorBuilder_.getMessageOrBuilder();
+      } else {
+        return error_ == null ?
+            com.exchange.proto.common.error.ErrorPb.getDefaultInstance() : error_;
       }
     }
     /**
-     * <code>string msg = 2;</code>
-     * @return The bytes for msg.
+     * <code>.common.ErrorPb error = 1;</code>
      */
-    public com.google.protobuf.ByteString
-        getMsgBytes() {
-      java.lang.Object ref = msg_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        msg_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
+    private com.google.protobuf.SingleFieldBuilderV3<
+        com.exchange.proto.common.error.ErrorPb, com.exchange.proto.common.error.ErrorPb.Builder, com.exchange.proto.common.error.ErrorPbOrBuilder> 
+        getErrorFieldBuilder() {
+      if (errorBuilder_ == null) {
+        errorBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+            com.exchange.proto.common.error.ErrorPb, com.exchange.proto.common.error.ErrorPb.Builder, com.exchange.proto.common.error.ErrorPbOrBuilder>(
+                getError(),
+                getParentForChildren(),
+                isClean());
+        error_ = null;
       }
-    }
-    /**
-     * <code>string msg = 2;</code>
-     * @param value The msg to set.
-     * @return This builder for chaining.
-     */
-    public Builder setMsg(
-        java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  
-      msg_ = value;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string msg = 2;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearMsg() {
-      
-      msg_ = getDefaultInstance().getMsg();
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string msg = 2;</code>
-     * @param value The bytes for msg to set.
-     * @return This builder for chaining.
-     */
-    public Builder setMsgBytes(
-        com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-      
-      msg_ = value;
-      onChanged();
-      return this;
+      return errorBuilder_;
     }
     @java.lang.Override
     public final Builder setUnknownFields(

@@ -7,4 +7,6 @@ public abstract class CustomException extends CustomThrowable {
         super(errorCode);
     }
     public CustomException(ErrorCode errorCode, String message) {super(errorCode, message);}
+    public CustomException(ErrorCode errorCode, Throwable cause) {super(errorCode, cause);}
+    public CustomException(ErrorCode errorCode, String message, Throwable cause) {super(errorCode, message, cause);}
 }

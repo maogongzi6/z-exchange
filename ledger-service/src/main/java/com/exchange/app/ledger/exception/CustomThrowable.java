@@ -17,4 +17,14 @@ public abstract class CustomThrowable extends RuntimeException {
         super(msg);
         code = c;
     }
+
+    public CustomThrowable(ErrorCode c, Throwable cause) {
+        super(c.message, cause);
+        code = c;
+    }
+
+    public CustomThrowable(ErrorCode c, String msg, Throwable cause) {
+        super(msg, cause);
+        code = c;
+    }
 }

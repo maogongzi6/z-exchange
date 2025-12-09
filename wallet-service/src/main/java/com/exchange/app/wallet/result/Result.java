@@ -1,8 +1,7 @@
-package com.exchange.app.ledger.result;
+package com.exchange.app.wallet.result;
 
 import com.exchange.common.result.CommonResult;
 
-// TODO maybe move success() fail() to common module
 public class Result<T> extends CommonResult<T, ErrorCode> {
 
     private Result(boolean success, T value, ErrorCode errorCode, String errorDetail) {

@@ -6,6 +6,7 @@ option java_multiple_files = true;
 option java_package = "com.exchange.proto.ledger.post";
 
 import "com/exchange/proto/ledger/ledger_common.proto";
+import "com/exchange/proto/common/error.proto";
 
 service PostService {
   rpc postTransaction(PostTransactionRequestPb) returns (PostTransactionReplyPb) {}
@@ -18,8 +19,7 @@ message PostTransactionRequestPb {
 }
 
 message PostTransactionReplyPb {
-  int32 code = 1;
-  string msg = 2;
+  common.ErrorPb error = 1;
 }
 
 message LedgerEntryPb {

@@ -1,5 +1,6 @@
 package com.exchange.app.wallet.exception;
 
+import com.exchange.app.wallet.result.ErrorCode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -14,6 +15,16 @@ public abstract class CustomThrowable extends RuntimeException {
 
     public CustomThrowable(ErrorCode c, String msg) {
         super(msg);
+        code = c;
+    }
+
+    public CustomThrowable(ErrorCode c, Throwable cause) {
+        super(c.message, cause);
+        code = c;
+    }
+
+    public CustomThrowable(ErrorCode c, String msg, Throwable cause) {
+        super(msg, cause);
         code = c;
     }
 }

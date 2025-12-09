@@ -1,10 +1,8 @@
 package com.exchange.app.ledger.processor.post;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.exchange.app.ledger.exception.AccountException;
-import com.exchange.app.ledger.exception.CommonException;
+import com.exchange.app.ledger.dao.manager.LedgerTxnManager;
 import com.exchange.app.ledger.result.ErrorCode;
-import com.exchange.app.ledger.exception.LedgerException;
 import com.exchange.app.ledger.dao.mapper.AccountMapper;
 import com.exchange.app.ledger.dao.mapper.LedgerEntryMapper;
 import com.exchange.app.ledger.dao.mapper.LedgerTxnMapper;
@@ -12,6 +10,9 @@ import com.exchange.app.ledger.po.account.Account;
 import com.exchange.app.ledger.po.enums.Direction;
 import com.exchange.app.ledger.po.ledger.LedgerEntry;
 import com.exchange.app.ledger.po.ledger.LedgerTxn;
+import com.exchange.app.ledger.result.PbErrorBuilder;
+import com.exchange.app.ledger.result.Result;
+import com.exchange.app.ledger.utils.DbTransactionHelper;
 import com.exchange.proto.ledger.post.LedgerEntryPb;
 import com.exchange.proto.ledger.post.PostTransactionReplyPb;
 import com.exchange.proto.ledger.post.PostTransactionRequestPb;
@@ -36,10 +37,17 @@ public class PostLedgerProcessor {
     final private LedgerEntryMapper ledgerEntryMapper;
     final private LedgerTxnMapper ledgerTxnMapper;
     final private AccountMapper accountMapper;
+
+    final private LedgerTxnManager ledgerTxnManager;
+
     final private TransactionTemplate transactionTemplate;
 
     public PostTransactionReplyPb postTransaction(PostTransactionRequestPb req) {
-        validateReq(req);
+
+        Result<Void> result = validateReq(req);
+        if (!Result.isSuccess(result)) {
+            return replyError(result);
+        }
 
         String txnId = IdGenerator.generateLedgerTxnId();
 
@@ -52,54 +60,38 @@ public class PostLedgerProcessor {
         wrapper.clear();
         if (accountIdFromDb.size() != accountIds.size()) {
             accountIdFromDb.forEach(accountIds::remove);
-            throw AccountException.accountNotFound(accountIds.toString());
+            return replyError(ErrorCode.ACCOUNT_NOT_FOUND, accountIds.toString());
         }
 
-        transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-        try {
-            transactionTemplate.execute((transactionStatus -> {
-                try {
-
-                    if (ledgerTxnMapper.insert(ledgerTxn) == 0) {
-                        throw LedgerException.duplicatedLedger("duplicated_ledger_txn");
-                    }
-                    if (ledgerEntryMapper.batchInsert(entries) < entries.size()) {
-                        throw LedgerException.duplicatedLedger("duplicated_ledger_entry");
-                    }
-                } catch (Exception e) {
-                    transactionStatus.setRollbackOnly();
-                    if (e instanceof DuplicateKeyException) {
-                        throw (LedgerException) LedgerException.duplicatedLedger("duplicate_ledger").initCause(e);
-                    } else {
-                        throw e;
-                    }
-                }
-                return null;
-            }));
-        } catch (LedgerException e) {
-            if (e.getCode() == ErrorCode.LEDGER_DUPLICATED) {
-                // ignore here
-                log.warn("Duplicated ledger: {}", e.getMessage());
-            } else {
-                throw e;
+        result = DbTransactionHelper.executeWithResult(transactionTemplate, TransactionDefinition.PROPAGATION_REQUIRED, () -> {
+            if (ledgerTxnManager.insertIgnore(ledgerTxn) == 0) {
+                log.info("ledger txn already exists");
+                return Result.success();
             }
+            if (ledgerEntryMapper.batchInsert(entries) < entries.size()) {
+                return Result.fail(ErrorCode.LEDGER_DUPLICATED, "unexpected duplicated_ledger_entry");
+            }
+            return Result.success();
+        });
+        if (!Result.isSuccess(result)) {
+            return replyError(result);
         }
 
-        return PostTransactionReplyPb.newBuilder().setCode(ErrorCode.SUCCESS.code).setMsg(ErrorCode.SUCCESS.message).build();
+        return replySuccess("success");
     }
 
-    private void validateReq(PostTransactionRequestPb req) {
+    private Result<Void> validateReq(PostTransactionRequestPb req) {
         Map<String, Long> debitSumMap = new HashMap<>(), creditSumMap = new HashMap<>();
         int debitCount = 0, creditCount = 0;
 
         for (LedgerEntryPb entry : req.getEntriesList()) {
             if (entry.getAmount() == 0) {
-                throw CommonException.invalidRequestParameter("zero_amount: " + entry);
+                return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "zero_amount: " + entry);
             }
             Direction d = EnumConvertHelper.directionPbToPo(entry.getDirection());
             String assetId = entry.getAssetId();
             if (d == null || d == Direction.UNKNOWN) {
-                throw CommonException.invalidRequestParameter("invalid_direction: " + Direction.UNKNOWN);
+                return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid_direction: " + Direction.UNKNOWN);
             }
             if (d == Direction.DEBIT) {
                 debitCount++;
@@ -114,16 +106,33 @@ public class PostLedgerProcessor {
         }
 
         if (debitCount == 0 || creditCount == 0) {
-            throw CommonException.invalidRequestParameter("imbalanced_entry: debit: " + debitSumMap + ", credit: " + creditSumMap);
+            return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "imbalanced_entry: debit: " + debitSumMap + ", credit: " + creditSumMap);
         }
 
         if (debitSumMap.size() != creditSumMap.size()) {
-            throw CommonException.invalidRequestParameter("imbalanced_entry: debit: " + debitSumMap + ", credit: " + creditSumMap);
+            return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "imbalanced_entry: debit: " + debitSumMap + ", credit: " + creditSumMap);
         }
-        debitSumMap.forEach((assetId, amount) -> {
-            if (!Objects.equals(creditSumMap.get(assetId), amount)) {
-                throw CommonException.invalidRequestParameter("imbalanced_entry: debit: " + debitSumMap + ", credit: " + creditSumMap);
+        for (Map.Entry<String, Long> entry: debitSumMap.entrySet()) {
+            String assetId = entry.getKey();
+            Long debitAmount = entry.getValue();
+            if (!Objects.equals(creditSumMap.get(assetId), debitAmount)) {
+                return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER,("imbalanced_entry: debit: " + debitSumMap + ", credit: " + creditSumMap));
             }
-        });
+        }
+        return Result.success();
+    }
+
+    private PostTransactionReplyPb replySuccess(String detail) {
+        return replyError(ErrorCode.SUCCESS, detail);
+    }
+
+    private PostTransactionReplyPb replyError(ErrorCode errorCode, String detail) {
+        PostTransactionReplyPb.Builder builder = PostTransactionReplyPb.newBuilder();
+        return builder.setError(PbErrorBuilder.build(errorCode, detail)).build();
+    }
+
+    private PostTransactionReplyPb replyError(Result<?> result) {
+        result = Result.requireNotNull(result);
+        return replyError(result.errorCode, result.errorDetail);
     }
 }

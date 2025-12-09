@@ -16,6 +16,7 @@ public class LedgerEntry {
     @TableId(type = IdType.AUTO)
     private Long id;
     private String entryId;
+    // TODO should we add a seq field in LedgerEntry and set (txn_id, seq) as unique key, so that a txn cannot insert entries once it has been posted
     private String txnId;
     private String assetId;
     private String accountId;
