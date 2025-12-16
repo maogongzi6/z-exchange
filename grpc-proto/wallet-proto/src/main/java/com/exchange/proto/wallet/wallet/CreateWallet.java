@@ -33,21 +33,21 @@ public final class CreateWallet {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\032wallet/create_wallet.proto\022\006wallet\032\032wa" +
-      "llet/wallet_common.proto\032%com/exchange/p" +
-      "roto/common/error.proto\"\243\001\n\025CreateWallet" +
-      "RequestPb\022\'\n\nservice_id\030\001 \001(\0162\023.wallet.S" +
-      "erviceIdPb\022\024\n\014reference_id\030\002 \001(\t\022\020\n\010asse" +
-      "t_id\030\003 \001(\t\022\'\n\nowner_type\030\004 \001(\0162\023.wallet." +
-      "OwnerTypePb\022\020\n\010owner_id\030\005 \001(\t\"5\n\023CreateW" +
-      "alletReplyPb\022\036\n\005error\030\001 \001(\0132\017.common.Err" +
-      "orPbB$\n com.exchange.proto.wallet.wallet" +
-      "P\001b\006proto3"
+      "\n\032wallet/create_wallet.proto\022\006wallet\032\030wa" +
+      "llet/wallet_enum.proto\032%com/exchange/pro" +
+      "to/common/error.proto\"\243\001\n\025CreateWalletRe" +
+      "questPb\022\'\n\nservice_id\030\001 \001(\0162\023.wallet.Ser" +
+      "viceIdPb\022\024\n\014reference_id\030\002 \001(\t\022\020\n\010asset_" +
+      "id\030\003 \001(\t\022\'\n\nowner_type\030\004 \001(\0162\023.wallet.Ow" +
+      "nerTypePb\022\020\n\010owner_id\030\005 \001(\t\"5\n\023CreateWal" +
+      "letReplyPb\022\036\n\005error\030\001 \001(\0132\017.common.Error" +
+      "PbB$\n com.exchange.proto.wallet.walletP\001" +
+      "b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
-          com.exchange.proto.wallet.common.WalletCommon.getDescriptor(),
+          com.exchange.proto.wallet.common.WalletEnum.getDescriptor(),
           com.exchange.proto.common.error.Error.getDescriptor(),
         });
     internal_static_wallet_CreateWalletRequestPb_descriptor =
@@ -62,7 +62,7 @@ public final class CreateWallet {
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_wallet_CreateWalletReplyPb_descriptor,
         new java.lang.String[] { "Error", });
-    com.exchange.proto.wallet.common.WalletCommon.getDescriptor();
+    com.exchange.proto.wallet.common.WalletEnum.getDescriptor();
     com.exchange.proto.common.error.Error.getDescriptor();
   }
 

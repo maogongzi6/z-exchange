@@ -58,6 +58,37 @@ public final class WalletServiceGrpc {
     return getCreateWalletMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.exchange.proto.wallet.wallet.AtomicTransactionRequestPb,
+      com.exchange.proto.wallet.wallet.AtomicTransactionReplyPb> getAtomicTransactionMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "atomicTransaction",
+      requestType = com.exchange.proto.wallet.wallet.AtomicTransactionRequestPb.class,
+      responseType = com.exchange.proto.wallet.wallet.AtomicTransactionReplyPb.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.exchange.proto.wallet.wallet.AtomicTransactionRequestPb,
+      com.exchange.proto.wallet.wallet.AtomicTransactionReplyPb> getAtomicTransactionMethod() {
+    io.grpc.MethodDescriptor<com.exchange.proto.wallet.wallet.AtomicTransactionRequestPb, com.exchange.proto.wallet.wallet.AtomicTransactionReplyPb> getAtomicTransactionMethod;
+    if ((getAtomicTransactionMethod = WalletServiceGrpc.getAtomicTransactionMethod) == null) {
+      synchronized (WalletServiceGrpc.class) {
+        if ((getAtomicTransactionMethod = WalletServiceGrpc.getAtomicTransactionMethod) == null) {
+          WalletServiceGrpc.getAtomicTransactionMethod = getAtomicTransactionMethod =
+              io.grpc.MethodDescriptor.<com.exchange.proto.wallet.wallet.AtomicTransactionRequestPb, com.exchange.proto.wallet.wallet.AtomicTransactionReplyPb>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "atomicTransaction"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.exchange.proto.wallet.wallet.AtomicTransactionRequestPb.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.exchange.proto.wallet.wallet.AtomicTransactionReplyPb.getDefaultInstance()))
+              .setSchemaDescriptor(new WalletServiceMethodDescriptorSupplier("atomicTransaction"))
+              .build();
+        }
+      }
+    }
+    return getAtomicTransactionMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -113,6 +144,13 @@ public final class WalletServiceGrpc {
       asyncUnimplementedUnaryCall(getCreateWalletMethod(), responseObserver);
     }
 
+    /**
+     */
+    public void atomicTransaction(com.exchange.proto.wallet.wallet.AtomicTransactionRequestPb request,
+        io.grpc.stub.StreamObserver<com.exchange.proto.wallet.wallet.AtomicTransactionReplyPb> responseObserver) {
+      asyncUnimplementedUnaryCall(getAtomicTransactionMethod(), responseObserver);
+    }
+
     @java.lang.Override public final io.grpc.ServerServiceDefinition bindService() {
       return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
           .addMethod(
@@ -122,6 +160,13 @@ public final class WalletServiceGrpc {
                 com.exchange.proto.wallet.wallet.CreateWalletRequestPb,
                 com.exchange.proto.wallet.wallet.CreateWalletReplyPb>(
                   this, METHODID_CREATE_WALLET)))
+          .addMethod(
+            getAtomicTransactionMethod(),
+            asyncUnaryCall(
+              new MethodHandlers<
+                com.exchange.proto.wallet.wallet.AtomicTransactionRequestPb,
+                com.exchange.proto.wallet.wallet.AtomicTransactionReplyPb>(
+                  this, METHODID_ATOMIC_TRANSACTION)))
           .build();
     }
   }
@@ -147,6 +192,14 @@ public final class WalletServiceGrpc {
       asyncUnaryCall(
           getChannel().newCall(getCreateWalletMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     */
+    public void atomicTransaction(com.exchange.proto.wallet.wallet.AtomicTransactionRequestPb request,
+        io.grpc.stub.StreamObserver<com.exchange.proto.wallet.wallet.AtomicTransactionReplyPb> responseObserver) {
+      asyncUnaryCall(
+          getChannel().newCall(getAtomicTransactionMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -168,6 +221,13 @@ public final class WalletServiceGrpc {
     public com.exchange.proto.wallet.wallet.CreateWalletReplyPb createWallet(com.exchange.proto.wallet.wallet.CreateWalletRequestPb request) {
       return blockingUnaryCall(
           getChannel(), getCreateWalletMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.exchange.proto.wallet.wallet.AtomicTransactionReplyPb atomicTransaction(com.exchange.proto.wallet.wallet.AtomicTransactionRequestPb request) {
+      return blockingUnaryCall(
+          getChannel(), getAtomicTransactionMethod(), getCallOptions(), request);
     }
   }
 
@@ -192,9 +252,18 @@ public final class WalletServiceGrpc {
       return futureUnaryCall(
           getChannel().newCall(getCreateWalletMethod(), getCallOptions()), request);
     }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.exchange.proto.wallet.wallet.AtomicTransactionReplyPb> atomicTransaction(
+        com.exchange.proto.wallet.wallet.AtomicTransactionRequestPb request) {
+      return futureUnaryCall(
+          getChannel().newCall(getAtomicTransactionMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_CREATE_WALLET = 0;
+  private static final int METHODID_ATOMIC_TRANSACTION = 1;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -216,6 +285,10 @@ public final class WalletServiceGrpc {
         case METHODID_CREATE_WALLET:
           serviceImpl.createWallet((com.exchange.proto.wallet.wallet.CreateWalletRequestPb) request,
               (io.grpc.stub.StreamObserver<com.exchange.proto.wallet.wallet.CreateWalletReplyPb>) responseObserver);
+          break;
+        case METHODID_ATOMIC_TRANSACTION:
+          serviceImpl.atomicTransaction((com.exchange.proto.wallet.wallet.AtomicTransactionRequestPb) request,
+              (io.grpc.stub.StreamObserver<com.exchange.proto.wallet.wallet.AtomicTransactionReplyPb>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -279,6 +352,7 @@ public final class WalletServiceGrpc {
           serviceDescriptor = result = io.grpc.ServiceDescriptor.newBuilder(SERVICE_NAME)
               .setSchemaDescriptor(new WalletServiceFileDescriptorSupplier())
               .addMethod(getCreateWalletMethod())
+              .addMethod(getAtomicTransactionMethod())
               .build();
         }
       }

@@ -24,18 +24,23 @@ public final class WalletServiceOuterClass {
   static {
     java.lang.String[] descriptorData = {
       "\n\033wallet/wallet_service.proto\022\006wallet\032\032w" +
-      "allet/create_wallet.proto2]\n\rWalletServi" +
-      "ce\022L\n\014createWallet\022\035.wallet.CreateWallet" +
-      "RequestPb\032\033.wallet.CreateWalletReplyPb\"\000" +
-      "B$\n com.exchange.proto.wallet.walletP\001b\006" +
-      "proto3"
+      "allet/create_wallet.proto\032\037wallet/wallet" +
+      "_transaction.proto2\270\001\n\rWalletService\022L\n\014" +
+      "createWallet\022\035.wallet.CreateWalletReques" +
+      "tPb\032\033.wallet.CreateWalletReplyPb\"\000\022Y\n\021at" +
+      "omicTransaction\022\".wallet.AtomicTransacti" +
+      "onRequestPb\032 .wallet.AtomicTransactionRe" +
+      "plyPbB$\n com.exchange.proto.wallet.walle" +
+      "tP\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.exchange.proto.wallet.wallet.CreateWallet.getDescriptor(),
+          com.exchange.proto.wallet.wallet.WalletTransaction.getDescriptor(),
         });
     com.exchange.proto.wallet.wallet.CreateWallet.getDescriptor();
+    com.exchange.proto.wallet.wallet.WalletTransaction.getDescriptor();
   }
 
   // @@protoc_insertion_point(outer_class_scope)

@@ -8,6 +8,8 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
+import java.util.List;
+
 public interface WalletMapper extends BaseMapper<Wallet> {
     @Select("SELECT * FROM wallets WHERE wallet_id=#{wallet_id}")
     Wallet selectByWalletId(@Param("wallet_id") String walletId);

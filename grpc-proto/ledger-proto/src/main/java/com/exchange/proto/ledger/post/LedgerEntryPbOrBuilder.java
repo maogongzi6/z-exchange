@@ -8,16 +8,16 @@ public interface LedgerEntryPbOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>string accountId = 1;</code>
-   * @return The accountId.
+   * <code>string accountRef = 1;</code>
+   * @return The accountRef.
    */
-  java.lang.String getAccountId();
+  java.lang.String getAccountRef();
   /**
-   * <code>string accountId = 1;</code>
-   * @return The bytes for accountId.
+   * <code>string accountRef = 1;</code>
+   * @return The bytes for accountRef.
    */
   com.google.protobuf.ByteString
-      getAccountIdBytes();
+      getAccountRefBytes();
 
   /**
    * <code>.ledger.LedgerDirectionPb direction = 2;</code>

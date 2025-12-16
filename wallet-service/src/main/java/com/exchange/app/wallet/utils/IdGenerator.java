@@ -14,6 +14,18 @@ public class IdGenerator {
         return String.format("%9d%d", timeOffset()/1000, sequence());
     }
 
+    public static String generateWalletTransactionId() {
+        return String.format("%9d%d", timeOffset()/1000, sequence());
+    }
+
+    public static String generateWalletActionId() {
+        return String.format("%9d%d", timeOffset()/1000, sequence());
+    }
+
+    public static String generateReservationId() {
+        return String.format("%9d%d", timeOffset()/1000, sequence());
+    }
+
     private static long timeOffset() {
         return System.currentTimeMillis() - START_TIME;
     }

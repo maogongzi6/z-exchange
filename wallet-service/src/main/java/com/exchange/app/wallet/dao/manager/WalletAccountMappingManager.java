@@ -1,5 +1,6 @@
 package com.exchange.app.wallet.dao.manager;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.exchange.app.wallet.dao.mapper.WalletAccountMappingMapper;
 import com.exchange.app.wallet.po.wallet.WalletAccountMapping;
 import com.exchange.common.db.DbBaseManager;
@@ -9,6 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Slf4j
 @Component
 public class WalletAccountMappingManager extends DbBaseManager<WalletAccountMapping, WalletAccountMappingMapper> {
@@ -17,14 +20,9 @@ public class WalletAccountMappingManager extends DbBaseManager<WalletAccountMapp
         super(mapper);
     }
 
-//    public int insertIgnore(WalletAccountMapping mapping) {
-//        try {
-//            return walletAccountMappingMapper.insert(mapping);
-//        } catch (Exception e) {
-//            if (e instanceof DuplicateKeyException) {
-//               return 0;
-//            }
-//            throw e;
-//        }
-//    }
+    public List<WalletAccountMapping> selectInWalletIds(List<String> walletIds) {
+        LambdaQueryWrapper<WalletAccountMapping> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.in(WalletAccountMapping::getWalletId, walletIds);
+        return mapper.selectList(queryWrapper);
+    }
 }

@@ -36,7 +36,7 @@ public class CreateAccountProcessor {
         OwnerType ownerType = EnumMappers.ownerTypePbMapper.to(req.getOwnerType());
 
         Result<Void> result = validateReq(req, serviceId, category, normalSide, ownerType);
-        if (!Result.isSuccess(result)) {
+        if (!result.success) {
             return replyError(result);
         }
 

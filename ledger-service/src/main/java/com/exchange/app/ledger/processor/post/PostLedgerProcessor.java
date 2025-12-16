@@ -1,6 +1,7 @@
 package com.exchange.app.ledger.processor.post;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.exchange.app.ledger.dao.manager.AccountManager;
 import com.exchange.app.ledger.dao.manager.LedgerTxnManager;
 import com.exchange.app.ledger.result.ErrorCode;
 import com.exchange.app.ledger.dao.mapper.AccountMapper;
@@ -40,28 +41,31 @@ public class PostLedgerProcessor {
     final private LedgerTxnManager ledgerTxnManager;
 
     final private TransactionTemplate transactionTemplate;
+    private final AccountManager accountManager;
 
     public PostTransactionReplyPb postTransaction(PostTransactionRequestPb req) {
 
         Result<Void> result = validateReq(req);
-        if (!Result.isSuccess(result)) {
+        if (!result.success) {
             return replyError(result);
         }
 
         String txnId = IdGenerator.generateLedgerTxnId();
-
         LedgerTxn ledgerTxn = LedgerTxn.create(txnId, req.getReferenceId(), "TODO");
-        List<LedgerEntry> entries = req.getEntriesList().stream().map(entry -> EntryHelper.protoToDto(ledgerTxn.getTxnId(), IdGenerator.generateLedgerEntryId(), entry)).collect(Collectors.toList());
-        Set<String> accountIds = entries.stream().map(LedgerEntry::getAccountId).collect(Collectors.toSet());
-        LambdaQueryWrapper<Account> wrapper = new LambdaQueryWrapper<>();
-        wrapper.select(Account::getAccountId).in(Account::getAccountId, accountIds);
-        List<String> accountIdFromDb = accountMapper.selectList(wrapper).stream().map(Account::getAccountId).collect(Collectors.toList());
-        wrapper.clear();
-        if (accountIdFromDb.size() != accountIds.size()) {
-            accountIdFromDb.forEach(accountIds::remove);
-            return replyError(ErrorCode.ACCOUNT_NOT_FOUND, accountIds.toString());
+//        List<LedgerEntry> entries = req.getEntriesList().stream().map(entry -> EntryHelper.protoToDto(ledgerTxn.getTxnId(), IdGenerator.generateLedgerEntryId(), entry)).collect(Collectors.toList());
+//        Set<String> accountIds = entries.stream().map(LedgerEntry::getAccountId).collect(Collectors.toSet());
+        List<String> accountRefs = req.getEntriesList().stream().map(LedgerEntryPb::getAccountRef).collect(Collectors.toList());
+        Map<String, String> accountRefToAccountId = accountManager.getAccountIdInRef(accountRefs).stream()
+                .collect(Collectors.toMap(Account::getReferenceId, Account::getAccountId));
+        if (accountRefToAccountId.size() != accountRefs.size()) {
+            Set<String> notFound = new HashSet<>(accountRefs) {{removeAll(accountRefToAccountId.keySet());}};
+            return replyError(ErrorCode.ACCOUNT_NOT_FOUND, "account_not_found, refs: " + notFound);
         }
 
+        List<LedgerEntry> entries = new ArrayList<>();
+        for (LedgerEntryPb entryPb : req.getEntriesList()) {
+            entries.add(createLedgerEntry(txnId, entryPb, accountRefToAccountId.get(entryPb.getAccountRef())));
+        }
         result = DbTransactionHelper.executeWithResult(transactionTemplate, TransactionDefinition.PROPAGATION_REQUIRED, () -> {
             if (ledgerTxnManager.insertIgnore(ledgerTxn) == 0) {
                 log.info("ledger txn already exists");
@@ -119,6 +123,17 @@ public class PostLedgerProcessor {
             }
         }
         return Result.success();
+    }
+
+    private LedgerEntry createLedgerEntry(String txnId, LedgerEntryPb entryPb, String accountId) {
+        return LedgerEntry.create(
+                IdGenerator.generateLedgerEntryId(),
+                txnId,
+                entryPb.getAssetId(),
+                accountId,
+                entryPb.getAmount(),
+                EnumMappers.directionPbMapper.to(entryPb.getDirection())
+        );
     }
 
     private PostTransactionReplyPb replySuccess(String detail) {

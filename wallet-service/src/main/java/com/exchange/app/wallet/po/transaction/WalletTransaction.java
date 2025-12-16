@@ -5,8 +5,8 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.exchange.app.wallet.po.enums.BusinessType;
 import com.exchange.app.wallet.po.enums.ServiceId;
-import com.exchange.app.wallet.po.enums.TransactionStatus;
-import com.exchange.app.wallet.po.enums.TransactionType;
+import com.exchange.app.wallet.po.enums.transaction.TransactionStatus;
+import com.exchange.app.wallet.po.enums.transaction.TransactionType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -21,22 +21,22 @@ public class WalletTransaction {
     private String txnId;
     private String referenceId;
     private ServiceId initiator;
-    private String idempotentKey;
+    private String idempotencyKey;
     private TransactionStatus txnStatus;
     private TransactionType txnType;
     private BusinessType businessType;
 
-    private WalletTransaction(BusinessType businessType, TransactionType txnType, String txnId, String referenceId, ServiceId initiator, String idempotentKey, TransactionStatus txnStatus) {
-        this.businessType = businessType;
-        this.txnType = txnType;
+    private WalletTransaction(String txnId, String referenceId, ServiceId initiator, String idempotencyKey, TransactionStatus txnStatus, TransactionType txnType, BusinessType businessType) {
         this.txnId = txnId;
         this.referenceId = referenceId;
         this.initiator = initiator;
-        this.idempotentKey = idempotentKey;
+        this.idempotencyKey = idempotencyKey;
         this.txnStatus = txnStatus;
+        this.txnType = txnType;
+        this.businessType = businessType;
     }
 
-    public static WalletTransaction create(BusinessType businessType, TransactionType txnType, String txnId, String referenceId, ServiceId initiator, String idempotentKey, TransactionStatus txnStatus) {
-        return new WalletTransaction(businessType, txnType, txnId, referenceId, initiator, idempotentKey, txnStatus);
+    public static WalletTransaction create(String txnId, String referenceId, ServiceId initiator, String idempotentKey, TransactionStatus txnStatus, TransactionType txnType, BusinessType businessType) {
+        return new WalletTransaction(txnId, referenceId, initiator, idempotentKey, txnStatus, txnType, businessType);
     }
 }

@@ -16,7 +16,7 @@ private static final long serialVersionUID = 0L;
     super(builder);
   }
   private LedgerEntryPb() {
-    accountId_ = "";
+    accountRef_ = "";
     direction_ = 0;
     assetId_ = "";
   }
@@ -54,7 +54,7 @@ private static final long serialVersionUID = 0L;
           case 10: {
             java.lang.String s = input.readStringRequireUtf8();
 
-            accountId_ = s;
+            accountRef_ = s;
             break;
           }
           case 16: {
@@ -106,38 +106,38 @@ private static final long serialVersionUID = 0L;
             com.exchange.proto.ledger.post.LedgerEntryPb.class, com.exchange.proto.ledger.post.LedgerEntryPb.Builder.class);
   }
 
-  public static final int ACCOUNTID_FIELD_NUMBER = 1;
-  private volatile java.lang.Object accountId_;
+  public static final int ACCOUNTREF_FIELD_NUMBER = 1;
+  private volatile java.lang.Object accountRef_;
   /**
-   * <code>string accountId = 1;</code>
-   * @return The accountId.
+   * <code>string accountRef = 1;</code>
+   * @return The accountRef.
    */
   @java.lang.Override
-  public java.lang.String getAccountId() {
-    java.lang.Object ref = accountId_;
+  public java.lang.String getAccountRef() {
+    java.lang.Object ref = accountRef_;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
       com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
-      accountId_ = s;
+      accountRef_ = s;
       return s;
     }
   }
   /**
-   * <code>string accountId = 1;</code>
-   * @return The bytes for accountId.
+   * <code>string accountRef = 1;</code>
+   * @return The bytes for accountRef.
    */
   @java.lang.Override
   public com.google.protobuf.ByteString
-      getAccountIdBytes() {
-    java.lang.Object ref = accountId_;
+      getAccountRefBytes() {
+    java.lang.Object ref = accountRef_;
     if (ref instanceof java.lang.String) {
       com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
-      accountId_ = b;
+      accountRef_ = b;
       return b;
     } else {
       return (com.google.protobuf.ByteString) ref;
@@ -226,8 +226,8 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
-    if (!getAccountIdBytes().isEmpty()) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 1, accountId_);
+    if (!getAccountRefBytes().isEmpty()) {
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 1, accountRef_);
     }
     if (direction_ != com.exchange.proto.ledger.common.LedgerDirectionPb.LedgerDirection_Unknown.getNumber()) {
       output.writeEnum(2, direction_);
@@ -247,8 +247,8 @@ private static final long serialVersionUID = 0L;
     if (size != -1) return size;
 
     size = 0;
-    if (!getAccountIdBytes().isEmpty()) {
-      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, accountId_);
+    if (!getAccountRefBytes().isEmpty()) {
+      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, accountRef_);
     }
     if (direction_ != com.exchange.proto.ledger.common.LedgerDirectionPb.LedgerDirection_Unknown.getNumber()) {
       size += com.google.protobuf.CodedOutputStream
@@ -276,8 +276,8 @@ private static final long serialVersionUID = 0L;
     }
     com.exchange.proto.ledger.post.LedgerEntryPb other = (com.exchange.proto.ledger.post.LedgerEntryPb) obj;
 
-    if (!getAccountId()
-        .equals(other.getAccountId())) return false;
+    if (!getAccountRef()
+        .equals(other.getAccountRef())) return false;
     if (direction_ != other.direction_) return false;
     if (getAmount()
         != other.getAmount()) return false;
@@ -294,8 +294,8 @@ private static final long serialVersionUID = 0L;
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
-    hash = (37 * hash) + ACCOUNTID_FIELD_NUMBER;
-    hash = (53 * hash) + getAccountId().hashCode();
+    hash = (37 * hash) + ACCOUNTREF_FIELD_NUMBER;
+    hash = (53 * hash) + getAccountRef().hashCode();
     hash = (37 * hash) + DIRECTION_FIELD_NUMBER;
     hash = (53 * hash) + direction_;
     hash = (37 * hash) + AMOUNT_FIELD_NUMBER;
@@ -436,7 +436,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
-      accountId_ = "";
+      accountRef_ = "";
 
       direction_ = 0;
 
@@ -470,7 +470,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.exchange.proto.ledger.post.LedgerEntryPb buildPartial() {
       com.exchange.proto.ledger.post.LedgerEntryPb result = new com.exchange.proto.ledger.post.LedgerEntryPb(this);
-      result.accountId_ = accountId_;
+      result.accountRef_ = accountRef_;
       result.direction_ = direction_;
       result.amount_ = amount_;
       result.assetId_ = assetId_;
@@ -522,8 +522,8 @@ private static final long serialVersionUID = 0L;
 
     public Builder mergeFrom(com.exchange.proto.ledger.post.LedgerEntryPb other) {
       if (other == com.exchange.proto.ledger.post.LedgerEntryPb.getDefaultInstance()) return this;
-      if (!other.getAccountId().isEmpty()) {
-        accountId_ = other.accountId_;
+      if (!other.getAccountRef().isEmpty()) {
+        accountRef_ = other.accountRef_;
         onChanged();
       }
       if (other.direction_ != 0) {
@@ -565,78 +565,78 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private java.lang.Object accountId_ = "";
+    private java.lang.Object accountRef_ = "";
     /**
-     * <code>string accountId = 1;</code>
-     * @return The accountId.
+     * <code>string accountRef = 1;</code>
+     * @return The accountRef.
      */
-    public java.lang.String getAccountId() {
-      java.lang.Object ref = accountId_;
+    public java.lang.String getAccountRef() {
+      java.lang.Object ref = accountRef_;
       if (!(ref instanceof java.lang.String)) {
         com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
-        accountId_ = s;
+        accountRef_ = s;
         return s;
       } else {
         return (java.lang.String) ref;
       }
     }
     /**
-     * <code>string accountId = 1;</code>
-     * @return The bytes for accountId.
+     * <code>string accountRef = 1;</code>
+     * @return The bytes for accountRef.
      */
     public com.google.protobuf.ByteString
-        getAccountIdBytes() {
-      java.lang.Object ref = accountId_;
+        getAccountRefBytes() {
+      java.lang.Object ref = accountRef_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
-        accountId_ = b;
+        accountRef_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
       }
     }
     /**
-     * <code>string accountId = 1;</code>
-     * @param value The accountId to set.
+     * <code>string accountRef = 1;</code>
+     * @param value The accountRef to set.
      * @return This builder for chaining.
      */
-    public Builder setAccountId(
+    public Builder setAccountRef(
         java.lang.String value) {
       if (value == null) {
     throw new NullPointerException();
   }
   
-      accountId_ = value;
+      accountRef_ = value;
       onChanged();
       return this;
     }
     /**
-     * <code>string accountId = 1;</code>
+     * <code>string accountRef = 1;</code>
      * @return This builder for chaining.
      */
-    public Builder clearAccountId() {
+    public Builder clearAccountRef() {
       
-      accountId_ = getDefaultInstance().getAccountId();
+      accountRef_ = getDefaultInstance().getAccountRef();
       onChanged();
       return this;
     }
     /**
-     * <code>string accountId = 1;</code>
-     * @param value The bytes for accountId to set.
+     * <code>string accountRef = 1;</code>
+     * @param value The bytes for accountRef to set.
      * @return This builder for chaining.
      */
-    public Builder setAccountIdBytes(
+    public Builder setAccountRefBytes(
         com.google.protobuf.ByteString value) {
       if (value == null) {
     throw new NullPointerException();
   }
   checkByteStringIsUtf8(value);
       
-      accountId_ = value;
+      accountRef_ = value;
       onChanged();
       return this;
     }

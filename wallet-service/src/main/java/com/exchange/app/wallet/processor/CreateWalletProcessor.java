@@ -48,28 +48,28 @@ public class CreateWalletProcessor {
         ServiceId serviceId = EnumMappers.serviceIdPbMapper.to(req.getServiceId());
         OwnerType ownerType = EnumMappers.ownerTypePbMapper.to(req.getOwnerType());
         Result<Void> result = validateReq(req, serviceId, ownerType);
-        if (!Result.isSuccess(result)) {
+        if (!result.success) {
             return replyError(result);
         }
 
         Wallet walletInDb = walletMapper.selectByReferenceId(serviceId, req.getReferenceId());
-        if (walletInDb != null && WalletHelper.hasInitiated(walletInDb.getWalletStatus())) {
+        if (walletInDb != null && WalletHelper.walletHasInitiated(walletInDb.getWalletStatus())) {
             return replySuccess("wallet has been created");
         } else if (walletInDb == null) {
             Result<Wallet> walletResult = createWalletInDb(req, serviceId, ownerType);
-            if (!Result.isSuccess(walletResult)) {
+            if (!walletResult.success) {
                 return replyError(walletResult);
             }
             walletInDb = walletResult.value;
         }
 
         result = createAccount(walletInDb);
-        if (!Result.isSuccess(result)) {
+        if (!result.success) {
            return replyError(result);
         }
 
         result = enableWallet(walletInDb);
-        if (!Result.isSuccess(result)) {
+        if (!result.success) {
             return replyError(result);
         }
 
@@ -83,7 +83,7 @@ public class CreateWalletProcessor {
         if (ownerType == null || ownerType == OwnerType.UNKNOWN) {
             return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER,"invalid_owner_type: " + req.getOwnerType());
         }
-        return Result.success();
+        return Result.success(null);
     }
 
     private Result<Wallet> createWalletInDb(CreateWalletRequestPb req, ServiceId serviceId, OwnerType ownerType) {
@@ -117,13 +117,13 @@ public class CreateWalletProcessor {
     private Result<Void> enableWallet(Wallet wallet) {
         return DbTransactionHelper.executeWithResult(transactionTemplate, TransactionDefinition.PROPAGATION_REQUIRED, () -> {
             if (walletMapper.updateWalletStatus(wallet.getWalletId(), WalletStatus.INIT, WalletStatus.OPEN) == 0) {
-                return Result.fail(ErrorCode.WALLET_STATUS_MISMATCH, "unable_to_change_status: " + wallet);
+                return Result.fail(ErrorCode.WALLET_UPDATE_FAILED, "unable_to_change_status: " + wallet);
             }
             WalletAccountMapping mapping = WalletAccountMapping.create(wallet.getWalletId(), wallet.getWalletId());
             if (walletAccountMappingManager.insertIgnore(mapping) == 0) {
                 return Result.fail(ErrorCode.WALLET_ACCOUNT_MAPPING_DUPLICATED, "unexpected duplicate: " + mapping);
             }
-            BalanceSnapshot snapshot = BalanceSnapshot.create(IdGenerator.generateBalanceSnapshotId(), wallet.getWalletId(), wallet.getAssetId(), 0L, 0L);
+            BalanceSnapshot snapshot = BalanceSnapshot.create(wallet.getWalletId(), wallet.getServiceId(), wallet.getReferenceId(), wallet.getAssetId(), WalletStatus.OPEN, wallet.getOwnerType(), wallet.getOwnerId(), 0L, 0L);
             if (balanceSnapshotManager.insertIgnore(snapshot) == 0) {
                 return Result.fail(ErrorCode.BALANCE_SNAPSHOT_DUPLICATED, "unexpected duplicate: " + snapshot);
             }

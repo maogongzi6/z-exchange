@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package wallet;
+
+option java_multiple_files = true;
+option java_package = "com.exchange.proto.wallet.common";
+
+enum OwnerTypePb {
+  OwnerTypePb_Unknown = 0;
+  OwnerTypePb_System = 1;
+  OwnerTypePb_User = 2;
+}
+
+enum ServiceIdPb {
+  ServiceIdPb_Unknown = 0;
+  ServiceIdPb_System = 1;
+  ServiceIdPb_User = 2;
+}
+
+enum TransactionTypePb {
+  TransactionTypePb_Unknown = 0;
+  TransactionTypePb_Atomic = 1;
+}
+
+enum TransactionStatusPb {
+  TransactionStatusPb_Unknown = 0;
+  TransactionStatusPb_Pending = 1;
+  TransactionStatusPb_Completed = 2;
+  TransactionStatusPb_Closed = 3;
+}
+
+enum BusinessTypePb {
+  BusinessTypePb_Unknown = 0;
+  BusinessTypePb_Transfer = 1;
+}
+
+enum ActionTypePb {
+  ActionTypePb_Unknown = 0;
+  ActionTypePb_Reserve = 1;
+  ActionTypePb_TransferOut = 2;
+  ActionTypePb_TransferIn = 3;
+}

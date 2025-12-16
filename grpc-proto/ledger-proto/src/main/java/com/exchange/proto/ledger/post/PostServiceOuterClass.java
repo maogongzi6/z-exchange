@@ -45,14 +45,14 @@ public final class PostServiceOuterClass {
       "equestPb\022\023\n\013referenceId\030\001 \001(\t\022\023\n\013descrip" +
       "tion\030\002 \001(\t\022&\n\007entries\030\003 \003(\0132\025.ledger.Led" +
       "gerEntryPb\"8\n\026PostTransactionReplyPb\022\036\n\005" +
-      "error\030\001 \001(\0132\017.common.ErrorPb\"q\n\rLedgerEn" +
-      "tryPb\022\021\n\taccountId\030\001 \001(\t\022,\n\tdirection\030\002 " +
-      "\001(\0162\031.ledger.LedgerDirectionPb\022\016\n\006amount" +
-      "\030\003 \001(\003\022\017\n\007assetId\030\004 \001(\t2d\n\013PostService\022U" +
-      "\n\017postTransaction\022 .ledger.PostTransacti" +
-      "onRequestPb\032\036.ledger.PostTransactionRepl" +
-      "yPb\"\000B\"\n\036com.exchange.proto.ledger.postP" +
-      "\001b\006proto3"
+      "error\030\001 \001(\0132\017.common.ErrorPb\"r\n\rLedgerEn" +
+      "tryPb\022\022\n\naccountRef\030\001 \001(\t\022,\n\tdirection\030\002" +
+      " \001(\0162\031.ledger.LedgerDirectionPb\022\016\n\006amoun" +
+      "t\030\003 \001(\003\022\017\n\007assetId\030\004 \001(\t2d\n\013PostService\022" +
+      "U\n\017postTransaction\022 .ledger.PostTransact" +
+      "ionRequestPb\032\036.ledger.PostTransactionRep" +
+      "lyPb\"\000B\"\n\036com.exchange.proto.ledger.post" +
+      "P\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -77,7 +77,7 @@ public final class PostServiceOuterClass {
     internal_static_ledger_LedgerEntryPb_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_ledger_LedgerEntryPb_descriptor,
-        new java.lang.String[] { "AccountId", "Direction", "Amount", "AssetId", });
+        new java.lang.String[] { "AccountRef", "Direction", "Amount", "AssetId", });
     com.exchange.proto.ledger.common.LedgerCommon.getDescriptor();
     com.exchange.proto.common.error.Error.getDescriptor();
   }

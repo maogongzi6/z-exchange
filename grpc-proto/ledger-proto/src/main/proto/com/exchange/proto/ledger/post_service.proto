@@ -23,7 +23,7 @@ message PostTransactionReplyPb {
 }
 
 message LedgerEntryPb {
-  string accountId = 1;
+  string accountRef = 1;
   LedgerDirectionPb direction = 2;
   int64 amount = 3;
   string assetId = 4;

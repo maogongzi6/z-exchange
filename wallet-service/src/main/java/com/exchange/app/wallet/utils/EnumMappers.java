@@ -1,14 +1,14 @@
 package com.exchange.app.wallet.utils;
 
+import com.exchange.app.wallet.po.enums.transaction.ActionType;
+import com.exchange.app.wallet.po.enums.BusinessType;
 import com.exchange.app.wallet.po.enums.OwnerType;
 import com.exchange.app.wallet.po.enums.ServiceId;
+import com.exchange.app.wallet.po.enums.transaction.TransactionStatus;
 import com.exchange.common.enums.EnumMapper;
-import com.exchange.proto.wallet.common.OwnerTypePb;
-import com.exchange.proto.wallet.common.ServiceIdPb;
+import com.exchange.proto.wallet.common.*;
 
-import java.util.EnumMap;
 import java.util.HashMap;
-import java.util.Map;
 
 public class EnumMappers {
     final static public EnumMapper<OwnerTypePb, OwnerType> ownerTypePbMapper = new EnumMapper<>(
@@ -25,24 +25,29 @@ public class EnumMappers {
                 put(ServiceIdPb.ServiceIdPb_User, ServiceId.USER);
             }}
     );
-//
-//    final static private Map<OwnerTypePb, OwnerType> ownerTypeMapper = new EnumMap<>(OwnerTypePb.class) {{
-//        put(OwnerTypePb.OwnerTypePb_Unknown, OwnerType.UNKNOWN);
-//        put(OwnerTypePb.OwnerTypePb_System, OwnerType.SYSTEM);
-//        put(OwnerTypePb.OwnerTypePb_User, OwnerType.USER);
-//    }};
-//
-//    static public OwnerType ownerTypePbToPo(OwnerTypePb pb) {
-//        return ownerTypeMapper.get(pb);
-//    }
-//
-//    final static private Map<ServiceIdPb, ServiceId> serviceIdMapper = new EnumMap<>(ServiceIdPb.class) {{
-//        put(ServiceIdPb.ServiceIdPb_Unknown, ServiceId.UNKNOWN);
-//        put(ServiceIdPb.ServiceIdPb_System, ServiceId.SYSTEM);
-//        put(ServiceIdPb.ServiceIdPb_User, ServiceId.USER);
-//    }};
-//
-//    static public ServiceId serviceIdPbToPo(ServiceIdPb pb) {
-//        return serviceIdMapper.get(pb);
-//    }
+
+    final static public EnumMapper<BusinessTypePb, BusinessType> businessTypePbMapper = new EnumMapper<>(
+            new HashMap<>() {{
+                put(BusinessTypePb.BusinessTypePb_Unknown, BusinessType.UNKNOWN);
+                put(BusinessTypePb.BusinessTypePb_Transfer, BusinessType.TRANSFER);
+            }}
+    );
+
+    final static public EnumMapper<TransactionStatusPb, TransactionStatus> transactionStatusPbMapper = new EnumMapper<>(
+            new HashMap<>() {{
+                put(TransactionStatusPb.TransactionStatusPb_Unknown, TransactionStatus.UNKNOWN);
+                put(TransactionStatusPb.TransactionStatusPb_Pending, TransactionStatus.PENDING);
+                put(TransactionStatusPb.TransactionStatusPb_Completed, TransactionStatus.COMPLETED);
+                put(TransactionStatusPb.TransactionStatusPb_Closed, TransactionStatus.CLOSED);
+            }}
+    );
+
+    final static public EnumMapper<ActionTypePb, ActionType> actionTypePbMapper = new EnumMapper<>(
+            new HashMap<>() {{
+                put(ActionTypePb.ActionTypePb_Unknown, ActionType.UNKNOWN);
+                put(ActionTypePb.ActionTypePb_Reserve, ActionType.RESERVE);
+                put(ActionTypePb.ActionTypePb_TransferOut, ActionType.TRANSFER_OUT);
+                put(ActionTypePb.ActionTypePb_TransferIn, ActionType.TRANSFER_IN);
+            }}
+    );
 }

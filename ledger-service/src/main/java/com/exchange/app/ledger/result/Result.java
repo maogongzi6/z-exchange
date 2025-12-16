@@ -27,7 +27,7 @@ public class Result<T> extends CommonResult<T, ErrorCode> {
 
     public static <T, R> Result<T> result(T newValue, Result<R> result) {
         result = requireNotNull(result);
-        return new Result<>(result.success, newValue, ErrorCode.success(), result.errorDetail);
+        return new Result<>(result.success, newValue, result.errorCode, result.errorDetail);
     }
 
 }

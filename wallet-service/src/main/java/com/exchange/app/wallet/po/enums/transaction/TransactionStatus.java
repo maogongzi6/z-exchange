@@ -1,11 +1,11 @@
-package com.exchange.app.wallet.po.enums;
+package com.exchange.app.wallet.po.enums.transaction;
 
 import com.baomidou.mybatisplus.annotation.EnumValue;
 
 public enum TransactionStatus {
     UNKNOWN(0),
     PENDING(1),
-    COMPLETE(2),
+    COMPLETED(2),
     CLOSED(3),;
 
     @EnumValue

@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.springframework.dao.DuplicateKeyException;
 
 public class DbBaseManager<T, M extends BaseMapper<T>> {
-    private final M mapper;
+    protected final M mapper;
 
     public DbBaseManager(M mapper) {
         this.mapper = mapper;
