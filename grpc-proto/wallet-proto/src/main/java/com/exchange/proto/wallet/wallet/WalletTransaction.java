@@ -49,11 +49,11 @@ public final class WalletTransaction {
       "micTransactionReplyPb\022\036\n\005error\030\001 \001(\0132\017.c" +
       "ommon.ErrorPb\022\026\n\016transaction_id\030\002 \001(\t\022+\n" +
       "\006status\030\003 \001(\0162\033.wallet.TransactionStatus" +
-      "Pb\"v\n\021TransactionLinePb\022\022\n\nwallet_ref\030\001 " +
-      "\001(\t\022\022\n\nasset_code\030\002 \001(\t\022)\n\013action_type\030\003" +
-      " \001(\0162\024.wallet.ActionTypePb\022\016\n\006amount\030\004 \001" +
-      "(\003B$\n com.exchange.proto.wallet.walletP\001" +
-      "b\006proto3"
+      "Pb\"\223\001\n\021TransactionLinePb\022\022\n\nwallet_ref\030\001" +
+      " \001(\t\022\022\n\nasset_code\030\002 \001(\t\022-\n\016operation_ty" +
+      "pe\030\003 \001(\0162\025.wallet.OperationType\022\016\n\006amoun" +
+      "t\030\004 \001(\003\022\027\n\017reservation_ref\030\005 \001(\tB$\n com." +
+      "exchange.proto.wallet.walletP\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -78,7 +78,7 @@ public final class WalletTransaction {
     internal_static_wallet_TransactionLinePb_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_wallet_TransactionLinePb_descriptor,
-        new java.lang.String[] { "WalletRef", "AssetCode", "ActionType", "Amount", });
+        new java.lang.String[] { "WalletRef", "AssetCode", "OperationType", "Amount", "ReservationRef", });
     com.exchange.proto.wallet.common.WalletEnum.getDescriptor();
     com.exchange.proto.common.error.Error.getDescriptor();
   }

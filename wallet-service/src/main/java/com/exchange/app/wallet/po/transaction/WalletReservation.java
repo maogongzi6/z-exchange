@@ -22,28 +22,32 @@ public class WalletReservation {
     private String referenceId;
     private String walletId;
     private String assetId;
-    private Long reservedAmount;
-    private Long consumedAmount;
-    private Long pendingSettleAmount;
+    private Long total;
+    private Long remaining;
+    private Long consumed;
+    private Long pendingSettle;
+    private Long released;
     private ReservationStatus reservationStatus;
     private ReservationOutcome reservationOutcome;
     private String reserveTxnId;
 
-    private WalletReservation(String reservationId, ServiceId initiator, String referenceId, String walletId, String assetId, Long reservedAmount, Long consumedAmount, Long pendingSettleAmount, ReservationStatus reservationStatus, ReservationOutcome reservationOutcome, String reserveTxnId) {
+    private WalletReservation(String reservationId, ServiceId initiator, String referenceId, String walletId, String assetId, Long total, Long remaining, Long consumed, Long pendingSettle, Long released, ReservationStatus reservationStatus, ReservationOutcome reservationOutcome, String reserveTxnId) {
         this.reservationId = reservationId;
         this.initiator = initiator;
         this.referenceId = referenceId;
         this.walletId = walletId;
         this.assetId = assetId;
-        this.reservedAmount = reservedAmount;
-        this.consumedAmount = consumedAmount;
-        this.pendingSettleAmount = pendingSettleAmount;
+        this.total = total;
+        this.remaining = remaining;
+        this.consumed = consumed;
+        this.pendingSettle = pendingSettle;
+        this.released = released;
         this.reservationStatus = reservationStatus;
         this.reservationOutcome = reservationOutcome;
         this.reserveTxnId = reserveTxnId;
     }
 
-    public static WalletReservation create(String reservationId, ServiceId initiator, String referenceId, String walletId, String assetId, Long reservedAmount, Long consumedAmount, Long pendingSettleAmount, ReservationStatus reservationStatus, ReservationOutcome reservationOutcome, String reserveTxnId) {
-        return new WalletReservation(reservationId, initiator, referenceId, walletId, assetId, reservedAmount, consumedAmount, pendingSettleAmount, reservationStatus, reservationOutcome, reserveTxnId);
+    public static WalletReservation create(String reservationId, ServiceId initiator, String referenceId, String walletId, String assetId, Long total, Long remaining, Long consumed, Long pendingSettle, Long released, ReservationStatus reservationStatus, ReservationOutcome reservationOutcome, String reserveTxnId) {
+        return new WalletReservation(reservationId, initiator, referenceId, walletId, assetId, total, remaining, consumed, pendingSettle, released, reservationStatus, reservationOutcome, reserveTxnId);
     }
 }

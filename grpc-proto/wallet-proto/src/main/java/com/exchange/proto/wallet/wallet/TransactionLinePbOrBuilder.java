@@ -32,19 +32,39 @@ public interface TransactionLinePbOrBuilder extends
       getAssetCodeBytes();
 
   /**
-   * <code>.wallet.ActionTypePb action_type = 3;</code>
-   * @return The enum numeric value on the wire for actionType.
+   * <code>.wallet.OperationType operation_type = 3;</code>
+   * @return The enum numeric value on the wire for operationType.
    */
-  int getActionTypeValue();
+  int getOperationTypeValue();
   /**
-   * <code>.wallet.ActionTypePb action_type = 3;</code>
-   * @return The actionType.
+   * <code>.wallet.OperationType operation_type = 3;</code>
+   * @return The operationType.
    */
-  com.exchange.proto.wallet.common.ActionTypePb getActionType();
+  com.exchange.proto.wallet.common.OperationType getOperationType();
 
   /**
    * <code>int64 amount = 4;</code>
    * @return The amount.
    */
   long getAmount();
+
+  /**
+   * <pre>
+   * used in 2-step transaction, when action_type=consume/release
+   * </pre>
+   *
+   * <code>string reservation_ref = 5;</code>
+   * @return The reservationRef.
+   */
+  java.lang.String getReservationRef();
+  /**
+   * <pre>
+   * used in 2-step transaction, when action_type=consume/release
+   * </pre>
+   *
+   * <code>string reservation_ref = 5;</code>
+   * @return The bytes for reservationRef.
+   */
+  com.google.protobuf.ByteString
+      getReservationRefBytes();
 }

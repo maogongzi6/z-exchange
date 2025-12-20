@@ -15,4 +15,8 @@ public enum WalletStatus {
     WalletStatus(int code) {
         this.code = code;
     }
+
+    public boolean hasInitiated() {
+        return this != WalletStatus.UNKNOWN && this != WalletStatus.INIT;
+    }
 }

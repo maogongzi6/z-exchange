@@ -5,15 +5,20 @@ import com.baomidou.mybatisplus.annotation.EnumValue;
 public enum ActionType {
     UNKNOWN(0),
     RESERVE(1),
-    TRANSFER_OUT(2),
-    TRANSFER_IN(3),
-    RELEASE(4),
-    ADJUST(5),;
+    CONSUME(2),
+    RELEASE(3),
+    TRANSFER_OUT(4),
+    TRANSFER_IN(5),
+    ADJUST(6),;
 
     @EnumValue
     final public int code;
 
     ActionType(int code) {
         this.code = code;
+    }
+
+    public boolean isTransfer() {
+        return this == TRANSFER_OUT || this == TRANSFER_IN;
     }
 }

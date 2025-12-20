@@ -8,7 +8,6 @@ import com.exchange.app.wallet.po.enums.transaction.ReservationStatus;
 import com.exchange.app.wallet.po.transaction.WalletReservation;
 import com.exchange.common.db.DbBaseManager;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.ibatis.annotations.Param;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import java.util.List;
@@ -39,11 +38,11 @@ public class WalletReservationManager extends DbBaseManager<WalletReservation, W
                 .eq(WalletReservation::getId, id)
                 .eq(WalletReservation::getWalletId, reservation.getWalletId())
                 .eq(WalletReservation::getAssetId, reservation.getAssetId())
-                .eq(WalletReservation::getPendingSettleAmount, amount)
+                .eq(WalletReservation::getPendingSettle, amount)
                 .eq(WalletReservation::getReserveTxnId, reservation.getReserveTxnId())
                 .eq(WalletReservation::getReservationStatus, ReservationStatus.ACTIVE)
-                .set(WalletReservation::getPendingSettleAmount, 0)
-                .set(WalletReservation::getConsumedAmount, amount)
+                .set(WalletReservation::getPendingSettle, 0)
+                .set(WalletReservation::getConsumed, amount)
                 .set(WalletReservation::getReservationStatus, ReservationStatus.FINISHED)
                 .set(WalletReservation::getReservationOutcome, ReservationOutcome.CONSUMED);
         return mapper.update(reservation, updateWrapper);

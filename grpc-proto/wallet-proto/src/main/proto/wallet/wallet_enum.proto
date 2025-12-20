@@ -39,4 +39,14 @@ enum ActionTypePb {
   ActionTypePb_Reserve = 1;
   ActionTypePb_TransferOut = 2;
   ActionTypePb_TransferIn = 3;
+  ActionTypePb_Release = 4;
+}
+
+enum OperationType {
+    OperationType_Unknown = 0;
+    OperationType_Reserve = 1;
+    OperationType_Earmark = 2;
+    OperationType_Release = 3;
+    OperationType_Debit = 4;
+    OperationType_Credit = 5;
 }

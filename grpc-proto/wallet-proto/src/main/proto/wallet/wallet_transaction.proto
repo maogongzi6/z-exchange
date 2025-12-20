@@ -25,6 +25,7 @@ message AtomicTransactionReplyPb {
 message TransactionLinePb {
   string wallet_ref = 1;
   string asset_code = 2;
-  ActionTypePb action_type = 3;
+  OperationType operation_type = 3;
   int64 amount = 4;
+  string reservation_ref = 5; // used in 2-step transaction, when action_type=consume/release
 }

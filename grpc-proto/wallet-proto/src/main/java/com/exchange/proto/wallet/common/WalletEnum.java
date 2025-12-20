@@ -36,11 +36,16 @@ public final class WalletEnum {
       "b_Completed\020\002\022\036\n\032TransactionStatusPb_Clo" +
       "sed\020\003*I\n\016BusinessTypePb\022\032\n\026BusinessTypeP" +
       "b_Unknown\020\000\022\033\n\027BusinessTypePb_Transfer\020\001" +
-      "*}\n\014ActionTypePb\022\030\n\024ActionTypePb_Unknown" +
-      "\020\000\022\030\n\024ActionTypePb_Reserve\020\001\022\034\n\030ActionTy" +
-      "pePb_TransferOut\020\002\022\033\n\027ActionTypePb_Trans" +
-      "ferIn\020\003B$\n com.exchange.proto.wallet.com" +
-      "monP\001b\006proto3"
+      "*\227\001\n\014ActionTypePb\022\030\n\024ActionTypePb_Unknow" +
+      "n\020\000\022\030\n\024ActionTypePb_Reserve\020\001\022\034\n\030ActionT" +
+      "ypePb_TransferOut\020\002\022\033\n\027ActionTypePb_Tran" +
+      "sferIn\020\003\022\030\n\024ActionTypePb_Release\020\004*\256\001\n\rO" +
+      "perationType\022\031\n\025OperationType_Unknown\020\000\022" +
+      "\031\n\025OperationType_Reserve\020\001\022\031\n\025OperationT" +
+      "ype_Earmark\020\002\022\031\n\025OperationType_Release\020\003" +
+      "\022\027\n\023OperationType_Debit\020\004\022\030\n\024OperationTy" +
+      "pe_Credit\020\005B$\n com.exchange.proto.wallet" +
+      ".commonP\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

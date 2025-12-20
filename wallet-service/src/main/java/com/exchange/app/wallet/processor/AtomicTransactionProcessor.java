@@ -3,7 +3,6 @@ package com.exchange.app.wallet.processor;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.exchange.app.wallet.client.PostServiceClient;
 import com.exchange.app.wallet.dao.manager.*;
-import com.exchange.app.wallet.dao.mapper.*;
 import com.exchange.app.wallet.exception.InvalidEnumException;
 import com.exchange.app.wallet.po.enums.WalletBucket;
 import com.exchange.app.wallet.po.enums.outbox.OutboxEventType;
@@ -25,6 +24,7 @@ import com.exchange.proto.ledger.common.LedgerDirectionPb;
 import com.exchange.proto.ledger.post.LedgerEntryPb;
 import com.exchange.proto.ledger.post.PostTransactionReplyPb;
 import com.exchange.proto.ledger.post.PostTransactionRequestPb;
+import com.exchange.proto.wallet.common.OperationType;
 import com.exchange.proto.wallet.wallet.AtomicTransactionReplyPb;
 import com.exchange.proto.wallet.wallet.AtomicTransactionRequestPb;
 import com.exchange.proto.wallet.wallet.TransactionLinePb;
@@ -79,7 +79,7 @@ public class AtomicTransactionProcessor {
         }
         Result<WalletTransaction> txnResult = completeExecution(transactionInfo, requestInfo);
         if (!txnResult.success) {
-            return replyError(result);
+            return replyError(txnResult);
         }
         // outbox should not block main flow
         if (walletOutboxManager.finishOutbox(transactionInfo.outbox) != 1) {
@@ -102,16 +102,15 @@ public class AtomicTransactionProcessor {
         Map<String, Long> inAssetToAmount = new HashMap<>(), outAssetToAmount = new HashMap<>();
         List<String> walletRefs = new ArrayList<>();
         for (TransactionLinePb line : request.getLinesList()) {
-            ActionType actionType = EnumMappers.actionTypePbMapper.to(line.getActionType());
             // validate action type and amount
-            if (actionType != ActionType.TRANSFER_OUT && actionType != ActionType.TRANSFER_IN) {
-                return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid action type: " + line);
+            if (line.getOperationType() != OperationType.OperationType_Debit && line.getOperationType() != OperationType.OperationType_Credit) {
+                return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid operation type: " + line);
             }
             if (line.getAmount() <= 0) {
                 return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid amount: " + line);
             }
 
-            Map<String, Long> targetAssetToAmount = actionType == ActionType.TRANSFER_OUT ? outAssetToAmount : inAssetToAmount;
+            Map<String, Long> targetAssetToAmount = line.getOperationType() == OperationType.OperationType_Debit ? outAssetToAmount : inAssetToAmount;
             if (!targetAssetToAmount.containsKey(line.getAssetCode())) {
                 targetAssetToAmount.put(line.getAssetCode(), 0L);
             }
@@ -144,7 +143,7 @@ public class AtomicTransactionProcessor {
         Map<String, BalanceSnapshot> refToSnapshot = walletIdAndRefs.stream().collect(Collectors.toMap(BalanceSnapshot::getWalletReferenceId, snapshot -> snapshot));
         List<RequestInfo.Line> lineInfos = new ArrayList<>();
         for (TransactionLinePb line : request.getLinesList()) {
-            ActionType actionType = EnumMappers.actionTypePbMapper.to(line.getActionType());
+            ActionType actionType = line.getOperationType() == OperationType.OperationType_Credit ? ActionType.TRANSFER_IN : ActionType.TRANSFER_OUT;
             BalanceSnapshot snapshot = refToSnapshot.get(line.getWalletRef());
             if (snapshot == null) {
                 return Result.fail(ErrorCode.BALANCE_SNAPSHOT_NOT_FOUND, "snapshot not found: " + line.getWalletRef());
@@ -168,17 +167,13 @@ public class AtomicTransactionProcessor {
         List<WalletAction> actions = new ArrayList<>();
         List<WalletReservation> reservations = new ArrayList<>();
         for (RequestInfo.Line line : requestInfo.lines) {
-            String reservationId;
             if (line.actionType == ActionType.TRANSFER_OUT) {
                 WalletReservation reservation = createReservation(walletTxn, line);
                 reservations.add(reservation);
-                reservationId = reservation.getReservationId();
-                actions.add(createReserveAction(walletTxn, line, reservationId));
-            } else {
-                // transfer in action do not have reservation id
-                reservationId = "";
+                actions.add(createReserveAction(walletTxn, line, reservation.getReservationId()));
+                actions.add(createConsumeAction(walletTxn, line, reservation.getReservationId()));
             }
-            actions.add(createTransferAction(walletTxn, line, reservationId));
+            actions.add(createTransferAction(walletTxn, line));
         }
 
         WalletOutbox walletOutbox = createOutbox(walletTxn, requestInfo);
@@ -187,16 +182,15 @@ public class AtomicTransactionProcessor {
         if (!result.success) {
             return Result.fail(result);
         }
-        Map<String, WalletAction> walletIdToTransferAction = actions.stream()
-                .filter(action -> action.getActionType() != ActionType.RESERVE)
-                .collect(Collectors.toMap(WalletAction::getWalletId, action -> action));
 
         // fill id into reservations
-        List<WalletReservation> reservationWithId = walletReservationManager.selectByTxnId(walletTxn.getTxnId(), new LambdaQueryWrapper<>() {{eq(WalletReservation::getReservationStatus, TransactionStatus.PENDING);}});
+        List<WalletReservation> reservationWithId = walletReservationManager.selectByTxnId(walletTxn.getTxnId(), new LambdaQueryWrapper<>() {{
+            eq(WalletReservation::getReservationStatus, TransactionStatus.PENDING);
+        }});
         if (reservationWithId.size() != reservations.size()) {
             return Result.fail(ErrorCode.WALLET_RESERVATION_NOT_FOUND, "reservation size mismatch: " + reservations.size() + ", " + reservationWithId.size());
         }
-        return Result.success(new TransactionInfo(walletTxn, walletIdToTransferAction, reservationWithId, walletOutbox));
+        return Result.success(TransactionInfo.create(walletTxn, actions, reservationWithId, walletOutbox));
     }
 
     private Result<Void> createWalletTxnDbTransaction(WalletTransaction walletTxn, List<WalletAction> actions, List<WalletReservation> reservations, WalletOutbox walletOutbox, RequestInfo requestInfo) {
@@ -234,13 +228,15 @@ public class AtomicTransactionProcessor {
     }
 
     private Result<TransactionInfo> getTransactionInfo(AtomicTransactionRequestPb request, RequestInfo requestInfo, WalletTransaction txn) {
-        List<WalletAction> transferActions = walletActionManager.selectByTxnId(txn.getTxnId(), new LambdaQueryWrapper<>() {{
-            in(WalletAction::getActionType, ActionType.TRANSFER_IN, ActionType.TRANSFER_OUT);
+        List<WalletAction> requiredActions = walletActionManager.selectByTxnId(txn.getTxnId(), new LambdaQueryWrapper<>() {{
+            in(WalletAction::getActionType, ActionType.TRANSFER_IN, ActionType.TRANSFER_OUT, ActionType.CONSUME);
         }});
-        List<WalletReservation> reservations = walletReservationManager.selectByTxnId(txn.getTxnId(), new LambdaQueryWrapper<>() {{eq(WalletReservation::getReservationStatus, TransactionStatus.PENDING);}});
+        List<WalletReservation> reservations = walletReservationManager.selectByTxnId(txn.getTxnId(), new LambdaQueryWrapper<>() {{
+            eq(WalletReservation::getReservationStatus, TransactionStatus.PENDING);
+        }});
         WalletOutbox outbox = walletOutboxManager.selectByIdempotencyKey(txn.getReferenceId());
-        Map<String, WalletAction> walletIdToTransferAction = transferActions.stream().collect(Collectors.toMap(WalletAction::getWalletId, action -> action));
-        TransactionInfo transactionInfo = new TransactionInfo(txn, walletIdToTransferAction, reservations, outbox);
+
+        TransactionInfo transactionInfo = TransactionInfo.create(txn, requiredActions, reservations, outbox);
         return Result.result(transactionInfo, validateTransferInfo(transactionInfo, request, requestInfo));
     }
 
@@ -253,9 +249,10 @@ public class AtomicTransactionProcessor {
             log.error("transferActions: {}", transactionInfo.walletIdToTransferAction);
             return Result.fail(ErrorCode.WALLET_ACTION_NOT_FOUND, "unexpected transfer_action not found");
         }
-        if (transactionInfo.reservations.size() != requestInfo.outSnapshotIdAndRefs.size()) {
-            log.error("reservations: {}, out_wallet_ids: {}", transactionInfo, requestInfo.outSnapshotIdAndRefs);
-            return Result.fail(ErrorCode.WALLET_RESERVATION_NOT_FOUND, "unexpected wallet_reservation not found");
+        if (transactionInfo.reservations.size() != transactionInfo.walletIdToConsumeAction.size()) {
+            // severe db state mismatch here
+            log.error("reservation and consume mismatch, reservations: {}, wallet_id_to_consume_action: {}", transactionInfo, transactionInfo.walletIdToConsumeAction);
+            return Result.fail(ErrorCode.DB_STATE_MISMATCH, "unexpected wallet_reservation mismatch");
         }
 
         Map<String, WalletReservation> walletIdToReservation = transactionInfo.reservations.stream().collect(Collectors.toMap(WalletReservation::getWalletId, reservation -> reservation));
@@ -265,18 +262,29 @@ public class AtomicTransactionProcessor {
                 log.error("action not found, walletId: {}", line.walletId);
                 return Result.fail(ErrorCode.WALLET_ACTION_NOT_FOUND, "unexpected action not found");
             }
+            // line should match action info
             if (line.actionType != action.getActionType()
                     || !Objects.equals(line.assetCode, action.getAssetId())
-                    || !Objects.equals(line.amount, action.getAmount())) {
+                    || !Objects.equals(line.amount, action.getAmount())
+                    || !Objects.equals(line.walletId, action.getWalletId())) {
                 log.error("action info not match, line: {}, action: {}", line, action);
-                return Result.fail(ErrorCode.WALLET_ACTION_INVALID, "unexpected action info not match");
+                return Result.fail(ErrorCode.WALLET_ACTION_MISMATCH, "unexpected action info not match");
             }
-            if (line.actionType == ActionType.TRANSFER_OUT) {
-                // each transfer-out should have one reservation
-                WalletReservation reservation = walletIdToReservation.get(line.walletId);
-                if (reservation == null || !Objects.equals(line.amount, reservation.getPendingSettleAmount())) {
-                    log.error("reservation info not match, line: {}, reservation: {}", line, reservation);
-                    return Result.fail(ErrorCode.WALLET_RESERVATION_INVALID, "unexpected reservation info not match");
+            if (action.getActionType() == ActionType.TRANSFER_OUT) {
+                // each transfer-out should have one corresponding consume
+                WalletAction consumeAction = transactionInfo.walletIdToConsumeAction.get(line.walletId);
+                if (!ActionHelper.isConsumeTransferOutPair(consumeAction, action)) {
+                    // severe db state mismatch here
+                    log.error("transfer out and consume action mismatch, line: {}, transfer_out_action: {}, consume_action: {}", line, action, consumeAction);
+                    return Result.fail(ErrorCode.DB_STATE_MISMATCH, "unexpected action mismatch");
+                }
+                WalletReservation reservation = walletIdToReservation.get(consumeAction.getWalletId());
+                if (reservation == null || !Objects.equals(consumeAction.getAmount(), reservation.getPendingSettle())
+                        || !Objects.equals(reservation.getAssetId(), consumeAction.getAssetId())
+                        || !Objects.equals(reservation.getWalletId(), consumeAction.getWalletId())) {
+                    // severe db state mismatch here
+                    log.error("reservation info mismatch, line: {}, consume_action: {}, reservation: {}", line, consumeAction, reservation);
+                    return Result.fail(ErrorCode.DB_STATE_MISMATCH, "unexpected reservation info not match");
                 }
             }
         }
@@ -304,9 +312,11 @@ public class AtomicTransactionProcessor {
                 walletTransaction.getReferenceId() + ":" + line.walletId,
                 line.walletId,
                 line.assetCode,
+                line.amount,
                 0L,
                 0L,
                 line.amount,
+                0L,
                 ReservationStatus.ACTIVE,
                 ReservationOutcome.NOT_DONE,
                 walletTransaction.getTxnId()
@@ -326,7 +336,20 @@ public class AtomicTransactionProcessor {
                 );
     }
 
-    private WalletAction createTransferAction(WalletTransaction walletTxn, RequestInfo.Line line, String reservationId) {
+    private WalletAction createConsumeAction(WalletTransaction walletTxn, RequestInfo.Line line, String reservationId) {
+        return WalletAction.create(
+                IdGenerator.generateWalletActionId(),
+                walletTxn.getTxnId(),
+                line.walletId,
+                line.assetCode,
+                WalletBucket.RESERVED,
+                ActionType.CONSUME,
+                line.amount,
+                reservationId
+        );
+    }
+
+    private WalletAction createTransferAction(WalletTransaction walletTxn, RequestInfo.Line line) {
         WalletBucket bucket = line.actionType == ActionType.TRANSFER_OUT ? WalletBucket.RESERVED : WalletBucket.AVAILABLE;
         return WalletAction.create(
                 IdGenerator.generateWalletActionId(),
@@ -336,7 +359,7 @@ public class AtomicTransactionProcessor {
                 bucket,
                 line.actionType,
                 line.amount,
-                reservationId
+                null
                 );
     }
 
@@ -346,7 +369,7 @@ public class AtomicTransactionProcessor {
                 walletTransaction.getReferenceId(),
                 OutboxStatus.PENDING,
                 //TODO payload
-                "{\"name\":\"a\"}",
+                "{\"TODO\":\"todo\"}",
                 0,
                 OutboxHelper.nextAttempt()
                 );
@@ -388,14 +411,14 @@ public class AtomicTransactionProcessor {
                 .sorted(Comparator.comparing(WalletReservation::getId)).collect(Collectors.toList());
         List<BalanceSnapshot> snapshotIdsInOrder = requestInfo.snapshotIdAndRefs.stream()
                 .sorted(Comparator.comparing(BalanceSnapshot::getId)).collect(Collectors.toList());
-        Map<String, WalletAction> reservationIdToTransferOutAction = transactionInfo.walletIdToTransferAction.values().stream()
-                .filter((action) -> action.getActionType() == ActionType.TRANSFER_OUT).
-                collect(Collectors.toMap(WalletAction::getReservationId, action -> action));
+//        Map<String, WalletAction> reservationIdToTransferOutAction = transactionInfo.walletIdToTransferAction.values().stream()
+//                .filter((action) -> action.getActionType() == ActionType.TRANSFER_OUT).
+//                collect(Collectors.toMap(WalletAction::getReservationId, action -> action));
 
         Result<Void> result = DbTransactionHelper.executeWithResult(transactionTemplate, TransactionDefinition.PROPAGATION_REQUIRED, () -> {
             // consume reservation in id order
             for (WalletReservation reservation : reservationsInIdOrder) {
-                WalletAction action = reservationIdToTransferOutAction.get(reservation.getReservationId());
+                WalletAction action = transactionInfo.walletIdToConsumeAction.get(reservation.getWalletId());
                 if (walletReservationManager.fullyConsumeReservation(reservation.getId(), reservation, action.getAmount()) != 1) {
                     log.error("wallet_reservation_not_found, reservation: {}", reservation);
                     return Result.fail(ErrorCode.WALLET_RESERVATION_UPDATE_FAILED, "reservation_update_failed");
@@ -494,9 +517,19 @@ public class AtomicTransactionProcessor {
     @AllArgsConstructor
     static private class TransactionInfo {
         WalletTransaction walletTxn;
-        //List<WalletAction> transferActions; // just TRANSFER_IN and TRANSFER_OUT, not include HOLD action
-        Map<String, WalletAction> walletIdToTransferAction; // just TRANSFER_IN and TRANSFER_OUT, not include HOLD action
+        Map<String, WalletAction> walletIdToTransferAction; // just TRANSFER_IN and TRANSFER_OUT
+        Map<String, WalletAction> walletIdToConsumeAction;
         List<WalletReservation> reservations;
         WalletOutbox outbox;
+
+        static TransactionInfo create(WalletTransaction txn, List<WalletAction> actions, List<WalletReservation> reservations, WalletOutbox outbox) {
+            Map<String, WalletAction> walletIdToTransferAction = actions.stream()
+                    .filter(action -> action.getActionType().isTransfer())
+                    .collect(Collectors.toMap(WalletAction::getWalletId, action -> action));
+            Map<String, WalletAction> walletIdToConsumeAction = actions.stream()
+                    .filter(action -> action.getActionType() == ActionType.CONSUME)
+                    .collect(Collectors.toMap(WalletAction::getWalletId, action -> action));
+            return new TransactionInfo(txn, walletIdToTransferAction, walletIdToConsumeAction, reservations, outbox);
+        }
     }
 }

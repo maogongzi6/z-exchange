@@ -18,7 +18,8 @@ private static final long serialVersionUID = 0L;
   private TransactionLinePb() {
     walletRef_ = "";
     assetCode_ = "";
-    actionType_ = 0;
+    operationType_ = 0;
+    reservationRef_ = "";
   }
 
   @java.lang.Override
@@ -66,12 +67,18 @@ private static final long serialVersionUID = 0L;
           case 24: {
             int rawValue = input.readEnum();
 
-            actionType_ = rawValue;
+            operationType_ = rawValue;
             break;
           }
           case 32: {
 
             amount_ = input.readInt64();
+            break;
+          }
+          case 42: {
+            java.lang.String s = input.readStringRequireUtf8();
+
+            reservationRef_ = s;
             break;
           }
           default: {
@@ -182,23 +189,23 @@ private static final long serialVersionUID = 0L;
     }
   }
 
-  public static final int ACTION_TYPE_FIELD_NUMBER = 3;
-  private int actionType_;
+  public static final int OPERATION_TYPE_FIELD_NUMBER = 3;
+  private int operationType_;
   /**
-   * <code>.wallet.ActionTypePb action_type = 3;</code>
-   * @return The enum numeric value on the wire for actionType.
+   * <code>.wallet.OperationType operation_type = 3;</code>
+   * @return The enum numeric value on the wire for operationType.
    */
-  @java.lang.Override public int getActionTypeValue() {
-    return actionType_;
+  @java.lang.Override public int getOperationTypeValue() {
+    return operationType_;
   }
   /**
-   * <code>.wallet.ActionTypePb action_type = 3;</code>
-   * @return The actionType.
+   * <code>.wallet.OperationType operation_type = 3;</code>
+   * @return The operationType.
    */
-  @java.lang.Override public com.exchange.proto.wallet.common.ActionTypePb getActionType() {
+  @java.lang.Override public com.exchange.proto.wallet.common.OperationType getOperationType() {
     @SuppressWarnings("deprecation")
-    com.exchange.proto.wallet.common.ActionTypePb result = com.exchange.proto.wallet.common.ActionTypePb.valueOf(actionType_);
-    return result == null ? com.exchange.proto.wallet.common.ActionTypePb.UNRECOGNIZED : result;
+    com.exchange.proto.wallet.common.OperationType result = com.exchange.proto.wallet.common.OperationType.valueOf(operationType_);
+    return result == null ? com.exchange.proto.wallet.common.OperationType.UNRECOGNIZED : result;
   }
 
   public static final int AMOUNT_FIELD_NUMBER = 4;
@@ -210,6 +217,52 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public long getAmount() {
     return amount_;
+  }
+
+  public static final int RESERVATION_REF_FIELD_NUMBER = 5;
+  private volatile java.lang.Object reservationRef_;
+  /**
+   * <pre>
+   * used in 2-step transaction, when action_type=consume/release
+   * </pre>
+   *
+   * <code>string reservation_ref = 5;</code>
+   * @return The reservationRef.
+   */
+  @java.lang.Override
+  public java.lang.String getReservationRef() {
+    java.lang.Object ref = reservationRef_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      reservationRef_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * used in 2-step transaction, when action_type=consume/release
+   * </pre>
+   *
+   * <code>string reservation_ref = 5;</code>
+   * @return The bytes for reservationRef.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getReservationRefBytes() {
+    java.lang.Object ref = reservationRef_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      reservationRef_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
   }
 
   private byte memoizedIsInitialized = -1;
@@ -232,11 +285,14 @@ private static final long serialVersionUID = 0L;
     if (!getAssetCodeBytes().isEmpty()) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 2, assetCode_);
     }
-    if (actionType_ != com.exchange.proto.wallet.common.ActionTypePb.ActionTypePb_Unknown.getNumber()) {
-      output.writeEnum(3, actionType_);
+    if (operationType_ != com.exchange.proto.wallet.common.OperationType.OperationType_Unknown.getNumber()) {
+      output.writeEnum(3, operationType_);
     }
     if (amount_ != 0L) {
       output.writeInt64(4, amount_);
+    }
+    if (!getReservationRefBytes().isEmpty()) {
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 5, reservationRef_);
     }
     unknownFields.writeTo(output);
   }
@@ -253,13 +309,16 @@ private static final long serialVersionUID = 0L;
     if (!getAssetCodeBytes().isEmpty()) {
       size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, assetCode_);
     }
-    if (actionType_ != com.exchange.proto.wallet.common.ActionTypePb.ActionTypePb_Unknown.getNumber()) {
+    if (operationType_ != com.exchange.proto.wallet.common.OperationType.OperationType_Unknown.getNumber()) {
       size += com.google.protobuf.CodedOutputStream
-        .computeEnumSize(3, actionType_);
+        .computeEnumSize(3, operationType_);
     }
     if (amount_ != 0L) {
       size += com.google.protobuf.CodedOutputStream
         .computeInt64Size(4, amount_);
+    }
+    if (!getReservationRefBytes().isEmpty()) {
+      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(5, reservationRef_);
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -280,9 +339,11 @@ private static final long serialVersionUID = 0L;
         .equals(other.getWalletRef())) return false;
     if (!getAssetCode()
         .equals(other.getAssetCode())) return false;
-    if (actionType_ != other.actionType_) return false;
+    if (operationType_ != other.operationType_) return false;
     if (getAmount()
         != other.getAmount()) return false;
+    if (!getReservationRef()
+        .equals(other.getReservationRef())) return false;
     if (!unknownFields.equals(other.unknownFields)) return false;
     return true;
   }
@@ -298,11 +359,13 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getWalletRef().hashCode();
     hash = (37 * hash) + ASSET_CODE_FIELD_NUMBER;
     hash = (53 * hash) + getAssetCode().hashCode();
-    hash = (37 * hash) + ACTION_TYPE_FIELD_NUMBER;
-    hash = (53 * hash) + actionType_;
+    hash = (37 * hash) + OPERATION_TYPE_FIELD_NUMBER;
+    hash = (53 * hash) + operationType_;
     hash = (37 * hash) + AMOUNT_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
         getAmount());
+    hash = (37 * hash) + RESERVATION_REF_FIELD_NUMBER;
+    hash = (53 * hash) + getReservationRef().hashCode();
     hash = (29 * hash) + unknownFields.hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -440,9 +503,11 @@ private static final long serialVersionUID = 0L;
 
       assetCode_ = "";
 
-      actionType_ = 0;
+      operationType_ = 0;
 
       amount_ = 0L;
+
+      reservationRef_ = "";
 
       return this;
     }
@@ -472,8 +537,9 @@ private static final long serialVersionUID = 0L;
       com.exchange.proto.wallet.wallet.TransactionLinePb result = new com.exchange.proto.wallet.wallet.TransactionLinePb(this);
       result.walletRef_ = walletRef_;
       result.assetCode_ = assetCode_;
-      result.actionType_ = actionType_;
+      result.operationType_ = operationType_;
       result.amount_ = amount_;
+      result.reservationRef_ = reservationRef_;
       onBuilt();
       return result;
     }
@@ -530,11 +596,15 @@ private static final long serialVersionUID = 0L;
         assetCode_ = other.assetCode_;
         onChanged();
       }
-      if (other.actionType_ != 0) {
-        setActionTypeValue(other.getActionTypeValue());
+      if (other.operationType_ != 0) {
+        setOperationTypeValue(other.getOperationTypeValue());
       }
       if (other.getAmount() != 0L) {
         setAmount(other.getAmount());
+      }
+      if (!other.getReservationRef().isEmpty()) {
+        reservationRef_ = other.reservationRef_;
+        onChanged();
       }
       this.mergeUnknownFields(other.unknownFields);
       onChanged();
@@ -717,56 +787,56 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private int actionType_ = 0;
+    private int operationType_ = 0;
     /**
-     * <code>.wallet.ActionTypePb action_type = 3;</code>
-     * @return The enum numeric value on the wire for actionType.
+     * <code>.wallet.OperationType operation_type = 3;</code>
+     * @return The enum numeric value on the wire for operationType.
      */
-    @java.lang.Override public int getActionTypeValue() {
-      return actionType_;
+    @java.lang.Override public int getOperationTypeValue() {
+      return operationType_;
     }
     /**
-     * <code>.wallet.ActionTypePb action_type = 3;</code>
-     * @param value The enum numeric value on the wire for actionType to set.
+     * <code>.wallet.OperationType operation_type = 3;</code>
+     * @param value The enum numeric value on the wire for operationType to set.
      * @return This builder for chaining.
      */
-    public Builder setActionTypeValue(int value) {
+    public Builder setOperationTypeValue(int value) {
       
-      actionType_ = value;
+      operationType_ = value;
       onChanged();
       return this;
     }
     /**
-     * <code>.wallet.ActionTypePb action_type = 3;</code>
-     * @return The actionType.
+     * <code>.wallet.OperationType operation_type = 3;</code>
+     * @return The operationType.
      */
     @java.lang.Override
-    public com.exchange.proto.wallet.common.ActionTypePb getActionType() {
+    public com.exchange.proto.wallet.common.OperationType getOperationType() {
       @SuppressWarnings("deprecation")
-      com.exchange.proto.wallet.common.ActionTypePb result = com.exchange.proto.wallet.common.ActionTypePb.valueOf(actionType_);
-      return result == null ? com.exchange.proto.wallet.common.ActionTypePb.UNRECOGNIZED : result;
+      com.exchange.proto.wallet.common.OperationType result = com.exchange.proto.wallet.common.OperationType.valueOf(operationType_);
+      return result == null ? com.exchange.proto.wallet.common.OperationType.UNRECOGNIZED : result;
     }
     /**
-     * <code>.wallet.ActionTypePb action_type = 3;</code>
-     * @param value The actionType to set.
+     * <code>.wallet.OperationType operation_type = 3;</code>
+     * @param value The operationType to set.
      * @return This builder for chaining.
      */
-    public Builder setActionType(com.exchange.proto.wallet.common.ActionTypePb value) {
+    public Builder setOperationType(com.exchange.proto.wallet.common.OperationType value) {
       if (value == null) {
         throw new NullPointerException();
       }
       
-      actionType_ = value.getNumber();
+      operationType_ = value.getNumber();
       onChanged();
       return this;
     }
     /**
-     * <code>.wallet.ActionTypePb action_type = 3;</code>
+     * <code>.wallet.OperationType operation_type = 3;</code>
      * @return This builder for chaining.
      */
-    public Builder clearActionType() {
+    public Builder clearOperationType() {
       
-      actionType_ = 0;
+      operationType_ = 0;
       onChanged();
       return this;
     }
@@ -798,6 +868,102 @@ private static final long serialVersionUID = 0L;
     public Builder clearAmount() {
       
       amount_ = 0L;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object reservationRef_ = "";
+    /**
+     * <pre>
+     * used in 2-step transaction, when action_type=consume/release
+     * </pre>
+     *
+     * <code>string reservation_ref = 5;</code>
+     * @return The reservationRef.
+     */
+    public java.lang.String getReservationRef() {
+      java.lang.Object ref = reservationRef_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        reservationRef_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * used in 2-step transaction, when action_type=consume/release
+     * </pre>
+     *
+     * <code>string reservation_ref = 5;</code>
+     * @return The bytes for reservationRef.
+     */
+    public com.google.protobuf.ByteString
+        getReservationRefBytes() {
+      java.lang.Object ref = reservationRef_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        reservationRef_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * used in 2-step transaction, when action_type=consume/release
+     * </pre>
+     *
+     * <code>string reservation_ref = 5;</code>
+     * @param value The reservationRef to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReservationRef(
+        java.lang.String value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+  
+      reservationRef_ = value;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * used in 2-step transaction, when action_type=consume/release
+     * </pre>
+     *
+     * <code>string reservation_ref = 5;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearReservationRef() {
+      
+      reservationRef_ = getDefaultInstance().getReservationRef();
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * used in 2-step transaction, when action_type=consume/release
+     * </pre>
+     *
+     * <code>string reservation_ref = 5;</code>
+     * @param value The bytes for reservationRef to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReservationRefBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+      
+      reservationRef_ = value;
       onChanged();
       return this;
     }

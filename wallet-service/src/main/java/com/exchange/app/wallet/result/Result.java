@@ -9,7 +9,7 @@ public class Result<T> extends CommonResult<T, ErrorCode> {
     }
 
     public static <T> Result<T> success(T value) {
-        return new Result<>(true, value, ErrorCode.success(), null);
+        return new Result<>(true, value, ErrorCode.success(), "");
     }
 
     public static Result<Void> success() {

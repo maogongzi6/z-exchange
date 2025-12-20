@@ -5,10 +5,7 @@ import com.exchange.app.wallet.dao.mapper.BalanceSnapshotMapper;
 import com.exchange.app.wallet.po.enums.BusinessType;
 import com.exchange.app.wallet.po.wallet.BalanceSnapshot;
 import com.exchange.proto.common.error.ErrorCodePb;
-import com.exchange.proto.wallet.common.ActionTypePb;
-import com.exchange.proto.wallet.common.BusinessTypePb;
-import com.exchange.proto.wallet.common.OwnerTypePb;
-import com.exchange.proto.wallet.common.ServiceIdPb;
+import com.exchange.proto.wallet.common.*;
 import com.exchange.proto.wallet.wallet.*;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Assert;
@@ -43,13 +40,13 @@ public class AtomicTransactionProcessorTest {
     public void testAtomicSuccess() {
         createWallet();
 
-        String ref = "test-atomic-success";
+        String ref = "test-atomic-success-3";
 
         List<TransactionLinePb> lines = new ArrayList<>() {{
-            add(TransactionLinePb.newBuilder().setWalletRef(usdOutWalletRef).setAssetCode(usdAssetId).setActionType(ActionTypePb.ActionTypePb_TransferOut).setAmount(10).build());
-            add(TransactionLinePb.newBuilder().setWalletRef(usdInWalletRef).setAssetCode(usdAssetId).setActionType(ActionTypePb.ActionTypePb_TransferIn).setAmount(10).build());
-            add(TransactionLinePb.newBuilder().setWalletRef(cnyOutWalletRef).setAssetCode(cnyAssetId).setActionType(ActionTypePb.ActionTypePb_TransferOut).setAmount(40).build());
-            add(TransactionLinePb.newBuilder().setWalletRef(cnyInWalletRef).setAssetCode(cnyAssetId).setActionType(ActionTypePb.ActionTypePb_TransferIn).setAmount(40).build());
+            add(TransactionLinePb.newBuilder().setWalletRef(usdOutWalletRef).setAssetCode(usdAssetId).setOperationType(OperationType.OperationType_Debit).setAmount(10).build());
+            add(TransactionLinePb.newBuilder().setWalletRef(usdInWalletRef).setAssetCode(usdAssetId).setOperationType(OperationType.OperationType_Credit).setAmount(10).build());
+            add(TransactionLinePb.newBuilder().setWalletRef(cnyOutWalletRef).setAssetCode(cnyAssetId).setOperationType(OperationType.OperationType_Debit).setAmount(40).build());
+            add(TransactionLinePb.newBuilder().setWalletRef(cnyInWalletRef).setAssetCode(cnyAssetId).setOperationType(OperationType.OperationType_Credit).setAmount(40).build());
 
         }};
         AtomicTransactionRequestPb requestPb = AtomicTransactionRequestPb.newBuilder()
