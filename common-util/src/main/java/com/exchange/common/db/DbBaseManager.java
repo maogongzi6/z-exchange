@@ -1,5 +1,7 @@
 package com.exchange.common.db;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.extension.conditions.update.LambdaUpdateChainWrapper;
@@ -12,12 +14,12 @@ public class DbBaseManager<T, M extends BaseMapper<T>> {
         this.mapper = mapper;
     }
 
-    protected LambdaUpdateChainWrapper<T> updateChainWrapper() {
-        return new LambdaUpdateChainWrapper<>(mapper);
+    protected LambdaUpdateWrapper<T> updateLambdaWrapper() {
+        return new LambdaUpdateWrapper<>();
     }
 
-    protected LambdaQueryChainWrapper<T> queryChainWrapper() {
-        return new LambdaQueryChainWrapper<>(mapper);
+    protected LambdaQueryWrapper<T> queryLambdaWrapper() {
+        return new LambdaQueryWrapper<>();
     }
 
     public int insertIgnore(T record) {

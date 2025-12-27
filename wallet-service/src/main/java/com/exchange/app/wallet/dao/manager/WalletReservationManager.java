@@ -34,12 +34,12 @@ public class WalletReservationManager extends DbBaseManager<WalletReservation, W
     }
 
     public List<WalletReservation> selectByRefs(List<String> refs) {
-        if (refs.size() == 0) {
+        if (refs.isEmpty()) {
             return new ArrayList<>();
         }
-        //LambdaQueryWrapper<WalletReservation> queryWrapper = new LambdaQueryWrapper<>();
-        //return mapper.selectList(queryWrapper.in(WalletReservation::getReserveTxnId, refs));
-        return queryChainWrapper().in(WalletReservation::getReservationId, refs).list();
+
+        var wrapper = queryLambdaWrapper().in(WalletReservation::getReservationId, refs);
+        return mapper.selectList(wrapper);
     }
 
     public List<WalletReservation> selectInIdForUpdate(List<Long> ids) {
@@ -67,14 +67,15 @@ public class WalletReservationManager extends DbBaseManager<WalletReservation, W
     }
 
     // update with optimistic lock of amount and status
-    public boolean updateWithOptimisticLock(WalletReservation now, WalletReservation old) {
-        return updateChainWrapper().eq(WalletReservation::getId, now.getId())
+    public int updateWithOptimisticLock(WalletReservation now, WalletReservation old) {
+        var wrapper = updateLambdaWrapper().eq(WalletReservation::getId, now.getId())
                 .eq(WalletReservation::getReservationStatus, old.getReservationStatus())
                 .eq(WalletReservation::getRemaining, old.getRemaining())
                 .eq(WalletReservation::getPendingSettle, old.getPendingSettle())
                 .eq(WalletReservation::getConsumed, old.getConsumed())
                 .eq(WalletReservation::getReleased, old.getReleased())
-                .setEntity(now).update();
+                .setEntity(now);
+        return mapper.update(wrapper);
     }
 
     public int batchInsert(List<WalletReservation> list) {

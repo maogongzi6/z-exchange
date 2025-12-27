@@ -259,7 +259,7 @@ class TransactionProcessor {
                 }
             }
             if (changed) {
-                if (!walletReservationManager.updateWithOptimisticLock(reservation, copy)) {
+                if (walletReservationManager.updateWithOptimisticLock(reservation, copy) != 1) {
                     return Result.fail(ErrorCode.WALLET_RESERVATION_UPDATE_FAILED, String.format("failed to update reservation, reservation: %s, copy: %s", reservation, copy));
                 }
             }
