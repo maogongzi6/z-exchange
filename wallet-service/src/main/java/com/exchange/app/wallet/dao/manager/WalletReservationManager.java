@@ -10,6 +10,8 @@ import com.exchange.common.db.DbBaseManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -31,8 +33,24 @@ public class WalletReservationManager extends DbBaseManager<WalletReservation, W
         return mapper.selectList(queryWrapper);
     }
 
-    // id is explicit and necessary to force using PK
-    public int fullyConsumeReservation(Long id, WalletReservation reservation, Long amount) {
+    public List<WalletReservation> selectByRefs(List<String> refs) {
+        if (refs.size() == 0) {
+            return new ArrayList<>();
+        }
+        //LambdaQueryWrapper<WalletReservation> queryWrapper = new LambdaQueryWrapper<>();
+        //return mapper.selectList(queryWrapper.in(WalletReservation::getReserveTxnId, refs));
+        return queryChainWrapper().in(WalletReservation::getReservationId, refs).list();
+    }
+
+    public List<WalletReservation> selectInIdForUpdate(List<Long> ids) {
+        LambdaUpdateWrapper<WalletReservation> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper = updateWrapper.in(WalletReservation::getId, ids).last("for update");
+        return mapper.selectList(updateWrapper);
+    }
+
+    // id is explicit and necessary to force using PK in db txn
+    // pending-settle -> consumed
+    public int fullySettleReservation(Long id, WalletReservation reservation, Long amount) {
         LambdaUpdateWrapper<WalletReservation> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper = updateWrapper.eq(WalletReservation::getReserveTxnId, reservation.getReserveTxnId())
                 .eq(WalletReservation::getId, id)
@@ -46,6 +64,17 @@ public class WalletReservationManager extends DbBaseManager<WalletReservation, W
                 .set(WalletReservation::getReservationStatus, ReservationStatus.FINISHED)
                 .set(WalletReservation::getReservationOutcome, ReservationOutcome.CONSUMED);
         return mapper.update(reservation, updateWrapper);
+    }
+
+    // update with optimistic lock of amount and status
+    public boolean updateWithOptimisticLock(WalletReservation now, WalletReservation old) {
+        return updateChainWrapper().eq(WalletReservation::getId, now.getId())
+                .eq(WalletReservation::getReservationStatus, old.getReservationStatus())
+                .eq(WalletReservation::getRemaining, old.getRemaining())
+                .eq(WalletReservation::getPendingSettle, old.getPendingSettle())
+                .eq(WalletReservation::getConsumed, old.getConsumed())
+                .eq(WalletReservation::getReleased, old.getReleased())
+                .setEntity(now).update();
     }
 
     public int batchInsert(List<WalletReservation> list) {

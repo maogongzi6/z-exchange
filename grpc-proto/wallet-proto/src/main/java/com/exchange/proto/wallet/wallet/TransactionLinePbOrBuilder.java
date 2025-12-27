@@ -32,15 +32,15 @@ public interface TransactionLinePbOrBuilder extends
       getAssetCodeBytes();
 
   /**
-   * <code>.wallet.OperationType operation_type = 3;</code>
+   * <code>.wallet.OperationTypePb operation_type = 3;</code>
    * @return The enum numeric value on the wire for operationType.
    */
   int getOperationTypeValue();
   /**
-   * <code>.wallet.OperationType operation_type = 3;</code>
+   * <code>.wallet.OperationTypePb operation_type = 3;</code>
    * @return The operationType.
    */
-  com.exchange.proto.wallet.common.OperationType getOperationType();
+  com.exchange.proto.wallet.common.OperationTypePb getOperationType();
 
   /**
    * <code>int64 amount = 4;</code>

@@ -25,10 +25,35 @@ public final class WalletTransaction {
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_wallet_AtomicTransactionReplyPb_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_wallet_ReserveTransactionRequestPb_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_wallet_ReserveTransactionRequestPb_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_wallet_ReserveTransactionReplyPb_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_wallet_ReserveTransactionReplyPb_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_wallet_TwoStepTransactionRequestPb_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_wallet_TwoStepTransactionRequestPb_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_wallet_TwoStepTransactionReplyPb_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_wallet_TwoStepTransactionReplyPb_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
     internal_static_wallet_TransactionLinePb_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_wallet_TransactionLinePb_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_wallet_ReservationInfoPb_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_wallet_ReservationInfoPb_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -49,11 +74,32 @@ public final class WalletTransaction {
       "micTransactionReplyPb\022\036\n\005error\030\001 \001(\0132\017.c" +
       "ommon.ErrorPb\022\026\n\016transaction_id\030\002 \001(\t\022+\n" +
       "\006status\030\003 \001(\0162\033.wallet.TransactionStatus" +
-      "Pb\"\223\001\n\021TransactionLinePb\022\022\n\nwallet_ref\030\001" +
-      " \001(\t\022\022\n\nasset_code\030\002 \001(\t\022-\n\016operation_ty" +
-      "pe\030\003 \001(\0162\025.wallet.OperationType\022\016\n\006amoun" +
-      "t\030\004 \001(\003\022\027\n\017reservation_ref\030\005 \001(\tB$\n com." +
-      "exchange.proto.wallet.walletP\001b\006proto3"
+      "Pb\"\315\001\n\033ReserveTransactionRequestPb\022\024\n\014re" +
+      "ference_id\030\001 \001(\t\022&\n\tinitiator\030\002 \001(\0162\023.wa" +
+      "llet.ServiceIdPb\022\027\n\017idempotency_key\030\003 \001(" +
+      "\t\022-\n\rbusiness_type\030\004 \001(\0162\026.wallet.Busine" +
+      "ssTypePb\022(\n\005lines\030\005 \003(\0132\031.wallet.Transac" +
+      "tionLinePb\"\252\001\n\031ReserveTransactionReplyPb" +
+      "\022\036\n\005error\030\001 \001(\0132\017.common.ErrorPb\022\026\n\016tran" +
+      "saction_id\030\002 \001(\t\022+\n\006status\030\003 \001(\0162\033.walle" +
+      "t.TransactionStatusPb\022(\n\005infos\030\004 \003(\0132\031.w" +
+      "allet.ReservationInfoPb\"\315\001\n\033TwoStepTrans" +
+      "actionRequestPb\022\024\n\014reference_id\030\001 \001(\t\022&\n" +
+      "\tinitiator\030\002 \001(\0162\023.wallet.ServiceIdPb\022\027\n" +
+      "\017idempotency_key\030\003 \001(\t\022-\n\rbusiness_type\030" +
+      "\004 \001(\0162\026.wallet.BusinessTypePb\022(\n\005lines\030\005" +
+      " \003(\0132\031.wallet.TransactionLinePb\"\200\001\n\031TwoS" +
+      "tepTransactionReplyPb\022\036\n\005error\030\001 \001(\0132\017.c" +
+      "ommon.ErrorPb\022\026\n\016transaction_id\030\002 \001(\t\022+\n" +
+      "\006status\030\003 \001(\0162\033.wallet.TransactionStatus" +
+      "Pb\"\225\001\n\021TransactionLinePb\022\022\n\nwallet_ref\030\001" +
+      " \001(\t\022\022\n\nasset_code\030\002 \001(\t\022/\n\016operation_ty" +
+      "pe\030\003 \001(\0162\027.wallet.OperationTypePb\022\016\n\006amo" +
+      "unt\030\004 \001(\003\022\027\n\017reservation_ref\030\005 \001(\t\"d\n\021Re" +
+      "servationInfoPb\022\027\n\017reservation_ref\030\001 \001(\t" +
+      "\022\022\n\nwallet_ref\030\002 \001(\t\022\022\n\nasset_code\030\003 \001(\t" +
+      "\022\016\n\006amount\030\004 \001(\003B$\n com.exchange.proto.w" +
+      "allet.walletP\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -73,12 +119,42 @@ public final class WalletTransaction {
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_wallet_AtomicTransactionReplyPb_descriptor,
         new java.lang.String[] { "Error", "TransactionId", "Status", });
-    internal_static_wallet_TransactionLinePb_descriptor =
+    internal_static_wallet_ReserveTransactionRequestPb_descriptor =
       getDescriptor().getMessageTypes().get(2);
+    internal_static_wallet_ReserveTransactionRequestPb_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_wallet_ReserveTransactionRequestPb_descriptor,
+        new java.lang.String[] { "ReferenceId", "Initiator", "IdempotencyKey", "BusinessType", "Lines", });
+    internal_static_wallet_ReserveTransactionReplyPb_descriptor =
+      getDescriptor().getMessageTypes().get(3);
+    internal_static_wallet_ReserveTransactionReplyPb_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_wallet_ReserveTransactionReplyPb_descriptor,
+        new java.lang.String[] { "Error", "TransactionId", "Status", "Infos", });
+    internal_static_wallet_TwoStepTransactionRequestPb_descriptor =
+      getDescriptor().getMessageTypes().get(4);
+    internal_static_wallet_TwoStepTransactionRequestPb_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_wallet_TwoStepTransactionRequestPb_descriptor,
+        new java.lang.String[] { "ReferenceId", "Initiator", "IdempotencyKey", "BusinessType", "Lines", });
+    internal_static_wallet_TwoStepTransactionReplyPb_descriptor =
+      getDescriptor().getMessageTypes().get(5);
+    internal_static_wallet_TwoStepTransactionReplyPb_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_wallet_TwoStepTransactionReplyPb_descriptor,
+        new java.lang.String[] { "Error", "TransactionId", "Status", });
+    internal_static_wallet_TransactionLinePb_descriptor =
+      getDescriptor().getMessageTypes().get(6);
     internal_static_wallet_TransactionLinePb_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_wallet_TransactionLinePb_descriptor,
         new java.lang.String[] { "WalletRef", "AssetCode", "OperationType", "Amount", "ReservationRef", });
+    internal_static_wallet_ReservationInfoPb_descriptor =
+      getDescriptor().getMessageTypes().get(7);
+    internal_static_wallet_ReservationInfoPb_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_wallet_ReservationInfoPb_descriptor,
+        new java.lang.String[] { "ReservationRef", "WalletRef", "AssetCode", "Amount", });
     com.exchange.proto.wallet.common.WalletEnum.getDescriptor();
     com.exchange.proto.common.error.Error.getDescriptor();
   }

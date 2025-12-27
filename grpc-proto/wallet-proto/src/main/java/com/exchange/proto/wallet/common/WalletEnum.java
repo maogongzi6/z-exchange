@@ -39,13 +39,13 @@ public final class WalletEnum {
       "*\227\001\n\014ActionTypePb\022\030\n\024ActionTypePb_Unknow" +
       "n\020\000\022\030\n\024ActionTypePb_Reserve\020\001\022\034\n\030ActionT" +
       "ypePb_TransferOut\020\002\022\033\n\027ActionTypePb_Tran" +
-      "sferIn\020\003\022\030\n\024ActionTypePb_Release\020\004*\256\001\n\rO" +
-      "perationType\022\031\n\025OperationType_Unknown\020\000\022" +
-      "\031\n\025OperationType_Reserve\020\001\022\031\n\025OperationT" +
-      "ype_Earmark\020\002\022\031\n\025OperationType_Release\020\003" +
-      "\022\027\n\023OperationType_Debit\020\004\022\030\n\024OperationTy" +
-      "pe_Credit\020\005B$\n com.exchange.proto.wallet" +
-      ".commonP\001b\006proto3"
+      "sferIn\020\003\022\030\n\024ActionTypePb_Release\020\004*\260\001\n\017O" +
+      "perationTypePb\022\031\n\025OperationType_Unknown\020" +
+      "\000\022\031\n\025OperationType_Reserve\020\001\022\031\n\025Operatio" +
+      "nType_Earmark\020\002\022\031\n\025OperationType_Release" +
+      "\020\003\022\027\n\023OperationType_Debit\020\004\022\030\n\024Operation" +
+      "Type_Credit\020\005B$\n com.exchange.proto.wall" +
+      "et.commonP\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

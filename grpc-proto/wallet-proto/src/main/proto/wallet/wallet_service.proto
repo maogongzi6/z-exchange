@@ -11,6 +11,7 @@ import "wallet/wallet_transaction.proto";
 service WalletService {
   rpc createWallet(CreateWalletRequestPb) returns (CreateWalletReplyPb) {}
   rpc atomicTransaction(AtomicTransactionRequestPb) returns (AtomicTransactionReplyPb);
+  rpc reserveTransaction(ReserveTransactionRequestPb) returns (ReserveTransactionReplyPb);
 }
 
 

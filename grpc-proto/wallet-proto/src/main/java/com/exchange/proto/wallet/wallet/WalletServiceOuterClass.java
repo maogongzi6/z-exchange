@@ -25,13 +25,15 @@ public final class WalletServiceOuterClass {
     java.lang.String[] descriptorData = {
       "\n\033wallet/wallet_service.proto\022\006wallet\032\032w" +
       "allet/create_wallet.proto\032\037wallet/wallet" +
-      "_transaction.proto2\270\001\n\rWalletService\022L\n\014" +
+      "_transaction.proto2\226\002\n\rWalletService\022L\n\014" +
       "createWallet\022\035.wallet.CreateWalletReques" +
       "tPb\032\033.wallet.CreateWalletReplyPb\"\000\022Y\n\021at" +
       "omicTransaction\022\".wallet.AtomicTransacti" +
       "onRequestPb\032 .wallet.AtomicTransactionRe" +
-      "plyPbB$\n com.exchange.proto.wallet.walle" +
-      "tP\001b\006proto3"
+      "plyPb\022\\\n\022reserveTransaction\022#.wallet.Res" +
+      "erveTransactionRequestPb\032!.wallet.Reserv" +
+      "eTransactionReplyPbB$\n com.exchange.prot" +
+      "o.wallet.walletP\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

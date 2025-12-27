@@ -1,4 +1,4 @@
-package com.exchange.app.wallet.processor;
+package com.exchange.app.wallet.processor.transaction;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.exchange.app.wallet.client.PostServiceClient;
@@ -24,7 +24,7 @@ import com.exchange.proto.ledger.common.LedgerDirectionPb;
 import com.exchange.proto.ledger.post.LedgerEntryPb;
 import com.exchange.proto.ledger.post.PostTransactionReplyPb;
 import com.exchange.proto.ledger.post.PostTransactionRequestPb;
-import com.exchange.proto.wallet.common.OperationType;
+import com.exchange.proto.wallet.common.OperationTypePb;
 import com.exchange.proto.wallet.wallet.AtomicTransactionReplyPb;
 import com.exchange.proto.wallet.wallet.AtomicTransactionRequestPb;
 import com.exchange.proto.wallet.wallet.TransactionLinePb;
@@ -103,14 +103,14 @@ public class AtomicTransactionProcessor {
         List<String> walletRefs = new ArrayList<>();
         for (TransactionLinePb line : request.getLinesList()) {
             // validate action type and amount
-            if (line.getOperationType() != OperationType.OperationType_Debit && line.getOperationType() != OperationType.OperationType_Credit) {
+            if (line.getOperationType() != OperationTypePb.OperationType_Debit && line.getOperationType() != OperationTypePb.OperationType_Credit) {
                 return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid operation type: " + line);
             }
             if (line.getAmount() <= 0) {
                 return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid amount: " + line);
             }
 
-            Map<String, Long> targetAssetToAmount = line.getOperationType() == OperationType.OperationType_Debit ? outAssetToAmount : inAssetToAmount;
+            Map<String, Long> targetAssetToAmount = line.getOperationType() == OperationTypePb.OperationType_Debit ? outAssetToAmount : inAssetToAmount;
             if (!targetAssetToAmount.containsKey(line.getAssetCode())) {
                 targetAssetToAmount.put(line.getAssetCode(), 0L);
             }
@@ -118,11 +118,12 @@ public class AtomicTransactionProcessor {
 
             // each wallet only have one line
             if (walletRefs.contains(line.getWalletRef())) {
-                return  Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "duplicate wallet ref: " + line);
+                return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "duplicate wallet ref: " + line);
             }
             walletRefs.add(line.getWalletRef());
         }
 
+        // TODO leave this when refactor
         if (inAssetToAmount.isEmpty() || outAssetToAmount.isEmpty()) {
             return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "abnormal lines, transfer_in_size: " + inAssetToAmount.size() + ", transfer_out_size: " + outAssetToAmount.size());
         }
@@ -143,7 +144,7 @@ public class AtomicTransactionProcessor {
         Map<String, BalanceSnapshot> refToSnapshot = walletIdAndRefs.stream().collect(Collectors.toMap(BalanceSnapshot::getWalletReferenceId, snapshot -> snapshot));
         List<RequestInfo.Line> lineInfos = new ArrayList<>();
         for (TransactionLinePb line : request.getLinesList()) {
-            ActionType actionType = line.getOperationType() == OperationType.OperationType_Credit ? ActionType.TRANSFER_IN : ActionType.TRANSFER_OUT;
+            ActionType actionType = line.getOperationType() == OperationTypePb.OperationType_Credit ? ActionType.TRANSFER_IN : ActionType.TRANSFER_OUT;
             BalanceSnapshot snapshot = refToSnapshot.get(line.getWalletRef());
             if (snapshot == null) {
                 return Result.fail(ErrorCode.BALANCE_SNAPSHOT_NOT_FOUND, "snapshot not found: " + line.getWalletRef());
@@ -306,11 +307,12 @@ public class AtomicTransactionProcessor {
 
     // in Atomic txn, reservation asset goes into pending settle after created
     private WalletReservation createReservation(WalletTransaction walletTransaction, RequestInfo.Line line) {
-        return  WalletReservation.create(
+        return WalletReservation.create(
                 IdGenerator.generateReservationId(),
                 walletTransaction.getInitiator(),
                 walletTransaction.getReferenceId() + ":" + line.walletId,
                 line.walletId,
+                line.walletRef,
                 line.assetCode,
                 line.amount,
                 0L,
@@ -419,7 +421,7 @@ public class AtomicTransactionProcessor {
             // consume reservation in id order
             for (WalletReservation reservation : reservationsInIdOrder) {
                 WalletAction action = transactionInfo.walletIdToConsumeAction.get(reservation.getWalletId());
-                if (walletReservationManager.fullyConsumeReservation(reservation.getId(), reservation, action.getAmount()) != 1) {
+                if (walletReservationManager.fullySettleReservation(reservation.getId(), reservation, action.getAmount()) != 1) {
                     log.error("wallet_reservation_not_found, reservation: {}", reservation);
                     return Result.fail(ErrorCode.WALLET_RESERVATION_UPDATE_FAILED, "reservation_update_failed");
                 }

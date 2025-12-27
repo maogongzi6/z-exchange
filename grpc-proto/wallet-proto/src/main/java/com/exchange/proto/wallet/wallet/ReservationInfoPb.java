@@ -4,29 +4,28 @@
 package com.exchange.proto.wallet.wallet;
 
 /**
- * Protobuf type {@code wallet.TransactionLinePb}
+ * Protobuf type {@code wallet.ReservationInfoPb}
  */
-public final class TransactionLinePb extends
+public final class ReservationInfoPb extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:wallet.TransactionLinePb)
-    TransactionLinePbOrBuilder {
+    // @@protoc_insertion_point(message_implements:wallet.ReservationInfoPb)
+    ReservationInfoPbOrBuilder {
 private static final long serialVersionUID = 0L;
-  // Use TransactionLinePb.newBuilder() to construct.
-  private TransactionLinePb(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+  // Use ReservationInfoPb.newBuilder() to construct.
+  private ReservationInfoPb(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
     super(builder);
   }
-  private TransactionLinePb() {
+  private ReservationInfoPb() {
+    reservationRef_ = "";
     walletRef_ = "";
     assetCode_ = "";
-    operationType_ = 0;
-    reservationRef_ = "";
   }
 
   @java.lang.Override
   @SuppressWarnings({"unused"})
   protected java.lang.Object newInstance(
       UnusedPrivateParameter unused) {
-    return new TransactionLinePb();
+    return new ReservationInfoPb();
   }
 
   @java.lang.Override
@@ -34,7 +33,7 @@ private static final long serialVersionUID = 0L;
   getUnknownFields() {
     return this.unknownFields;
   }
-  private TransactionLinePb(
+  private ReservationInfoPb(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -55,30 +54,24 @@ private static final long serialVersionUID = 0L;
           case 10: {
             java.lang.String s = input.readStringRequireUtf8();
 
-            walletRef_ = s;
+            reservationRef_ = s;
             break;
           }
           case 18: {
             java.lang.String s = input.readStringRequireUtf8();
 
-            assetCode_ = s;
+            walletRef_ = s;
             break;
           }
-          case 24: {
-            int rawValue = input.readEnum();
+          case 26: {
+            java.lang.String s = input.readStringRequireUtf8();
 
-            operationType_ = rawValue;
+            assetCode_ = s;
             break;
           }
           case 32: {
 
             amount_ = input.readInt64();
-            break;
-          }
-          case 42: {
-            java.lang.String s = input.readStringRequireUtf8();
-
-            reservationRef_ = s;
             break;
           }
           default: {
@@ -102,131 +95,21 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.exchange.proto.wallet.wallet.WalletTransaction.internal_static_wallet_TransactionLinePb_descriptor;
+    return com.exchange.proto.wallet.wallet.WalletTransaction.internal_static_wallet_ReservationInfoPb_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.exchange.proto.wallet.wallet.WalletTransaction.internal_static_wallet_TransactionLinePb_fieldAccessorTable
+    return com.exchange.proto.wallet.wallet.WalletTransaction.internal_static_wallet_ReservationInfoPb_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
-            com.exchange.proto.wallet.wallet.TransactionLinePb.class, com.exchange.proto.wallet.wallet.TransactionLinePb.Builder.class);
+            com.exchange.proto.wallet.wallet.ReservationInfoPb.class, com.exchange.proto.wallet.wallet.ReservationInfoPb.Builder.class);
   }
 
-  public static final int WALLET_REF_FIELD_NUMBER = 1;
-  private volatile java.lang.Object walletRef_;
-  /**
-   * <code>string wallet_ref = 1;</code>
-   * @return The walletRef.
-   */
-  @java.lang.Override
-  public java.lang.String getWalletRef() {
-    java.lang.Object ref = walletRef_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs = 
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      walletRef_ = s;
-      return s;
-    }
-  }
-  /**
-   * <code>string wallet_ref = 1;</code>
-   * @return The bytes for walletRef.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getWalletRefBytes() {
-    java.lang.Object ref = walletRef_;
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      walletRef_ = b;
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
-    }
-  }
-
-  public static final int ASSET_CODE_FIELD_NUMBER = 2;
-  private volatile java.lang.Object assetCode_;
-  /**
-   * <code>string asset_code = 2;</code>
-   * @return The assetCode.
-   */
-  @java.lang.Override
-  public java.lang.String getAssetCode() {
-    java.lang.Object ref = assetCode_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs = 
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      assetCode_ = s;
-      return s;
-    }
-  }
-  /**
-   * <code>string asset_code = 2;</code>
-   * @return The bytes for assetCode.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getAssetCodeBytes() {
-    java.lang.Object ref = assetCode_;
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      assetCode_ = b;
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
-    }
-  }
-
-  public static final int OPERATION_TYPE_FIELD_NUMBER = 3;
-  private int operationType_;
-  /**
-   * <code>.wallet.OperationTypePb operation_type = 3;</code>
-   * @return The enum numeric value on the wire for operationType.
-   */
-  @java.lang.Override public int getOperationTypeValue() {
-    return operationType_;
-  }
-  /**
-   * <code>.wallet.OperationTypePb operation_type = 3;</code>
-   * @return The operationType.
-   */
-  @java.lang.Override public com.exchange.proto.wallet.common.OperationTypePb getOperationType() {
-    @SuppressWarnings("deprecation")
-    com.exchange.proto.wallet.common.OperationTypePb result = com.exchange.proto.wallet.common.OperationTypePb.valueOf(operationType_);
-    return result == null ? com.exchange.proto.wallet.common.OperationTypePb.UNRECOGNIZED : result;
-  }
-
-  public static final int AMOUNT_FIELD_NUMBER = 4;
-  private long amount_;
-  /**
-   * <code>int64 amount = 4;</code>
-   * @return The amount.
-   */
-  @java.lang.Override
-  public long getAmount() {
-    return amount_;
-  }
-
-  public static final int RESERVATION_REF_FIELD_NUMBER = 5;
+  public static final int RESERVATION_REF_FIELD_NUMBER = 1;
   private volatile java.lang.Object reservationRef_;
   /**
-   * <pre>
-   * used in 2-step transaction, when action_type=consume/release
-   * </pre>
-   *
-   * <code>string reservation_ref = 5;</code>
+   * <code>string reservation_ref = 1;</code>
    * @return The reservationRef.
    */
   @java.lang.Override
@@ -243,11 +126,7 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <pre>
-   * used in 2-step transaction, when action_type=consume/release
-   * </pre>
-   *
-   * <code>string reservation_ref = 5;</code>
+   * <code>string reservation_ref = 1;</code>
    * @return The bytes for reservationRef.
    */
   @java.lang.Override
@@ -265,6 +144,93 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int WALLET_REF_FIELD_NUMBER = 2;
+  private volatile java.lang.Object walletRef_;
+  /**
+   * <code>string wallet_ref = 2;</code>
+   * @return The walletRef.
+   */
+  @java.lang.Override
+  public java.lang.String getWalletRef() {
+    java.lang.Object ref = walletRef_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      walletRef_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string wallet_ref = 2;</code>
+   * @return The bytes for walletRef.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getWalletRefBytes() {
+    java.lang.Object ref = walletRef_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      walletRef_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int ASSET_CODE_FIELD_NUMBER = 3;
+  private volatile java.lang.Object assetCode_;
+  /**
+   * <code>string asset_code = 3;</code>
+   * @return The assetCode.
+   */
+  @java.lang.Override
+  public java.lang.String getAssetCode() {
+    java.lang.Object ref = assetCode_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      assetCode_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string asset_code = 3;</code>
+   * @return The bytes for assetCode.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getAssetCodeBytes() {
+    java.lang.Object ref = assetCode_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      assetCode_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int AMOUNT_FIELD_NUMBER = 4;
+  private long amount_;
+  /**
+   * <code>int64 amount = 4;</code>
+   * @return The amount.
+   */
+  @java.lang.Override
+  public long getAmount() {
+    return amount_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -279,20 +245,17 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
+    if (!getReservationRefBytes().isEmpty()) {
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 1, reservationRef_);
+    }
     if (!getWalletRefBytes().isEmpty()) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 1, walletRef_);
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 2, walletRef_);
     }
     if (!getAssetCodeBytes().isEmpty()) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 2, assetCode_);
-    }
-    if (operationType_ != com.exchange.proto.wallet.common.OperationTypePb.OperationType_Unknown.getNumber()) {
-      output.writeEnum(3, operationType_);
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 3, assetCode_);
     }
     if (amount_ != 0L) {
       output.writeInt64(4, amount_);
-    }
-    if (!getReservationRefBytes().isEmpty()) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 5, reservationRef_);
     }
     unknownFields.writeTo(output);
   }
@@ -303,22 +266,18 @@ private static final long serialVersionUID = 0L;
     if (size != -1) return size;
 
     size = 0;
+    if (!getReservationRefBytes().isEmpty()) {
+      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, reservationRef_);
+    }
     if (!getWalletRefBytes().isEmpty()) {
-      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, walletRef_);
+      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, walletRef_);
     }
     if (!getAssetCodeBytes().isEmpty()) {
-      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, assetCode_);
-    }
-    if (operationType_ != com.exchange.proto.wallet.common.OperationTypePb.OperationType_Unknown.getNumber()) {
-      size += com.google.protobuf.CodedOutputStream
-        .computeEnumSize(3, operationType_);
+      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, assetCode_);
     }
     if (amount_ != 0L) {
       size += com.google.protobuf.CodedOutputStream
         .computeInt64Size(4, amount_);
-    }
-    if (!getReservationRefBytes().isEmpty()) {
-      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(5, reservationRef_);
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -330,20 +289,19 @@ private static final long serialVersionUID = 0L;
     if (obj == this) {
      return true;
     }
-    if (!(obj instanceof com.exchange.proto.wallet.wallet.TransactionLinePb)) {
+    if (!(obj instanceof com.exchange.proto.wallet.wallet.ReservationInfoPb)) {
       return super.equals(obj);
     }
-    com.exchange.proto.wallet.wallet.TransactionLinePb other = (com.exchange.proto.wallet.wallet.TransactionLinePb) obj;
+    com.exchange.proto.wallet.wallet.ReservationInfoPb other = (com.exchange.proto.wallet.wallet.ReservationInfoPb) obj;
 
+    if (!getReservationRef()
+        .equals(other.getReservationRef())) return false;
     if (!getWalletRef()
         .equals(other.getWalletRef())) return false;
     if (!getAssetCode()
         .equals(other.getAssetCode())) return false;
-    if (operationType_ != other.operationType_) return false;
     if (getAmount()
         != other.getAmount()) return false;
-    if (!getReservationRef()
-        .equals(other.getReservationRef())) return false;
     if (!unknownFields.equals(other.unknownFields)) return false;
     return true;
   }
@@ -355,85 +313,83 @@ private static final long serialVersionUID = 0L;
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
+    hash = (37 * hash) + RESERVATION_REF_FIELD_NUMBER;
+    hash = (53 * hash) + getReservationRef().hashCode();
     hash = (37 * hash) + WALLET_REF_FIELD_NUMBER;
     hash = (53 * hash) + getWalletRef().hashCode();
     hash = (37 * hash) + ASSET_CODE_FIELD_NUMBER;
     hash = (53 * hash) + getAssetCode().hashCode();
-    hash = (37 * hash) + OPERATION_TYPE_FIELD_NUMBER;
-    hash = (53 * hash) + operationType_;
     hash = (37 * hash) + AMOUNT_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
         getAmount());
-    hash = (37 * hash) + RESERVATION_REF_FIELD_NUMBER;
-    hash = (53 * hash) + getReservationRef().hashCode();
     hash = (29 * hash) + unknownFields.hashCode();
     memoizedHashCode = hash;
     return hash;
   }
 
-  public static com.exchange.proto.wallet.wallet.TransactionLinePb parseFrom(
+  public static com.exchange.proto.wallet.wallet.ReservationInfoPb parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static com.exchange.proto.wallet.wallet.TransactionLinePb parseFrom(
+  public static com.exchange.proto.wallet.wallet.ReservationInfoPb parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static com.exchange.proto.wallet.wallet.TransactionLinePb parseFrom(
+  public static com.exchange.proto.wallet.wallet.ReservationInfoPb parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static com.exchange.proto.wallet.wallet.TransactionLinePb parseFrom(
+  public static com.exchange.proto.wallet.wallet.ReservationInfoPb parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static com.exchange.proto.wallet.wallet.TransactionLinePb parseFrom(byte[] data)
+  public static com.exchange.proto.wallet.wallet.ReservationInfoPb parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static com.exchange.proto.wallet.wallet.TransactionLinePb parseFrom(
+  public static com.exchange.proto.wallet.wallet.ReservationInfoPb parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static com.exchange.proto.wallet.wallet.TransactionLinePb parseFrom(java.io.InputStream input)
+  public static com.exchange.proto.wallet.wallet.ReservationInfoPb parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseWithIOException(PARSER, input);
   }
-  public static com.exchange.proto.wallet.wallet.TransactionLinePb parseFrom(
+  public static com.exchange.proto.wallet.wallet.ReservationInfoPb parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
-  public static com.exchange.proto.wallet.wallet.TransactionLinePb parseDelimitedFrom(java.io.InputStream input)
+  public static com.exchange.proto.wallet.wallet.ReservationInfoPb parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseDelimitedWithIOException(PARSER, input);
   }
-  public static com.exchange.proto.wallet.wallet.TransactionLinePb parseDelimitedFrom(
+  public static com.exchange.proto.wallet.wallet.ReservationInfoPb parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
   }
-  public static com.exchange.proto.wallet.wallet.TransactionLinePb parseFrom(
+  public static com.exchange.proto.wallet.wallet.ReservationInfoPb parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseWithIOException(PARSER, input);
   }
-  public static com.exchange.proto.wallet.wallet.TransactionLinePb parseFrom(
+  public static com.exchange.proto.wallet.wallet.ReservationInfoPb parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -446,7 +402,7 @@ private static final long serialVersionUID = 0L;
   public static Builder newBuilder() {
     return DEFAULT_INSTANCE.toBuilder();
   }
-  public static Builder newBuilder(com.exchange.proto.wallet.wallet.TransactionLinePb prototype) {
+  public static Builder newBuilder(com.exchange.proto.wallet.wallet.ReservationInfoPb prototype) {
     return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
   }
   @java.lang.Override
@@ -462,26 +418,26 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code wallet.TransactionLinePb}
+   * Protobuf type {@code wallet.ReservationInfoPb}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:wallet.TransactionLinePb)
-      com.exchange.proto.wallet.wallet.TransactionLinePbOrBuilder {
+      // @@protoc_insertion_point(builder_implements:wallet.ReservationInfoPb)
+      com.exchange.proto.wallet.wallet.ReservationInfoPbOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.exchange.proto.wallet.wallet.WalletTransaction.internal_static_wallet_TransactionLinePb_descriptor;
+      return com.exchange.proto.wallet.wallet.WalletTransaction.internal_static_wallet_ReservationInfoPb_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.exchange.proto.wallet.wallet.WalletTransaction.internal_static_wallet_TransactionLinePb_fieldAccessorTable
+      return com.exchange.proto.wallet.wallet.WalletTransaction.internal_static_wallet_ReservationInfoPb_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              com.exchange.proto.wallet.wallet.TransactionLinePb.class, com.exchange.proto.wallet.wallet.TransactionLinePb.Builder.class);
+              com.exchange.proto.wallet.wallet.ReservationInfoPb.class, com.exchange.proto.wallet.wallet.ReservationInfoPb.Builder.class);
     }
 
-    // Construct using com.exchange.proto.wallet.wallet.TransactionLinePb.newBuilder()
+    // Construct using com.exchange.proto.wallet.wallet.ReservationInfoPb.newBuilder()
     private Builder() {
       maybeForceBuilderInitialization();
     }
@@ -499,15 +455,13 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
+      reservationRef_ = "";
+
       walletRef_ = "";
 
       assetCode_ = "";
 
-      operationType_ = 0;
-
       amount_ = 0L;
-
-      reservationRef_ = "";
 
       return this;
     }
@@ -515,17 +469,17 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.exchange.proto.wallet.wallet.WalletTransaction.internal_static_wallet_TransactionLinePb_descriptor;
+      return com.exchange.proto.wallet.wallet.WalletTransaction.internal_static_wallet_ReservationInfoPb_descriptor;
     }
 
     @java.lang.Override
-    public com.exchange.proto.wallet.wallet.TransactionLinePb getDefaultInstanceForType() {
-      return com.exchange.proto.wallet.wallet.TransactionLinePb.getDefaultInstance();
+    public com.exchange.proto.wallet.wallet.ReservationInfoPb getDefaultInstanceForType() {
+      return com.exchange.proto.wallet.wallet.ReservationInfoPb.getDefaultInstance();
     }
 
     @java.lang.Override
-    public com.exchange.proto.wallet.wallet.TransactionLinePb build() {
-      com.exchange.proto.wallet.wallet.TransactionLinePb result = buildPartial();
+    public com.exchange.proto.wallet.wallet.ReservationInfoPb build() {
+      com.exchange.proto.wallet.wallet.ReservationInfoPb result = buildPartial();
       if (!result.isInitialized()) {
         throw newUninitializedMessageException(result);
       }
@@ -533,13 +487,12 @@ private static final long serialVersionUID = 0L;
     }
 
     @java.lang.Override
-    public com.exchange.proto.wallet.wallet.TransactionLinePb buildPartial() {
-      com.exchange.proto.wallet.wallet.TransactionLinePb result = new com.exchange.proto.wallet.wallet.TransactionLinePb(this);
+    public com.exchange.proto.wallet.wallet.ReservationInfoPb buildPartial() {
+      com.exchange.proto.wallet.wallet.ReservationInfoPb result = new com.exchange.proto.wallet.wallet.ReservationInfoPb(this);
+      result.reservationRef_ = reservationRef_;
       result.walletRef_ = walletRef_;
       result.assetCode_ = assetCode_;
-      result.operationType_ = operationType_;
       result.amount_ = amount_;
-      result.reservationRef_ = reservationRef_;
       onBuilt();
       return result;
     }
@@ -578,16 +531,20 @@ private static final long serialVersionUID = 0L;
     }
     @java.lang.Override
     public Builder mergeFrom(com.google.protobuf.Message other) {
-      if (other instanceof com.exchange.proto.wallet.wallet.TransactionLinePb) {
-        return mergeFrom((com.exchange.proto.wallet.wallet.TransactionLinePb)other);
+      if (other instanceof com.exchange.proto.wallet.wallet.ReservationInfoPb) {
+        return mergeFrom((com.exchange.proto.wallet.wallet.ReservationInfoPb)other);
       } else {
         super.mergeFrom(other);
         return this;
       }
     }
 
-    public Builder mergeFrom(com.exchange.proto.wallet.wallet.TransactionLinePb other) {
-      if (other == com.exchange.proto.wallet.wallet.TransactionLinePb.getDefaultInstance()) return this;
+    public Builder mergeFrom(com.exchange.proto.wallet.wallet.ReservationInfoPb other) {
+      if (other == com.exchange.proto.wallet.wallet.ReservationInfoPb.getDefaultInstance()) return this;
+      if (!other.getReservationRef().isEmpty()) {
+        reservationRef_ = other.reservationRef_;
+        onChanged();
+      }
       if (!other.getWalletRef().isEmpty()) {
         walletRef_ = other.walletRef_;
         onChanged();
@@ -596,15 +553,8 @@ private static final long serialVersionUID = 0L;
         assetCode_ = other.assetCode_;
         onChanged();
       }
-      if (other.operationType_ != 0) {
-        setOperationTypeValue(other.getOperationTypeValue());
-      }
       if (other.getAmount() != 0L) {
         setAmount(other.getAmount());
-      }
-      if (!other.getReservationRef().isEmpty()) {
-        reservationRef_ = other.reservationRef_;
-        onChanged();
       }
       this.mergeUnknownFields(other.unknownFields);
       onChanged();
@@ -621,11 +571,11 @@ private static final long serialVersionUID = 0L;
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      com.exchange.proto.wallet.wallet.TransactionLinePb parsedMessage = null;
+      com.exchange.proto.wallet.wallet.ReservationInfoPb parsedMessage = null;
       try {
         parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        parsedMessage = (com.exchange.proto.wallet.wallet.TransactionLinePb) e.getUnfinishedMessage();
+        parsedMessage = (com.exchange.proto.wallet.wallet.ReservationInfoPb) e.getUnfinishedMessage();
         throw e.unwrapIOException();
       } finally {
         if (parsedMessage != null) {
@@ -635,9 +585,85 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
+    private java.lang.Object reservationRef_ = "";
+    /**
+     * <code>string reservation_ref = 1;</code>
+     * @return The reservationRef.
+     */
+    public java.lang.String getReservationRef() {
+      java.lang.Object ref = reservationRef_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        reservationRef_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string reservation_ref = 1;</code>
+     * @return The bytes for reservationRef.
+     */
+    public com.google.protobuf.ByteString
+        getReservationRefBytes() {
+      java.lang.Object ref = reservationRef_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        reservationRef_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string reservation_ref = 1;</code>
+     * @param value The reservationRef to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReservationRef(
+        java.lang.String value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+  
+      reservationRef_ = value;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string reservation_ref = 1;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearReservationRef() {
+      
+      reservationRef_ = getDefaultInstance().getReservationRef();
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string reservation_ref = 1;</code>
+     * @param value The bytes for reservationRef to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReservationRefBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+      
+      reservationRef_ = value;
+      onChanged();
+      return this;
+    }
+
     private java.lang.Object walletRef_ = "";
     /**
-     * <code>string wallet_ref = 1;</code>
+     * <code>string wallet_ref = 2;</code>
      * @return The walletRef.
      */
     public java.lang.String getWalletRef() {
@@ -653,7 +679,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>string wallet_ref = 1;</code>
+     * <code>string wallet_ref = 2;</code>
      * @return The bytes for walletRef.
      */
     public com.google.protobuf.ByteString
@@ -670,7 +696,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>string wallet_ref = 1;</code>
+     * <code>string wallet_ref = 2;</code>
      * @param value The walletRef to set.
      * @return This builder for chaining.
      */
@@ -685,7 +711,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>string wallet_ref = 1;</code>
+     * <code>string wallet_ref = 2;</code>
      * @return This builder for chaining.
      */
     public Builder clearWalletRef() {
@@ -695,7 +721,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>string wallet_ref = 1;</code>
+     * <code>string wallet_ref = 2;</code>
      * @param value The bytes for walletRef to set.
      * @return This builder for chaining.
      */
@@ -713,7 +739,7 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object assetCode_ = "";
     /**
-     * <code>string asset_code = 2;</code>
+     * <code>string asset_code = 3;</code>
      * @return The assetCode.
      */
     public java.lang.String getAssetCode() {
@@ -729,7 +755,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>string asset_code = 2;</code>
+     * <code>string asset_code = 3;</code>
      * @return The bytes for assetCode.
      */
     public com.google.protobuf.ByteString
@@ -746,7 +772,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>string asset_code = 2;</code>
+     * <code>string asset_code = 3;</code>
      * @param value The assetCode to set.
      * @return This builder for chaining.
      */
@@ -761,7 +787,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>string asset_code = 2;</code>
+     * <code>string asset_code = 3;</code>
      * @return This builder for chaining.
      */
     public Builder clearAssetCode() {
@@ -771,7 +797,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>string asset_code = 2;</code>
+     * <code>string asset_code = 3;</code>
      * @param value The bytes for assetCode to set.
      * @return This builder for chaining.
      */
@@ -783,60 +809,6 @@ private static final long serialVersionUID = 0L;
   checkByteStringIsUtf8(value);
       
       assetCode_ = value;
-      onChanged();
-      return this;
-    }
-
-    private int operationType_ = 0;
-    /**
-     * <code>.wallet.OperationTypePb operation_type = 3;</code>
-     * @return The enum numeric value on the wire for operationType.
-     */
-    @java.lang.Override public int getOperationTypeValue() {
-      return operationType_;
-    }
-    /**
-     * <code>.wallet.OperationTypePb operation_type = 3;</code>
-     * @param value The enum numeric value on the wire for operationType to set.
-     * @return This builder for chaining.
-     */
-    public Builder setOperationTypeValue(int value) {
-      
-      operationType_ = value;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>.wallet.OperationTypePb operation_type = 3;</code>
-     * @return The operationType.
-     */
-    @java.lang.Override
-    public com.exchange.proto.wallet.common.OperationTypePb getOperationType() {
-      @SuppressWarnings("deprecation")
-      com.exchange.proto.wallet.common.OperationTypePb result = com.exchange.proto.wallet.common.OperationTypePb.valueOf(operationType_);
-      return result == null ? com.exchange.proto.wallet.common.OperationTypePb.UNRECOGNIZED : result;
-    }
-    /**
-     * <code>.wallet.OperationTypePb operation_type = 3;</code>
-     * @param value The operationType to set.
-     * @return This builder for chaining.
-     */
-    public Builder setOperationType(com.exchange.proto.wallet.common.OperationTypePb value) {
-      if (value == null) {
-        throw new NullPointerException();
-      }
-      
-      operationType_ = value.getNumber();
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>.wallet.OperationTypePb operation_type = 3;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearOperationType() {
-      
-      operationType_ = 0;
       onChanged();
       return this;
     }
@@ -871,102 +843,6 @@ private static final long serialVersionUID = 0L;
       onChanged();
       return this;
     }
-
-    private java.lang.Object reservationRef_ = "";
-    /**
-     * <pre>
-     * used in 2-step transaction, when action_type=consume/release
-     * </pre>
-     *
-     * <code>string reservation_ref = 5;</code>
-     * @return The reservationRef.
-     */
-    public java.lang.String getReservationRef() {
-      java.lang.Object ref = reservationRef_;
-      if (!(ref instanceof java.lang.String)) {
-        com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        reservationRef_ = s;
-        return s;
-      } else {
-        return (java.lang.String) ref;
-      }
-    }
-    /**
-     * <pre>
-     * used in 2-step transaction, when action_type=consume/release
-     * </pre>
-     *
-     * <code>string reservation_ref = 5;</code>
-     * @return The bytes for reservationRef.
-     */
-    public com.google.protobuf.ByteString
-        getReservationRefBytes() {
-      java.lang.Object ref = reservationRef_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        reservationRef_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-    /**
-     * <pre>
-     * used in 2-step transaction, when action_type=consume/release
-     * </pre>
-     *
-     * <code>string reservation_ref = 5;</code>
-     * @param value The reservationRef to set.
-     * @return This builder for chaining.
-     */
-    public Builder setReservationRef(
-        java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  
-      reservationRef_ = value;
-      onChanged();
-      return this;
-    }
-    /**
-     * <pre>
-     * used in 2-step transaction, when action_type=consume/release
-     * </pre>
-     *
-     * <code>string reservation_ref = 5;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearReservationRef() {
-      
-      reservationRef_ = getDefaultInstance().getReservationRef();
-      onChanged();
-      return this;
-    }
-    /**
-     * <pre>
-     * used in 2-step transaction, when action_type=consume/release
-     * </pre>
-     *
-     * <code>string reservation_ref = 5;</code>
-     * @param value The bytes for reservationRef to set.
-     * @return This builder for chaining.
-     */
-    public Builder setReservationRefBytes(
-        com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-      
-      reservationRef_ = value;
-      onChanged();
-      return this;
-    }
     @java.lang.Override
     public final Builder setUnknownFields(
         final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -980,41 +856,41 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:wallet.TransactionLinePb)
+    // @@protoc_insertion_point(builder_scope:wallet.ReservationInfoPb)
   }
 
-  // @@protoc_insertion_point(class_scope:wallet.TransactionLinePb)
-  private static final com.exchange.proto.wallet.wallet.TransactionLinePb DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:wallet.ReservationInfoPb)
+  private static final com.exchange.proto.wallet.wallet.ReservationInfoPb DEFAULT_INSTANCE;
   static {
-    DEFAULT_INSTANCE = new com.exchange.proto.wallet.wallet.TransactionLinePb();
+    DEFAULT_INSTANCE = new com.exchange.proto.wallet.wallet.ReservationInfoPb();
   }
 
-  public static com.exchange.proto.wallet.wallet.TransactionLinePb getDefaultInstance() {
+  public static com.exchange.proto.wallet.wallet.ReservationInfoPb getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static final com.google.protobuf.Parser<TransactionLinePb>
-      PARSER = new com.google.protobuf.AbstractParser<TransactionLinePb>() {
+  private static final com.google.protobuf.Parser<ReservationInfoPb>
+      PARSER = new com.google.protobuf.AbstractParser<ReservationInfoPb>() {
     @java.lang.Override
-    public TransactionLinePb parsePartialFrom(
+    public ReservationInfoPb parsePartialFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return new TransactionLinePb(input, extensionRegistry);
+      return new ReservationInfoPb(input, extensionRegistry);
     }
   };
 
-  public static com.google.protobuf.Parser<TransactionLinePb> parser() {
+  public static com.google.protobuf.Parser<ReservationInfoPb> parser() {
     return PARSER;
   }
 
   @java.lang.Override
-  public com.google.protobuf.Parser<TransactionLinePb> getParserForType() {
+  public com.google.protobuf.Parser<ReservationInfoPb> getParserForType() {
     return PARSER;
   }
 
   @java.lang.Override
-  public com.exchange.proto.wallet.wallet.TransactionLinePb getDefaultInstanceForType() {
+  public com.exchange.proto.wallet.wallet.ReservationInfoPb getDefaultInstanceForType() {
     return DEFAULT_INSTANCE;
   }
 

@@ -42,11 +42,11 @@ enum ActionTypePb {
   ActionTypePb_Release = 4;
 }
 
-enum OperationType {
+enum OperationTypePb {
     OperationType_Unknown = 0;
     OperationType_Reserve = 1;
-    OperationType_Earmark = 2;
+    OperationType_Earmark = 2; // confirm and transfer out in 2-step txn
     OperationType_Release = 3;
-    OperationType_Debit = 4;
+    OperationType_Debit = 4;   // transfer out in atomic txn
     OperationType_Credit = 5;
 }

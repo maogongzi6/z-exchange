@@ -31,45 +31,67 @@ public class BalanceSnapshotManager extends DbBaseManager<BalanceSnapshot, Balan
         return this.mapper.selectList(wrapper);
     }
 
-    public int reserveFromWalletId(Long id, String walletId, String assetId, long absAmount) {
-        if (absAmount <= 0) {
-            throw new InvalidValueException("amount<=0, amount: " + absAmount);
+    public List<BalanceSnapshot> selectByRefs(ServiceId serviceId, List<String> walletRefs) {
+        LambdaQueryWrapper<BalanceSnapshot> wrapper = new LambdaQueryWrapper<>();
+        wrapper = wrapper.eq(BalanceSnapshot::getServiceId, serviceId)
+                .in(BalanceSnapshot::getWalletReferenceId, walletRefs);
+        return this.mapper.selectList(wrapper);
+    }
+
+    public int reserveFromWalletId(Long id, String walletId, String assetId, long amount) {
+        if (amount <= 0) {
+            throw new InvalidValueException("amount<=0, amount: " + amount);
         }
         LambdaUpdateWrapper<BalanceSnapshot> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(BalanceSnapshot::getId, id)
                 .eq(BalanceSnapshot::getWalletId, walletId)
                 .eq(BalanceSnapshot::getAssetId, assetId)
                 .eq(BalanceSnapshot::getWalletStatus, WalletStatus.OPEN)
-                .ge(BalanceSnapshot::getAvailable, absAmount)
-                .setSql(String.format("`available` = `available` - %d", absAmount))
-                .setSql(String.format("`reserved` = `reserved` + %d", absAmount));
+                .ge(BalanceSnapshot::getAvailable, amount)
+                .setSql(String.format("`available` = `available` - %d", amount))
+                .setSql(String.format("`reserved` = `reserved` + %d", amount));
         return this.mapper.update(wrapper);
     }
 
-    public int transferOutFromWalletId(Long id, String walletId, String assetId, long absAmount) {
-        if (absAmount <= 0) {
-            throw new InvalidValueException("amount<=0, amount: " + absAmount);
+    public int releaseFromWalletId(Long id, String walletId, String assetId, long amount) {
+        if (amount <= 0) {
+            throw new InvalidValueException("amount<=0, amount: " + amount);
         }
         LambdaUpdateWrapper<BalanceSnapshot> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(BalanceSnapshot::getId, id)
                 .eq(BalanceSnapshot::getWalletId, walletId)
                 .eq(BalanceSnapshot::getAssetId, assetId)
                 .eq(BalanceSnapshot::getWalletStatus, WalletStatus.OPEN)
-                .ge(BalanceSnapshot::getReserved, absAmount)
-                .setSql(String.format("`reserved` = `reserved` - %d", absAmount));
+                .ge(BalanceSnapshot::getReserved, amount)
+                .setSql(String.format("`available` = `available` + %d", amount))
+                .setSql(String.format("`reserved` = `reserved` - %d", amount));
         return this.mapper.update(wrapper);
     }
 
-    public int transferInToWalletId(Long id, String walletId, String assetId, long absAmount) {
-        if (absAmount <= 0) {
-            throw new InvalidValueException("amount<=0, amount: " + absAmount);
+    public int transferOutFromWalletId(Long id, String walletId, String assetId, long amount) {
+        if (amount <= 0) {
+            throw new InvalidValueException("amount<=0, amount: " + amount);
         }
         LambdaUpdateWrapper<BalanceSnapshot> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(BalanceSnapshot::getId, id)
                 .eq(BalanceSnapshot::getWalletId, walletId)
                 .eq(BalanceSnapshot::getAssetId, assetId)
                 .eq(BalanceSnapshot::getWalletStatus, WalletStatus.OPEN)
-                .setSql(String.format("`available` = `available` + %d", absAmount));
+                .ge(BalanceSnapshot::getReserved, amount)
+                .setSql(String.format("`reserved` = `reserved` - %d", amount));
+        return this.mapper.update(wrapper);
+    }
+
+    public int transferInToWalletId(Long id, String walletId, String assetId, long amount) {
+        if (amount <= 0) {
+            throw new InvalidValueException("amount<=0, amount: " + amount);
+        }
+        LambdaUpdateWrapper<BalanceSnapshot> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(BalanceSnapshot::getId, id)
+                .eq(BalanceSnapshot::getWalletId, walletId)
+                .eq(BalanceSnapshot::getAssetId, assetId)
+                .eq(BalanceSnapshot::getWalletStatus, WalletStatus.OPEN)
+                .setSql(String.format("`available` = `available` + %d", amount));
         return this.mapper.update(wrapper);
     }
 }

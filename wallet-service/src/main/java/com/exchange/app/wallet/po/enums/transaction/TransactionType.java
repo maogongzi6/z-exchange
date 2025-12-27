@@ -5,9 +5,8 @@ import com.baomidou.mybatisplus.annotation.EnumValue;
 public enum TransactionType {
     UNKNOWN(0),
     ATOMIC(1),
-    RESERVE(2),
-    SETTLE(3),
-    ADJUST(4),;
+    TWO_STEP(2),
+    ADJUST(3),;
 
     @EnumValue
     final public int code;

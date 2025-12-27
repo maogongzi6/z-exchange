@@ -4,9 +4,9 @@
 package com.exchange.proto.wallet.common;
 
 /**
- * Protobuf enum {@code wallet.OperationType}
+ * Protobuf enum {@code wallet.OperationTypePb}
  */
-public enum OperationType
+public enum OperationTypePb
     implements com.google.protobuf.ProtocolMessageEnum {
   /**
    * <code>OperationType_Unknown = 0;</code>
@@ -17,6 +17,10 @@ public enum OperationType
    */
   OperationType_Reserve(1),
   /**
+   * <pre>
+   * confirm and transfer out in 2-step txn
+   * </pre>
+   *
    * <code>OperationType_Earmark = 2;</code>
    */
   OperationType_Earmark(2),
@@ -25,6 +29,10 @@ public enum OperationType
    */
   OperationType_Release(3),
   /**
+   * <pre>
+   * transfer out in atomic txn
+   * </pre>
+   *
    * <code>OperationType_Debit = 4;</code>
    */
   OperationType_Debit(4),
@@ -44,6 +52,10 @@ public enum OperationType
    */
   public static final int OperationType_Reserve_VALUE = 1;
   /**
+   * <pre>
+   * confirm and transfer out in 2-step txn
+   * </pre>
+   *
    * <code>OperationType_Earmark = 2;</code>
    */
   public static final int OperationType_Earmark_VALUE = 2;
@@ -52,6 +64,10 @@ public enum OperationType
    */
   public static final int OperationType_Release_VALUE = 3;
   /**
+   * <pre>
+   * transfer out in atomic txn
+   * </pre>
+   *
    * <code>OperationType_Debit = 4;</code>
    */
   public static final int OperationType_Debit_VALUE = 4;
@@ -75,7 +91,7 @@ public enum OperationType
    * @deprecated Use {@link #forNumber(int)} instead.
    */
   @java.lang.Deprecated
-  public static OperationType valueOf(int value) {
+  public static OperationTypePb valueOf(int value) {
     return forNumber(value);
   }
 
@@ -83,7 +99,7 @@ public enum OperationType
    * @param value The numeric wire value of the corresponding enum entry.
    * @return The enum associated with the given numeric wire value.
    */
-  public static OperationType forNumber(int value) {
+  public static OperationTypePb forNumber(int value) {
     switch (value) {
       case 0: return OperationType_Unknown;
       case 1: return OperationType_Reserve;
@@ -95,15 +111,15 @@ public enum OperationType
     }
   }
 
-  public static com.google.protobuf.Internal.EnumLiteMap<OperationType>
+  public static com.google.protobuf.Internal.EnumLiteMap<OperationTypePb>
       internalGetValueMap() {
     return internalValueMap;
   }
   private static final com.google.protobuf.Internal.EnumLiteMap<
-      OperationType> internalValueMap =
-        new com.google.protobuf.Internal.EnumLiteMap<OperationType>() {
-          public OperationType findValueByNumber(int number) {
-            return OperationType.forNumber(number);
+      OperationTypePb> internalValueMap =
+        new com.google.protobuf.Internal.EnumLiteMap<OperationTypePb>() {
+          public OperationTypePb findValueByNumber(int number) {
+            return OperationTypePb.forNumber(number);
           }
         };
 
@@ -124,9 +140,9 @@ public enum OperationType
     return com.exchange.proto.wallet.common.WalletEnum.getDescriptor().getEnumTypes().get(6);
   }
 
-  private static final OperationType[] VALUES = values();
+  private static final OperationTypePb[] VALUES = values();
 
-  public static OperationType valueOf(
+  public static OperationTypePb valueOf(
       com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
     if (desc.getType() != getDescriptor()) {
       throw new java.lang.IllegalArgumentException(
@@ -140,10 +156,10 @@ public enum OperationType
 
   private final int value;
 
-  private OperationType(int value) {
+  private OperationTypePb(int value) {
     this.value = value;
   }
 
-  // @@protoc_insertion_point(enum_scope:wallet.OperationType)
+  // @@protoc_insertion_point(enum_scope:wallet.OperationTypePb)
 }
 
