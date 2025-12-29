@@ -9,72 +9,72 @@ package com.exchange.proto.wallet.common;
 public enum OperationTypePb
     implements com.google.protobuf.ProtocolMessageEnum {
   /**
-   * <code>OperationType_Unknown = 0;</code>
+   * <code>OperationTypePb_Unknown = 0;</code>
    */
-  OperationType_Unknown(0),
+  OperationTypePb_Unknown(0),
   /**
-   * <code>OperationType_Reserve = 1;</code>
+   * <code>OperationTypePb_Reserve = 1;</code>
    */
-  OperationType_Reserve(1),
+  OperationTypePb_Reserve(1),
   /**
    * <pre>
    * confirm and transfer out in 2-step txn
    * </pre>
    *
-   * <code>OperationType_Earmark = 2;</code>
+   * <code>OperationTypePb_Earmark = 2;</code>
    */
-  OperationType_Earmark(2),
+  OperationTypePb_Earmark(2),
   /**
-   * <code>OperationType_Release = 3;</code>
+   * <code>OperationTypePb_Release = 3;</code>
    */
-  OperationType_Release(3),
+  OperationTypePb_Release(3),
   /**
    * <pre>
    * transfer out in atomic txn
    * </pre>
    *
-   * <code>OperationType_Debit = 4;</code>
+   * <code>OperationTypePb_Debit = 4;</code>
    */
-  OperationType_Debit(4),
+  OperationTypePb_Debit(4),
   /**
-   * <code>OperationType_Credit = 5;</code>
+   * <code>OperationTypePb_Credit = 5;</code>
    */
-  OperationType_Credit(5),
+  OperationTypePb_Credit(5),
   UNRECOGNIZED(-1),
   ;
 
   /**
-   * <code>OperationType_Unknown = 0;</code>
+   * <code>OperationTypePb_Unknown = 0;</code>
    */
-  public static final int OperationType_Unknown_VALUE = 0;
+  public static final int OperationTypePb_Unknown_VALUE = 0;
   /**
-   * <code>OperationType_Reserve = 1;</code>
+   * <code>OperationTypePb_Reserve = 1;</code>
    */
-  public static final int OperationType_Reserve_VALUE = 1;
+  public static final int OperationTypePb_Reserve_VALUE = 1;
   /**
    * <pre>
    * confirm and transfer out in 2-step txn
    * </pre>
    *
-   * <code>OperationType_Earmark = 2;</code>
+   * <code>OperationTypePb_Earmark = 2;</code>
    */
-  public static final int OperationType_Earmark_VALUE = 2;
+  public static final int OperationTypePb_Earmark_VALUE = 2;
   /**
-   * <code>OperationType_Release = 3;</code>
+   * <code>OperationTypePb_Release = 3;</code>
    */
-  public static final int OperationType_Release_VALUE = 3;
+  public static final int OperationTypePb_Release_VALUE = 3;
   /**
    * <pre>
    * transfer out in atomic txn
    * </pre>
    *
-   * <code>OperationType_Debit = 4;</code>
+   * <code>OperationTypePb_Debit = 4;</code>
    */
-  public static final int OperationType_Debit_VALUE = 4;
+  public static final int OperationTypePb_Debit_VALUE = 4;
   /**
-   * <code>OperationType_Credit = 5;</code>
+   * <code>OperationTypePb_Credit = 5;</code>
    */
-  public static final int OperationType_Credit_VALUE = 5;
+  public static final int OperationTypePb_Credit_VALUE = 5;
 
 
   public final int getNumber() {
@@ -101,12 +101,12 @@ public enum OperationTypePb
    */
   public static OperationTypePb forNumber(int value) {
     switch (value) {
-      case 0: return OperationType_Unknown;
-      case 1: return OperationType_Reserve;
-      case 2: return OperationType_Earmark;
-      case 3: return OperationType_Release;
-      case 4: return OperationType_Debit;
-      case 5: return OperationType_Credit;
+      case 0: return OperationTypePb_Unknown;
+      case 1: return OperationTypePb_Reserve;
+      case 2: return OperationTypePb_Earmark;
+      case 3: return OperationTypePb_Release;
+      case 4: return OperationTypePb_Debit;
+      case 5: return OperationTypePb_Credit;
       default: return null;
     }
   }

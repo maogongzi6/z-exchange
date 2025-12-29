@@ -285,7 +285,7 @@ private static final long serialVersionUID = 0L;
     if (!getAssetCodeBytes().isEmpty()) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 2, assetCode_);
     }
-    if (operationType_ != com.exchange.proto.wallet.common.OperationTypePb.OperationType_Unknown.getNumber()) {
+    if (operationType_ != com.exchange.proto.wallet.common.OperationTypePb.OperationTypePb_Unknown.getNumber()) {
       output.writeEnum(3, operationType_);
     }
     if (amount_ != 0L) {
@@ -309,7 +309,7 @@ private static final long serialVersionUID = 0L;
     if (!getAssetCodeBytes().isEmpty()) {
       size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, assetCode_);
     }
-    if (operationType_ != com.exchange.proto.wallet.common.OperationTypePb.OperationType_Unknown.getNumber()) {
+    if (operationType_ != com.exchange.proto.wallet.common.OperationTypePb.OperationTypePb_Unknown.getNumber()) {
       size += com.google.protobuf.CodedOutputStream
         .computeEnumSize(3, operationType_);
     }

@@ -43,10 +43,10 @@ public class AtomicTransactionProcessorTest {
         String ref = "test-atomic-success-3";
 
         List<TransactionLinePb> lines = new ArrayList<>() {{
-            add(TransactionLinePb.newBuilder().setWalletRef(usdOutWalletRef).setAssetCode(usdAssetId).setOperationType(OperationTypePb.OperationType_Debit).setAmount(10).build());
-            add(TransactionLinePb.newBuilder().setWalletRef(usdInWalletRef).setAssetCode(usdAssetId).setOperationType(OperationTypePb.OperationType_Credit).setAmount(10).build());
-            add(TransactionLinePb.newBuilder().setWalletRef(cnyOutWalletRef).setAssetCode(cnyAssetId).setOperationType(OperationTypePb.OperationType_Debit).setAmount(40).build());
-            add(TransactionLinePb.newBuilder().setWalletRef(cnyInWalletRef).setAssetCode(cnyAssetId).setOperationType(OperationTypePb.OperationType_Credit).setAmount(40).build());
+            add(TransactionLinePb.newBuilder().setWalletRef(usdOutWalletRef).setAssetCode(usdAssetId).setOperationType(OperationTypePb.OperationTypePb_Debit).setAmount(10).build());
+            add(TransactionLinePb.newBuilder().setWalletRef(usdInWalletRef).setAssetCode(usdAssetId).setOperationType(OperationTypePb.OperationTypePb_Credit).setAmount(10).build());
+            add(TransactionLinePb.newBuilder().setWalletRef(cnyOutWalletRef).setAssetCode(cnyAssetId).setOperationType(OperationTypePb.OperationTypePb_Debit).setAmount(40).build());
+            add(TransactionLinePb.newBuilder().setWalletRef(cnyInWalletRef).setAssetCode(cnyAssetId).setOperationType(OperationTypePb.OperationTypePb_Credit).setAmount(40).build());
 
         }};
         AtomicTransactionRequestPb requestPb = AtomicTransactionRequestPb.newBuilder()

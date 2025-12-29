@@ -1,22 +1,15 @@
 package com.exchange.app.wallet.processor.transaction;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.exchange.app.wallet.dao.manager.*;
-import com.exchange.app.wallet.exception.InvalidValueException;
-import com.exchange.app.wallet.po.enums.BusinessType;
-import com.exchange.app.wallet.po.enums.ServiceId;
-import com.exchange.app.wallet.po.enums.transaction.ActionType;
 import com.exchange.app.wallet.po.enums.transaction.TransactionStatus;
 import com.exchange.app.wallet.po.enums.transaction.TransactionType;
 import com.exchange.app.wallet.po.outbox.WalletOutbox;
 import com.exchange.app.wallet.po.transaction.WalletAction;
 import com.exchange.app.wallet.po.transaction.WalletReservation;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
-import com.exchange.app.wallet.po.wallet.BalanceSnapshot;
 import com.exchange.app.wallet.result.ErrorCode;
 import com.exchange.app.wallet.result.PbErrorBuilder;
 import com.exchange.app.wallet.result.Result;
-import com.exchange.app.wallet.utils.DbTransactionHelper;
 import com.exchange.app.wallet.utils.EnumMappers;
 import com.exchange.proto.wallet.common.OperationTypePb;
 import com.exchange.proto.wallet.wallet.ReservationInfoPb;
@@ -28,7 +21,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.*;
@@ -55,22 +47,22 @@ public class ReserveTransactionProcessor {
         WalletTransaction walletTxn = walletTransactionManager.selectByIdempotencyKey(requestInfo.serviceId, request.getIdempotencyKey());
         // idempotency check
         if (walletTxn != null) {
-            Result<List<WalletReservation>> reservationsResult = getAndValidateReservation(walletTxn, requestInfo.lines);
-            if (!reservationsResult.success) {
-                return replyError(reservationsResult);
+            Result<TransactionProcessor.TransactionInfo> txnInfoResult = transactionProcessor.getTxnInfo(walletTxn, requestInfo);
+            if (!txnInfoResult.success) {
+                return replyError(txnInfoResult);
             }
-            return replySuccess(new ReserveResult(walletTxn, reservationsResult.value), "SUCCESS, ALREADY RESERVED");
+            return replySuccess(txnInfoResult.value, "SUCCESS, ALREADY RESERVED");
         }
-        Result<ReserveResult> reserveResult = createReserveTransaction(request, requestInfo);
-        if (!reserveResult.success) {
-            return replyError(reserveResult);
+        Result<TransactionProcessor.TransactionInfo> txnInfoResult = transactionProcessor.beforePostingLedger(request.getReferenceId(), request.getReferenceId(), requestInfo);
+        if (!txnInfoResult.success) {
+            return replyError(txnInfoResult);
         }
 
-        return replySuccess(reserveResult.value, "SUCCESS");
+        return replySuccess(txnInfoResult.value, "SUCCESS");
     }
 
     private Result<TransactionProcessor.RequestInfo> validateAndGetRequestInfo(ReserveTransactionRequestPb request) {
-        Result<TransactionProcessor.RequestInfo> result = transactionProcessor.validateAndGetRequestInfo(request.getInitiator(), request.getBusinessType(), request.getLinesList());
+        Result<TransactionProcessor.RequestInfo> result = transactionProcessor.validateAndGetRequestInfo(request.getInitiator(), request.getBusinessType(), TransactionType.TWO_STEP, false, request.getLinesList());
         if (!result.success) {
             return result;
         }
@@ -78,44 +70,36 @@ public class ReserveTransactionProcessor {
 //            throw new InvalidValueException(String.format("unexpected, building snapshot info failed, snapshots: %s, lines: %s", result.value.operationToSnapshots.get(OperationTypePb.OperationType_Reserve), request.getLinesList()));
 //        }
         for (TransactionLinePb line : request.getLinesList()) {
-            if (line.getOperationType() != OperationTypePb.OperationType_Reserve) {
+            if (line.getOperationType() != OperationTypePb.OperationTypePb_Reserve) {
                 return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid operation type: " + line.getOperationType());
             }
         }
         return Result.success(result.value);
     }
 
-    private Result<ReserveResult> createReserveTransaction(ReserveTransactionRequestPb request, TransactionProcessor.RequestInfo requestInfo) {
-        // TODO precheck local cached asset table for status
-
-        WalletTransaction walletTxn = transactionProcessor.createTransaction(TransactionType.TWO_STEP, request.getReferenceId(), request.getIdempotencyKey(), requestInfo);
-        // no need to post ledger, complete immediately
-        walletTxn.setTxnStatus(TransactionStatus.COMPLETED);
-
-        // create action and reservation
-        List<WalletAction> actions = new ArrayList<>();
-        List<WalletReservation> reservations = new ArrayList<>();
-        for (TransactionProcessor.RequestInfo.Line line : requestInfo.lines) {
-            reservations.add(transactionProcessor.createReservation(walletTxn, line));
-            actions.add(transactionProcessor.createReserveAction(walletTxn, line));
-        }
-
-        WalletOutbox walletOutbox = transactionProcessor.createOutbox(walletTxn, requestInfo);
-
-        Result<Void> result = transactionProcessor.beforePostLedger(walletTxn, actions, reservations, walletOutbox, requestInfo);
-        if (!result.success) {
-            return Result.fail(result);
-        }
-
-//        // fill id into reservations
-//        List<WalletReservation> reservationWithId = walletReservationManager.selectByTxnId(walletTxn.getTxnId(), new LambdaQueryWrapper<>() {{
-//            eq(WalletReservation::getReservationStatus, TransactionStatus.PENDING);
-//        }});
-//        if (reservationWithId.size() != reservations.size()) {
-//            return Result.fail(ErrorCode.WALLET_RESERVATION_NOT_FOUND, "reservation size mismatch: " + reservations.size() + ", " + reservationWithId.size());
+//    private Result<ReserveResult> createReserveTransaction(ReserveTransactionRequestPb request, TransactionProcessor.RequestInfo requestInfo) {
+//        // TODO precheck local cached asset table for status
+//
+//        WalletTransaction walletTxn = transactionProcessor.createTransaction(TransactionType.TWO_STEP, request.getReferenceId(), request.getIdempotencyKey(), requestInfo);
+//        // no need to post ledger, complete immediately
+//        walletTxn.setTxnStatus(TransactionStatus.COMPLETED);
+//
+//        // create action and reservation
+//        List<WalletAction> actions = new ArrayList<>();
+//        List<WalletReservation> reservations = new ArrayList<>();
+//        for (TransactionProcessor.RequestInfo.Line line : requestInfo.lines) {
+//            reservations.add(transactionProcessor.createReservation(walletTxn, line));
+//            actions.add(transactionProcessor.createReserveAction(walletTxn, line));
 //        }
-        return Result.success(new ReserveResult(walletTxn, reservations));
-    }
+//
+//        WalletOutbox walletOutbox = transactionProcessor.createOutbox(walletTxn, requestInfo);
+//
+//        Result<Void> result = transactionProcessor.beforePostingLedger(walletTxn, actions, reservations, walletOutbox, requestInfo);
+//        if (!result.success) {
+//            return Result.fail(result);
+//        }
+//        return Result.success(new ReserveResult(walletTxn, reservations));
+//    }
 
     private Result<List<WalletReservation>> getAndValidateReservation(WalletTransaction txn, List<TransactionProcessor.RequestInfo.Line> lines) {
         List<WalletReservation> reservations = walletReservationManager.selectByTxnId(txn.getTxnId());
@@ -134,14 +118,14 @@ public class ReserveTransactionProcessor {
         return Result.success(reservations);
     }
 
-    private ReserveTransactionReplyPb replySuccess(ReserveResult result, String detail) {
-        WalletTransaction txn = result.walletTransaction;
+    private ReserveTransactionReplyPb replySuccess(TransactionProcessor.TransactionInfo info, String detail) {
+        WalletTransaction txn = info.walletTxn;
         ReserveTransactionReplyPb.Builder builder = ReserveTransactionReplyPb.newBuilder()
                 .setTransactionId(txn.getTxnId())
                 .setStatus(EnumMappers.transactionStatusPbMapper.from(txn.getTxnStatus()))
                 .setError(PbErrorBuilder.build(ErrorCode.SUCCESS, detail));
         List<ReservationInfoPb> infos = new ArrayList<>();
-        for (WalletReservation reservation : result.reservations) {
+        for (WalletReservation reservation : info.reservations) {
             ReservationInfoPb infoPb = ReservationInfoPb.newBuilder()
                     .setReservationRef(reservation.getReferenceId())
                     .setWalletRef(reservation.getWalletReferenceId())

@@ -103,14 +103,14 @@ public class AtomicTransactionProcessor {
         List<String> walletRefs = new ArrayList<>();
         for (TransactionLinePb line : request.getLinesList()) {
             // validate action type and amount
-            if (line.getOperationType() != OperationTypePb.OperationType_Debit && line.getOperationType() != OperationTypePb.OperationType_Credit) {
+            if (line.getOperationType() != OperationTypePb.OperationTypePb_Debit && line.getOperationType() != OperationTypePb.OperationTypePb_Credit) {
                 return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid operation type: " + line);
             }
             if (line.getAmount() <= 0) {
                 return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid amount: " + line);
             }
 
-            Map<String, Long> targetAssetToAmount = line.getOperationType() == OperationTypePb.OperationType_Debit ? outAssetToAmount : inAssetToAmount;
+            Map<String, Long> targetAssetToAmount = line.getOperationType() == OperationTypePb.OperationTypePb_Debit ? outAssetToAmount : inAssetToAmount;
             if (!targetAssetToAmount.containsKey(line.getAssetCode())) {
                 targetAssetToAmount.put(line.getAssetCode(), 0L);
             }
@@ -144,7 +144,7 @@ public class AtomicTransactionProcessor {
         Map<String, BalanceSnapshot> refToSnapshot = walletIdAndRefs.stream().collect(Collectors.toMap(BalanceSnapshot::getWalletReferenceId, snapshot -> snapshot));
         List<RequestInfo.Line> lineInfos = new ArrayList<>();
         for (TransactionLinePb line : request.getLinesList()) {
-            ActionType actionType = line.getOperationType() == OperationTypePb.OperationType_Credit ? ActionType.TRANSFER_IN : ActionType.TRANSFER_OUT;
+            ActionType actionType = line.getOperationType() == OperationTypePb.OperationTypePb_Credit ? ActionType.TRANSFER_IN : ActionType.TRANSFER_OUT;
             BalanceSnapshot snapshot = refToSnapshot.get(line.getWalletRef());
             if (snapshot == null) {
                 return Result.fail(ErrorCode.BALANCE_SNAPSHOT_NOT_FOUND, "snapshot not found: " + line.getWalletRef());

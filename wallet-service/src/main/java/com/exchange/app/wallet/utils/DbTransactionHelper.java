@@ -5,13 +5,14 @@ import com.exchange.app.wallet.result.Result;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.concurrent.Callable;
+import java.util.function.Supplier;
 
 public class DbTransactionHelper {
-    public static <T extends Result<?>> T executeWithResult(TransactionTemplate template, int propagation, Callable<T> callable) {
+    public static <T extends Result<?>> T executeWithResult(TransactionTemplate template, int propagation, Supplier<T> supplier) {
         template.setPropagationBehavior(propagation);
         return template.execute((transactionStatus) -> {
             try {
-                T result = callable.call();
+                T result = supplier.get();
                 if (!Result.isSuccess(result)) {
                     transactionStatus.setRollbackOnly();
                 }

@@ -6,10 +6,13 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.exchange.app.wallet.po.enums.transaction.ReservationOutcome;
 import com.exchange.app.wallet.po.enums.transaction.ReservationStatus;
 import com.exchange.app.wallet.po.enums.ServiceId;
+import com.exchange.app.wallet.result.ErrorCode;
+import com.exchange.app.wallet.result.Result;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
 import java.util.Objects;
 
 @Data

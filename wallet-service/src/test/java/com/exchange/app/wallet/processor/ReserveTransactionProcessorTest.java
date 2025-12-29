@@ -43,11 +43,11 @@ public class ReserveTransactionProcessorTest {
     public void testReserveTransactionProcessor() {
         createWallet();
 
-        String ref = "test-reserve-success-2";
+        String ref = "test-reserve-success-4";
 
         List<TransactionLinePb> lines = new ArrayList<>() {{
-            add(TransactionLinePb.newBuilder().setWalletRef(usdReserveWalletRef).setAssetCode(usdAssetId).setOperationType(OperationTypePb.OperationType_Reserve).setAmount(10).build());
-            add(TransactionLinePb.newBuilder().setWalletRef(cnyReserveWalletRef).setAssetCode(cnyAssetId).setOperationType(OperationTypePb.OperationType_Reserve).setAmount(40).build());
+            add(TransactionLinePb.newBuilder().setWalletRef(usdReserveWalletRef).setAssetCode(usdAssetId).setOperationType(OperationTypePb.OperationTypePb_Reserve).setAmount(10).build());
+            add(TransactionLinePb.newBuilder().setWalletRef(cnyReserveWalletRef).setAssetCode(cnyAssetId).setOperationType(OperationTypePb.OperationTypePb_Reserve).setAmount(40).build());
 
         }};
         ReserveTransactionRequestPb requestPb = ReserveTransactionRequestPb.newBuilder()

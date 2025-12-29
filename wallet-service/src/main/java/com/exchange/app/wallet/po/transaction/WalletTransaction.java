@@ -7,6 +7,7 @@ import com.exchange.app.wallet.po.enums.BusinessType;
 import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.enums.transaction.TransactionStatus;
 import com.exchange.app.wallet.po.enums.transaction.TransactionType;
+import com.exchange.app.wallet.result.Result;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

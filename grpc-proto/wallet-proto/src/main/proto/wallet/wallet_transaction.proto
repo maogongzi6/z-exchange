@@ -51,6 +51,19 @@ message TwoStepTransactionReplyPb {
   TransactionStatusPb status = 3;
 }
 
+message ApplyReservationTransactionRequestPb   {
+  string reference_id = 1;
+  ServiceIdPb initiator = 2;
+  string idempotency_key = 3;
+  BusinessTypePb business_type = 4;
+  repeated TransactionLinePb lines = 5;
+}
+
+message ApplyReservationTransactionReplyPb {
+  common.ErrorPb error = 1;
+  string transaction_id = 2;
+}
+
 message TransactionLinePb {
   string wallet_ref = 1;
   string asset_code = 2;
@@ -65,5 +78,3 @@ message ReservationInfoPb {
   string asset_code = 3;
   int64 amount = 4;
 }
-
-//ApplyReservationTransactionRequestPb
