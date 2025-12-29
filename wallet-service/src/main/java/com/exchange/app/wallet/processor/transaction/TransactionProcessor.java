@@ -1,6 +1,7 @@
 package com.exchange.app.wallet.processor.transaction;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.exchange.app.wallet.client.PostServiceClient;
 import com.exchange.app.wallet.dao.manager.*;
 import com.exchange.app.wallet.exception.InvalidEnumException;
 import com.exchange.app.wallet.po.enums.BusinessType;
@@ -14,12 +15,17 @@ import com.exchange.app.wallet.po.transaction.WalletAction;
 import com.exchange.app.wallet.po.transaction.WalletReservation;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
 import com.exchange.app.wallet.po.wallet.BalanceSnapshot;
+import com.exchange.app.wallet.po.wallet.WalletAccountMapping;
 import com.exchange.app.wallet.result.ErrorCode;
 import com.exchange.app.wallet.result.Result;
 import com.exchange.app.wallet.utils.DbTransactionHelper;
 import com.exchange.app.wallet.utils.EnumMappers;
 import com.exchange.app.wallet.utils.IdGenerator;
 import com.exchange.app.wallet.utils.OutboxHelper;
+import com.exchange.proto.ledger.common.LedgerDirectionPb;
+import com.exchange.proto.ledger.post.LedgerEntryPb;
+import com.exchange.proto.ledger.post.PostTransactionReplyPb;
+import com.exchange.proto.ledger.post.PostTransactionRequestPb;
 import com.exchange.proto.wallet.common.BusinessTypePb;
 import com.exchange.proto.wallet.common.OperationTypePb;
 import com.exchange.proto.wallet.common.ServiceIdPb;
@@ -35,9 +41,7 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.*;
-import java.util.concurrent.Callable;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -51,6 +55,8 @@ class TransactionProcessor {
     private final WalletTransactionManager walletTransactionManager;
     private final WalletActionManager walletActionManager;
     private final WalletOutboxManager walletOutboxManager;
+    private final WalletAccountMappingManager walletAccountMappingManager;
+    private final PostServiceClient postServiceClient;
 
     Result<RequestInfo> validateAndGetRequestInfo(ServiceIdPb serviceIdPb, BusinessTypePb businessTypePb, TransactionType transactionType, boolean needPostLedger, List<TransactionLinePb> linePbs) {
         ServiceId serviceId = EnumMappers.serviceIdPbMapper.to(serviceIdPb);
@@ -195,7 +201,7 @@ class TransactionProcessor {
         // get reservation created by the txn
         List<WalletReservation> reservationsUnderTxn = walletReservationManager.selectByTxnId(txn.getTxnId());
         List<WalletReservation> relatedReservations = new ArrayList<>();
-        List<String> reservationIdsInRequest = requestInfo.reservations.stream().map(WalletReservation::getReservationId).collect(Collectors.toList());
+        List<String> reservationIdsInRequest = requestInfo.reservationsInTheRequest.stream().map(WalletReservation::getReservationId).collect(Collectors.toList());
         if (!reservationIdsInRequest.isEmpty()) {
             // get reservation operated by the txn
             relatedReservations = walletReservationManager.selectByRefs(reservationIdsInRequest);
@@ -230,13 +236,22 @@ class TransactionProcessor {
         List<WalletAction> actions = new ArrayList<>();
         List<WalletReservation> createdReservations = new ArrayList<>();
         for (RequestInfo.Line line : requestInfo.lines) {
+            List<WalletAction> actionsFromLine = createActionsFromLine(walletTxn.getTxnId(), line);
             switch (line.operationTypePb) {
                 case OperationTypePb_Reserve:
                 case OperationTypePb_Debit:
-                    createdReservations.add(createReservation(walletTxn, line));
+                    WalletReservation reservation = createReservation(walletTxn, line);
+                    createdReservations.add(reservation);
+
+                    // after creating reservation, fill reservation id into action
+                    for (WalletAction action : actionsFromLine) {
+                        if (action.getActionType() == ActionType.CONSUME || action.getActionType() == ActionType.RESERVE) {
+                            action.setReservationId(reservation.getReservationId());
+                        }
+                    }
                     break;
             }
-            actions.addAll(createActionsFromLine(walletTxn.getTxnId(), line));
+            actions.addAll(actionsFromLine);
         }
 
 
@@ -254,7 +269,7 @@ class TransactionProcessor {
         }
 
         Result<Void> outResult = DbTransactionHelper.executeWithResult(transactionTemplate, TransactionDefinition.PROPAGATION_REQUIRED, () -> {
-            Result<Void> result = updateReservations(requestInfo.reservations,
+            Result<Void> result = updateReservations(requestInfo.reservationsInTheRequest,
                     (reservation) -> updateReservationBeforePosting(reservation, walletIdToActions));
             if (!result.success) {
                 return Result.fail(result);
@@ -294,7 +309,7 @@ class TransactionProcessor {
             return Result.fail(ErrorCode.WALLET_RESERVATION_NOT_FOUND, "wallet_reservation_not_found");
         }
         // all reservations related to the txn
-        reservations.addAll(requestInfo.reservations);
+        reservations.addAll(requestInfo.reservationsInTheRequest);
 
         return Result.success(TransactionInfo.create(walletTxn, actions, reservations, walletOutbox));
     }
@@ -421,18 +436,56 @@ class TransactionProcessor {
         return Result.success();
     }
 
+    Result<Void> postLedger(TransactionInfo transactionInfo) {
+
+
+        List<String> walletIds = new ArrayList<>(transactionInfo.walletIdToPostActions.keySet());
+        List<WalletAccountMapping> mappings = walletAccountMappingManager.selectInWalletIds(walletIds);
+        if (mappings.size() != walletIds.size()) {
+            log.error("wallet_account_mapping_not_found, wallet_ids: {}, mappings: {}", walletIds, mappings);
+            return Result.fail(ErrorCode.WALLET_ACCOUNT_MAPPING_NOT_FOUND, "wallet_account_mapping_not_found");
+        }
+        Map<String, String> walletToAccount = mappings.stream().collect(Collectors.toMap(WalletAccountMapping::getWalletId, WalletAccountMapping::getAccountRefId));
+
+        List<LedgerEntryPb> entries = new ArrayList<>();
+        for (List<WalletAction> actions : transactionInfo.walletIdToPostActions.values()) {
+            for (WalletAction action : actions) {
+                LedgerEntryPb.Builder builder = LedgerEntryPb.newBuilder();
+                builder.setAccountRef(walletToAccount.get(action.getWalletId())).setAmount(action.getAmount()).setAssetId(action.getAssetId());
+                switch (action.getActionType()) {
+                    case TRANSFER_OUT:
+                        builder.setDirection(LedgerDirectionPb.LedgerDirection_Debit);
+                        break;
+                    case TRANSFER_IN:
+                        builder.setDirection(LedgerDirectionPb.LedgerDirection_Credit);
+                        break;
+                    default:
+                        continue;
+                }
+                entries.add(builder.build());
+            }
+        }
+
+        PostTransactionRequestPb req = PostTransactionRequestPb.newBuilder()
+                .setReferenceId(transactionInfo.walletTxn.getReferenceId())
+                .addAllEntries(entries).build();
+        Result<PostTransactionReplyPb> result = postServiceClient.postTransaction(req);
+        return Result.result(null, result);
+    }
+
     Result<WalletTransaction> afterPostingLedger(RequestInfo requestInfo, TransactionInfo transactionInfo) {
         List<BalanceSnapshot> snapshotIdsInOrder = requestInfo.snapshots.stream()
                 .sorted(Comparator.comparing(BalanceSnapshot::getId)).collect(Collectors.toList());
 
         Result<Void> outResult = DbTransactionHelper.executeWithResult(transactionTemplate, TransactionDefinition.PROPAGATION_REQUIRED, () -> {
-            Result<Void> result = updateReservations(requestInfo.reservations,
-                    (reservation) -> updateReservationAfterPosting(reservation, transactionInfo.walletIdToActions));
+            // should update all reservations here
+            Result<Void> result = updateReservations(transactionInfo.reservations,
+                    (reservation) -> updateReservationAfterPosting(reservation, transactionInfo.walletIdToPostActions));
             if (!result.success) {
                 return Result.fail(result);
             }
 
-            result = updateSnapshotsAfterPosting(transactionInfo.walletIdToActions, snapshotIdsInOrder);
+            result = updateSnapshotsAfterPosting(transactionInfo.walletIdToPostActions, snapshotIdsInOrder);
             if (!result.success) {
                 return Result.fail(result);
             }
@@ -600,7 +653,8 @@ class TransactionProcessor {
         final boolean needPostLedger;
         final List<BalanceSnapshot> snapshots;
         final Map<OperationTypePb, List<BalanceSnapshot>> operationToSnapshots;
-        final List<WalletReservation> reservations;
+        // only have reservations in the request (created by other txn), not including txn created by this txn
+        final List<WalletReservation> reservationsInTheRequest;
         final List<Line> lines;
         @AllArgsConstructor
         static class Line {
@@ -617,8 +671,8 @@ class TransactionProcessor {
     @AllArgsConstructor
     static class TransactionInfo {
         final WalletTransaction walletTxn;
-        final List<WalletAction> afterPostingAction; // only CONSUME, TRANSFER_OUT, TRANSFER_IN
-        final Map<String, List<WalletAction>> walletIdToActions; // only CONSUME, TRANSFER_OUT, TRANSFER_IN
+        final List<WalletAction> postAction; // only CONSUME, TRANSFER_OUT, TRANSFER_IN
+        final Map<String, List<WalletAction>> walletIdToPostActions; // only CONSUME, TRANSFER_OUT, TRANSFER_IN
         final List<WalletReservation> reservations;
         final WalletOutbox outbox;
 

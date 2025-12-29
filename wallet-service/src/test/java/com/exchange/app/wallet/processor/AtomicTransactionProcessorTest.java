@@ -40,7 +40,7 @@ public class AtomicTransactionProcessorTest {
     public void testAtomicSuccess() {
         createWallet();
 
-        String ref = "test-atomic-success-3";
+        String ref = "test-atomic-success-8";
 
         List<TransactionLinePb> lines = new ArrayList<>() {{
             add(TransactionLinePb.newBuilder().setWalletRef(usdOutWalletRef).setAssetCode(usdAssetId).setOperationType(OperationTypePb.OperationTypePb_Debit).setAmount(10).build());

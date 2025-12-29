@@ -1,10 +1,7 @@
 package com.exchange.app.wallet.processor.transaction;
 
 import com.exchange.app.wallet.dao.manager.*;
-import com.exchange.app.wallet.po.enums.transaction.TransactionStatus;
 import com.exchange.app.wallet.po.enums.transaction.TransactionType;
-import com.exchange.app.wallet.po.outbox.WalletOutbox;
-import com.exchange.app.wallet.po.transaction.WalletAction;
 import com.exchange.app.wallet.po.transaction.WalletReservation;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
 import com.exchange.app.wallet.result.ErrorCode;

@@ -73,9 +73,8 @@ public class WalletReservationManager extends DbBaseManager<WalletReservation, W
                 .eq(WalletReservation::getRemaining, old.getRemaining())
                 .eq(WalletReservation::getPendingSettle, old.getPendingSettle())
                 .eq(WalletReservation::getConsumed, old.getConsumed())
-                .eq(WalletReservation::getReleased, old.getReleased())
-                .setEntity(now);
-        return mapper.update(wrapper);
+                .eq(WalletReservation::getReleased, old.getReleased());
+        return mapper.update(now, wrapper);
     }
 
     public int batchInsert(List<WalletReservation> list) {

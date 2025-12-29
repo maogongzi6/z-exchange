@@ -53,42 +53,41 @@ public class AtomicTransactionProcessor {
     private final PostServiceClient postServiceClient;
     private final TransactionTemplate transactionTemplate;
 
+    private final TransactionProcessor transactionProcessor;
+
     public AtomicTransactionReplyPb executeAtomic(AtomicTransactionRequestPb request) {
-        Result<RequestInfo> infoResult = validateAndGetRequestInfo(request);
+        Result<TransactionProcessor.RequestInfo> infoResult = transactionProcessor.validateAndGetRequestInfo(request.getInitiator(), request.getBusinessType(), TransactionType.ATOMIC, true, request.getLinesList());
         if (!infoResult.success) {
             return replyError(infoResult);
         }
-        RequestInfo requestInfo = infoResult.value;
+        TransactionProcessor.RequestInfo requestInfo = infoResult.value;
         WalletTransaction walletTxn = walletTransactionManager.selectByIdempotencyKey(requestInfo.serviceId, request.getIdempotencyKey());
-        Result<TransactionInfo> txnInfoResult;
+        Result<TransactionProcessor.TransactionInfo> txnInfoResult;
         // idempotency check
         if (walletTxn == null) {
-            txnInfoResult = createWalletTxn(request, requestInfo);
+            txnInfoResult = transactionProcessor.beforePostingLedger(request.getReferenceId(), request.getIdempotencyKey(), requestInfo);
         } else if (walletTxn.getTxnStatus() == TransactionStatus.PENDING) {
-            txnInfoResult = getTransactionInfo(request, requestInfo, walletTxn);
+            txnInfoResult = transactionProcessor.getTxnInfo(walletTxn, requestInfo);
         } else {
             return replySuccess(walletTxn, "txn already executed");
         }
         if (!txnInfoResult.success) {
             return replyError(txnInfoResult);
         }
-        TransactionInfo transactionInfo = txnInfoResult.value;
-        Result<Void> result = postLedger(transactionInfo);
+        TransactionProcessor.TransactionInfo transactionInfo = txnInfoResult.value;
+        Result<Void> result = transactionProcessor.postLedger(transactionInfo);
         if (!result.success) {
             return replyError(result);
         }
-        Result<WalletTransaction> txnResult = completeExecution(transactionInfo, requestInfo);
+        Result<WalletTransaction> txnResult = transactionProcessor.afterPostingLedger(requestInfo, transactionInfo);
         if (!txnResult.success) {
             return replyError(txnResult);
-        }
-        // outbox should not block main flow
-        if (walletOutboxManager.finishOutbox(transactionInfo.outbox) != 1) {
-            log.error("finish outbox failed, outbox={}", transactionInfo.outbox);
         }
 
         return replySuccess(txnResult.value, "success");
     }
 
+    /*
     private Result<RequestInfo> validateAndGetRequestInfo(AtomicTransactionRequestPb request) {
         ServiceId serviceId = EnumMappers.serviceIdPbMapper.to(request.getInitiator());
         BusinessType businessType = EnumMappers.businessTypePbMapper.to(request.getBusinessType());
@@ -480,23 +479,7 @@ public class AtomicTransactionProcessor {
 //        return Result.success();
 //    }
 
-    private AtomicTransactionReplyPb replySuccess(WalletTransaction txn, String detail) {
-        return AtomicTransactionReplyPb.newBuilder()
-                .setTransactionId(txn.getTxnId())
-                .setStatus(EnumMappers.transactionStatusPbMapper.from(txn.getTxnStatus()))
-                .setError(PbErrorBuilder.build(ErrorCode.SUCCESS, detail))
-                .build();
-    }
 
-    private AtomicTransactionReplyPb replyError(ErrorCode errorCode, String detail) {
-        AtomicTransactionReplyPb.Builder builder = AtomicTransactionReplyPb.newBuilder();
-        return builder.setError(PbErrorBuilder.build(errorCode, detail)).build();
-    }
-
-    private AtomicTransactionReplyPb replyError(Result<?> result) {
-        result = Result.requireNotNull(result);
-        return replyError(result.errorCode, result.errorDetail);
-    }
 
     @AllArgsConstructor
     static private class RequestInfo {
@@ -533,5 +516,23 @@ public class AtomicTransactionProcessor {
                     .collect(Collectors.toMap(WalletAction::getWalletId, action -> action));
             return new TransactionInfo(txn, walletIdToTransferAction, walletIdToConsumeAction, reservations, outbox);
         }
+    }
+    */
+    private AtomicTransactionReplyPb replySuccess(WalletTransaction txn, String detail) {
+        return AtomicTransactionReplyPb.newBuilder()
+                .setTransactionId(txn.getTxnId())
+                .setStatus(EnumMappers.transactionStatusPbMapper.from(txn.getTxnStatus()))
+                .setError(PbErrorBuilder.build(ErrorCode.SUCCESS, detail))
+                .build();
+    }
+
+    private AtomicTransactionReplyPb replyError(ErrorCode errorCode, String detail) {
+        AtomicTransactionReplyPb.Builder builder = AtomicTransactionReplyPb.newBuilder();
+        return builder.setError(PbErrorBuilder.build(errorCode, detail)).build();
+    }
+
+    private AtomicTransactionReplyPb replyError(Result<?> result) {
+        result = Result.requireNotNull(result);
+        return replyError(result.errorCode, result.errorDetail);
     }
 }
