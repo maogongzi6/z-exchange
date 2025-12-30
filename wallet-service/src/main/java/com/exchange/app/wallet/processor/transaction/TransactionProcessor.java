@@ -74,19 +74,19 @@ class TransactionProcessor {
 
         // get reservation from db to do precheck
         Set<String> reservationRefs = linePbs.stream()
-                .filter((reservation)-> !Strings.isEmpty(reservation.getReservationRef()))
+                .filter((line)-> !Strings.isEmpty(line.getReservationRef()))
                 .distinct().map(TransactionLinePb::getReservationRef).collect(Collectors.toSet());
-        List<WalletReservation> reservations = new ArrayList<>();
+        List<WalletReservation> reservationsInRequest = new ArrayList<>();
         if (!reservationRefs.isEmpty()) {
-            reservations = walletReservationManager.selectByRefs(new ArrayList<>(reservationRefs));
+            reservationsInRequest = walletReservationManager.selectByRefs(new ArrayList<>(reservationRefs));
         }
-        Map<String, WalletReservation> refToReservation = reservations.stream().collect(Collectors.toMap(WalletReservation::getReservationId, reservation->reservation));
+        Map<String, WalletReservation> refToReservation = reservationsInRequest.stream().collect(Collectors.toMap(WalletReservation::getReferenceId, reservation->reservation));
 
         // get snapshot from db to do precheck
         Set<String> walletRefs = linePbs.stream().distinct().map(TransactionLinePb::getWalletRef).collect(Collectors.toSet());
         List<BalanceSnapshot> balanceSnapshots = balanceSnapshotManager.selectByRefs(serviceId, new ArrayList<>(walletRefs));
         Map<String, BalanceSnapshot> walletRefToSnapshot = balanceSnapshots.stream().collect(Collectors.toMap(BalanceSnapshot::getWalletReferenceId, snapshot -> snapshot));
-        Map<OperationTypePb, List<BalanceSnapshot>> operationToSnapshots = new EnumMap<>(OperationTypePb.class);
+//        Map<OperationTypePb, List<BalanceSnapshot>> operationToSnapshots = new EnumMap<>(OperationTypePb.class);
         List<RequestInfo.Line> lines = new ArrayList<>();
         for (TransactionLinePb line : linePbs) {
             BalanceSnapshot snapshot = walletRefToSnapshot.get(line.getWalletRef());
@@ -105,12 +105,12 @@ class TransactionProcessor {
                 reservationId = reservation.getReservationId();
             }
 
-            operationToSnapshots.computeIfAbsent(line.getOperationType(), k -> new ArrayList<>());
-            operationToSnapshots.get(line.getOperationType()).add(snapshot);
+//            operationToSnapshots.computeIfAbsent(line.getOperationType(), k -> new ArrayList<>());
+//            operationToSnapshots.get(line.getOperationType()).add(snapshot);
             lines.add(new RequestInfo.Line(snapshot.getWalletId(), line.getWalletRef(), line.getAssetCode(), line.getOperationType(), line.getAmount(), reservationId));
         }
 
-        return Result.success(new RequestInfo(serviceId, businessType, transactionType, needPostLedger, balanceSnapshots, operationToSnapshots, reservations, lines));
+        return Result.success(new RequestInfo(serviceId, businessType, transactionType, needPostLedger, balanceSnapshots, reservationsInRequest, lines));
     }
 
     private Result<Void> validateAssetInfo(List<TransactionLinePb> linePbs) {
@@ -133,10 +133,8 @@ class TransactionProcessor {
                     // credit is asset transferring in
                     targetAssetToAmount = inAssetToAmount;
                 }
-                if (!targetAssetToAmount.containsKey(line.getAssetCode())) {
-                    targetAssetToAmount.put(line.getAssetCode(), 0L);
-                }
-                targetAssetToAmount.put(line.getAssetCode(), line.getAmount() + line.getAmount());
+                targetAssetToAmount.putIfAbsent(line.getAssetCode(), 0L);
+                targetAssetToAmount.put(line.getAssetCode(), line.getAmount() + targetAssetToAmount.get(line.getAssetCode()));
             }
         }
 
@@ -145,10 +143,10 @@ class TransactionProcessor {
         }
         // validate: for each asset, transfer in should match transfer out
         for (Map.Entry<String, Long> entry : inAssetToAmount.entrySet()) {
-            String inAssetCode = entry.getKey();
+            String assetCode = entry.getKey();
             Long inAmount = entry.getValue();
-            if (!Objects.equals(inAmount, outAssetToAmount.get(inAssetCode))) {
-                return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "imbalanced asset: " + inAssetCode + ", in_amount: " + inAmount + ", out_amount" + outAssetToAmount.get(inAssetCode));
+            if (!Objects.equals(inAmount, outAssetToAmount.get(assetCode))) {
+                return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "imbalanced asset: " + assetCode + ", in_amount: " + inAmount + ", out_amount" + outAssetToAmount.get(assetCode));
             }
         }
         return Result.success();
@@ -201,15 +199,15 @@ class TransactionProcessor {
         // get reservation created by the txn
         List<WalletReservation> reservationsUnderTxn = walletReservationManager.selectByTxnId(txn.getTxnId());
         List<WalletReservation> relatedReservations = new ArrayList<>();
-        List<String> reservationIdsInRequest = requestInfo.reservationsInTheRequest.stream().map(WalletReservation::getReservationId).collect(Collectors.toList());
-        if (!reservationIdsInRequest.isEmpty()) {
+        List<String> reservationRefsInRequest = requestInfo.reservationsInTheRequest.stream().map(WalletReservation::getReferenceId).collect(Collectors.toList());
+        if (!reservationRefsInRequest.isEmpty()) {
             // get reservation operated by the txn
-            relatedReservations = walletReservationManager.selectByRefs(reservationIdsInRequest);
+            relatedReservations = walletReservationManager.selectByRefs(reservationRefsInRequest);
         }
         // all reservations
         relatedReservations.addAll(reservationsUnderTxn);
 
-        TransactionInfo transactionInfo = TransactionInfo.create(txn, afterPostingActions, reservationsUnderTxn, outbox);
+        TransactionInfo transactionInfo = TransactionInfo.create(txn, afterPostingActions, relatedReservations, outbox);
         return Result.result(transactionInfo, validateTransferInfo(transactionInfo, requestInfo));
     }
 
@@ -398,6 +396,7 @@ class TransactionProcessor {
                     case RESERVE:
                         if (balanceSnapshotManager.reserveFromWalletId(snapshot.getId(), action.getWalletId(), action.getAssetId(), action.getAmount())
                                 != 1) {
+                            log.error("failed to update snapshot to reserve amount, reservation: {}, action: {}", snapshot, action);
                             return Result.fail(ErrorCode.BALANCE_SNAPSHOT_UPDATE_FAILED, "failed to update snapshot to reserve amount");
                         }
                         break;
@@ -437,8 +436,7 @@ class TransactionProcessor {
     }
 
     Result<Void> postLedger(TransactionInfo transactionInfo) {
-
-
+//        if (true) {throw new RuntimeException();}
         List<String> walletIds = new ArrayList<>(transactionInfo.walletIdToPostActions.keySet());
         List<WalletAccountMapping> mappings = walletAccountMappingManager.selectInWalletIds(walletIds);
         if (mappings.size() != walletIds.size()) {
@@ -652,7 +650,7 @@ class TransactionProcessor {
         final TransactionType transactionType;
         final boolean needPostLedger;
         final List<BalanceSnapshot> snapshots;
-        final Map<OperationTypePb, List<BalanceSnapshot>> operationToSnapshots;
+//        final Map<OperationTypePb, List<BalanceSnapshot>> operationToSnapshots;
         // only have reservations in the request (created by other txn), not including txn created by this txn
         final List<WalletReservation> reservationsInTheRequest;
         final List<Line> lines;

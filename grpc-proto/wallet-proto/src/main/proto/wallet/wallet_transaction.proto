@@ -62,6 +62,7 @@ message ApplyReservationTransactionRequestPb   {
 message ApplyReservationTransactionReplyPb {
   common.ErrorPb error = 1;
   string transaction_id = 2;
+  TransactionStatusPb status = 3;
 }
 
 message TransactionLinePb {

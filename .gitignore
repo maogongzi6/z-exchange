@@ -36,3 +36,7 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+grpc-proto/common-proto/src/main/java
+grpc-proto/ledger-proto/src/main/java
+grpc-proto/wallet-proto/src/main/java

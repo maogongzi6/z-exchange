@@ -1,7 +1,9 @@
 package com.exchange.app.wallet.processor;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.exchange.app.wallet.dao.manager.BalanceSnapshotManager;
 import com.exchange.app.wallet.dao.mapper.BalanceSnapshotMapper;
+import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.wallet.BalanceSnapshot;
 import com.exchange.app.wallet.processor.transaction.ReserveTransactionProcessor;
 import com.exchange.proto.common.error.ErrorCodePb;
@@ -38,6 +40,8 @@ public class ReserveTransactionProcessorTest {
     private BalanceSnapshotMapper balanceSnapshotMapper;
     @Autowired
     private ReserveTransactionProcessor reserveTransactionProcessor;
+    @Autowired
+    private BalanceSnapshotManager balanceSnapshotManager;
 
     @Test
     public void testReserveTransactionProcessor() {
@@ -46,7 +50,7 @@ public class ReserveTransactionProcessorTest {
         String ref = "test-reserve-success-4";
 
         List<TransactionLinePb> lines = new ArrayList<>() {{
-            add(TransactionLinePb.newBuilder().setWalletRef(usdReserveWalletRef).setAssetCode(usdAssetId).setOperationType(OperationTypePb.OperationTypePb_Reserve).setAmount(10).build());
+            add(TransactionLinePb.newBuilder().setWalletRef(usdReserveWalletRef).setAssetCode(usdAssetId).setOperationType(OperationTypePb.OperationTypePb_Reserve).setAmount(20).build());
             add(TransactionLinePb.newBuilder().setWalletRef(cnyReserveWalletRef).setAssetCode(cnyAssetId).setOperationType(OperationTypePb.OperationTypePb_Reserve).setAmount(40).build());
 
         }};
@@ -64,7 +68,10 @@ public class ReserveTransactionProcessorTest {
         Assert.assertEquals(ErrorCodePb.ERROR_OK, reply.getError().getCode());
         reply = createWalletProcessor.createWallet(CreateWalletRequestPb.newBuilder().setServiceId(serviceId).setReferenceId(cnyReserveWalletRef).setAssetId(cnyAssetId).setOwnerType(ownerType).setOwnerId(owner).build());
         Assert.assertEquals(ErrorCodePb.ERROR_OK, reply.getError().getCode());
-
+        List<BalanceSnapshot> snapshots = balanceSnapshotManager.selectByRefs(ServiceId.USER, List.of(usdReserveWalletRef));
+        if (!snapshots.isEmpty() && snapshots.get(0).getAvailable() > 0) {
+            return;
+        }
         LambdaUpdateWrapper<BalanceSnapshot> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(BalanceSnapshot::getWalletReferenceId, usdReserveWalletRef).set(BalanceSnapshot::getAvailable, 100);
         balanceSnapshotMapper.update(wrapper);

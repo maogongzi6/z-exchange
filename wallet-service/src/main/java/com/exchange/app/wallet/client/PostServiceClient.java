@@ -19,7 +19,7 @@ public class PostServiceClient {
     public Result<PostTransactionReplyPb> postTransaction(PostTransactionRequestPb req) {
         PostTransactionReplyPb reply = postServiceBlockingStub.postTransaction(req);
         if (reply.getError().getCode() != ErrorCodePb.ERROR_OK) {
-            log.error("post_transaction failed: " + reply.getError());
+            log.error("post_transaction failed: {}", reply.getError());
             return Result.fail(ErrorCode.POST_TRANSACTION_FAILED, reply.getError().getMessage());
         }
         return Result.success(reply);

@@ -31,7 +31,7 @@ public class IdGenerator {
     }
 
     private static long sequence() {
-        seq = (++seq)%10;
+        seq = (++seq)%100;
         return seq;
     }
 }

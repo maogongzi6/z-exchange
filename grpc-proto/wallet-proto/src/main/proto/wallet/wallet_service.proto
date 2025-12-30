@@ -12,6 +12,7 @@ service WalletService {
   rpc createWallet(CreateWalletRequestPb) returns (CreateWalletReplyPb) {}
   rpc atomicTransaction(AtomicTransactionRequestPb) returns (AtomicTransactionReplyPb);
   rpc reserveTransaction(ReserveTransactionRequestPb) returns (ReserveTransactionReplyPb);
+  rpc applyReserveTransaction(ApplyReservationTransactionRequestPb) returns (ApplyReservationTransactionReplyPb);
 }
 
 

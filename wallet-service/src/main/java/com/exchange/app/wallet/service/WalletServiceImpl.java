@@ -1,5 +1,6 @@
 package com.exchange.app.wallet.service;
 
+import com.exchange.app.wallet.processor.transaction.ApplyReservationTransactionProcessor;
 import com.exchange.app.wallet.processor.transaction.AtomicTransactionProcessor;
 import com.exchange.app.wallet.processor.CreateWalletProcessor;
 import com.exchange.app.wallet.processor.transaction.ReserveTransactionProcessor;
@@ -17,6 +18,7 @@ public class WalletServiceImpl extends WalletServiceGrpc.WalletServiceImplBase {
     final private CreateWalletProcessor createWalletProcessor;
     final private AtomicTransactionProcessor atomicTransactionProcessor;
     final private ReserveTransactionProcessor reserveTransactionProcessor;
+    private final ApplyReservationTransactionProcessor applyReservationTransactionProcessor;
 
     @Override
     public void createWallet(CreateWalletRequestPb request, StreamObserver<CreateWalletReplyPb> responseObserver) {
@@ -50,6 +52,18 @@ public class WalletServiceImpl extends WalletServiceGrpc.WalletServiceImplBase {
             reply = reserveTransactionProcessor.reserve(request);
         } catch (Exception e) {
             reply = ReserveTransactionReplyPb.newBuilder().setError(PbErrorBuilder.build(ErrorCode.SERVER_ERROR)).build();
+        }
+        responseObserver.onNext(reply);
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void applyReserveTransaction(ApplyReservationTransactionRequestPb request, StreamObserver<ApplyReservationTransactionReplyPb> responseObserver) {
+        ApplyReservationTransactionReplyPb reply;
+        try {
+            reply = applyReservationTransactionProcessor.apply(request);
+        } catch (Exception e) {
+            reply = ApplyReservationTransactionReplyPb.newBuilder().setError(PbErrorBuilder.build(ErrorCode.SERVER_ERROR)).build();
         }
         responseObserver.onNext(reply);
         responseObserver.onCompleted();

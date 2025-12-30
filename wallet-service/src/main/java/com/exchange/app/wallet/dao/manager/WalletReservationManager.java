@@ -38,7 +38,7 @@ public class WalletReservationManager extends DbBaseManager<WalletReservation, W
             return new ArrayList<>();
         }
 
-        var wrapper = queryLambdaWrapper().in(WalletReservation::getReservationId, refs);
+        var wrapper = queryLambdaWrapper().in(WalletReservation::getReferenceId, refs);
         return mapper.selectList(wrapper);
     }
 
