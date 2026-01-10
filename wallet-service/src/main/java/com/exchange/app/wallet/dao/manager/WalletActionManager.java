@@ -2,6 +2,7 @@ package com.exchange.app.wallet.dao.manager;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.exchange.app.wallet.dao.mapper.WalletActionMapper;
+import com.exchange.app.wallet.exception.DbException;
 import com.exchange.app.wallet.po.transaction.WalletAction;
 import com.exchange.common.db.DbBaseManager;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,9 @@ public class WalletActionManager extends DbBaseManager<WalletAction, WalletActio
     }
 
     public int batchInsert(List<WalletAction> list) {
+        if (list.isEmpty()) {
+            throw new DbException("empty list");
+        }
         return mapper.batchInsert(list);
     }
 

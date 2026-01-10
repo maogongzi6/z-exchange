@@ -9,9 +9,13 @@ import com.exchange.app.wallet.result.PbErrorBuilder;
 import com.exchange.proto.wallet.wallet.*;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.util.Arrays;
+
+@Slf4j
 @GrpcService
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class WalletServiceImpl extends WalletServiceGrpc.WalletServiceImplBase {
@@ -26,6 +30,7 @@ public class WalletServiceImpl extends WalletServiceGrpc.WalletServiceImplBase {
         try {
             reply = createWalletProcessor.createWallet(request);
         } catch (Exception e) {
+            log.error("uncaught exception", e);
             reply = CreateWalletReplyPb.newBuilder().setError(PbErrorBuilder.build(ErrorCode.SERVER_ERROR)).build();
         }
         responseObserver.onNext(reply);
@@ -39,6 +44,7 @@ public class WalletServiceImpl extends WalletServiceGrpc.WalletServiceImplBase {
         try {
             reply = atomicTransactionProcessor.executeAtomic(request);
         } catch (Exception e) {
+            log.error("uncaught exception", e);
             reply = AtomicTransactionReplyPb.newBuilder().setError(PbErrorBuilder.build(ErrorCode.SERVER_ERROR)).build();
         }
         responseObserver.onNext(reply);
@@ -51,6 +57,7 @@ public class WalletServiceImpl extends WalletServiceGrpc.WalletServiceImplBase {
         try {
             reply = reserveTransactionProcessor.reserve(request);
         } catch (Exception e) {
+            log.error("uncaught exception", e);
             reply = ReserveTransactionReplyPb.newBuilder().setError(PbErrorBuilder.build(ErrorCode.SERVER_ERROR)).build();
         }
         responseObserver.onNext(reply);
@@ -63,6 +70,7 @@ public class WalletServiceImpl extends WalletServiceGrpc.WalletServiceImplBase {
         try {
             reply = applyReservationTransactionProcessor.apply(request);
         } catch (Exception e) {
+            log.error("uncaught exception", e);
             reply = ApplyReservationTransactionReplyPb.newBuilder().setError(PbErrorBuilder.build(ErrorCode.SERVER_ERROR)).build();
         }
         responseObserver.onNext(reply);

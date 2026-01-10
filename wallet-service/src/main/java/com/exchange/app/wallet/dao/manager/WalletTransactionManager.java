@@ -3,11 +3,13 @@ package com.exchange.app.wallet.dao.manager;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.exchange.app.wallet.dao.mapper.WalletTransactionMapper;
+import com.exchange.app.wallet.exception.InvalidValueException;
 import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.enums.transaction.TransactionStatus;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
 import com.exchange.common.db.DbBaseManager;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -30,6 +32,9 @@ public class WalletTransactionManager extends DbBaseManager<WalletTransaction, W
     }
 
     public WalletTransaction selectByIdempotencyKey(ServiceId serviceId, String idempotencyKey, LambdaQueryWrapper<WalletTransaction> queryWrapper) {
+        if (serviceId == null || Strings.isEmpty(idempotencyKey)) {
+            throw new InvalidValueException(String.format("serviceId or idempotencyKey is null, serviceId:%s, idempotencyKey:%s", serviceId, idempotencyKey));
+        }
         LambdaQueryWrapper<WalletTransaction> query = Objects.requireNonNullElseGet(queryWrapper, LambdaQueryWrapper::new);
         query = query.eq(WalletTransaction::getInitiator, serviceId).eq(WalletTransaction::getIdempotencyKey, idempotencyKey);
         return mapper.selectOne(query);

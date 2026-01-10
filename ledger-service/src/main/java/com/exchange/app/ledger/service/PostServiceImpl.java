@@ -10,9 +10,11 @@ import com.exchange.proto.ledger.post.PostTransactionReplyPb;
 import com.exchange.proto.ledger.post.PostTransactionRequestPb;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.springframework.beans.factory.annotation.Autowired;
 
+@Slf4j
 @GrpcService
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class PostServiceImpl extends PostServiceGrpc.PostServiceImplBase {
@@ -20,11 +22,11 @@ public class PostServiceImpl extends PostServiceGrpc.PostServiceImplBase {
 
     @Override
     public void postTransaction(PostTransactionRequestPb request, StreamObserver<PostTransactionReplyPb> responseObserver) {
-        System.out.println(request.toString());
         PostTransactionReplyPb reply;
         try {
             reply = postLedgerProcessor.postTransaction(request);
         } catch (Exception e) {
+            log.error("uncaught exception", e);
             reply = PostTransactionReplyPb.newBuilder().setError(PbErrorBuilder.build(ErrorCode.SERVER_ERROR)).build();
         }
         responseObserver.onNext(reply);

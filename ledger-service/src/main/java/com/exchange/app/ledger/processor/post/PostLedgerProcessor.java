@@ -47,6 +47,7 @@ public class PostLedgerProcessor {
 
         Result<Void> result = validateReq(req);
         if (!result.success) {
+            log.error("invalid request, {}, {}", req, result);
             return replyError(result);
         }
 
@@ -59,6 +60,7 @@ public class PostLedgerProcessor {
                 .collect(Collectors.toMap(Account::getReferenceId, Account::getAccountId));
         if (accountRefToAccountId.size() != accountRefs.size()) {
             Set<String> notFound = new HashSet<>(accountRefs) {{removeAll(accountRefToAccountId.keySet());}};
+            log.error("account not found, notFoundRefs={}", notFound);
             return replyError(ErrorCode.ACCOUNT_NOT_FOUND, "account_not_found, refs: " + notFound);
         }
 
@@ -68,11 +70,13 @@ public class PostLedgerProcessor {
         }
         result = DbTransactionHelper.executeWithResult(transactionTemplate, TransactionDefinition.PROPAGATION_REQUIRED, () -> {
             if (ledgerTxnManager.insertIgnore(ledgerTxn) == 0) {
-                log.info("ledger txn already exists");
+                log.info("ledger txn already exists, {}", ledgerTxn);
                 return Result.success();
             }
             if (ledgerEntryMapper.batchInsert(entries) < entries.size()) {
-                return Result.fail(ErrorCode.LEDGER_DUPLICATED, "unexpected duplicated_ledger_entry");
+                log.error("unexpected ledger txn already exists, {}", ledgerTxn);
+                // should be a server error?
+                return Result.fail(ErrorCode.SERVER_ERROR, "unexpected duplicated_ledger_entry");
             }
             return Result.success();
         });

@@ -3,6 +3,7 @@ package com.exchange.app.wallet.dao.manager;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.exchange.app.wallet.dao.mapper.WalletReservationMapper;
+import com.exchange.app.wallet.exception.DbException;
 import com.exchange.app.wallet.po.enums.transaction.ReservationOutcome;
 import com.exchange.app.wallet.po.enums.transaction.ReservationStatus;
 import com.exchange.app.wallet.po.transaction.WalletReservation;
@@ -78,6 +79,9 @@ public class WalletReservationManager extends DbBaseManager<WalletReservation, W
     }
 
     public int batchInsert(List<WalletReservation> list) {
+        if (list.isEmpty()) {
+            throw new DbException("empty list");
+        }
         return mapper.batchInsert(list);
     }
 }

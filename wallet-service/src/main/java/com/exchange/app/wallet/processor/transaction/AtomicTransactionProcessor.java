@@ -56,6 +56,7 @@ public class AtomicTransactionProcessor {
     private final TransactionProcessor transactionProcessor;
 
     public AtomicTransactionReplyPb executeAtomic(AtomicTransactionRequestPb request) {
+        // TODO check idempotency key and reference id
         Result<TransactionProcessor.RequestInfo> infoResult = transactionProcessor.validateAndGetRequestInfo(request.getInitiator(), request.getBusinessType(), TransactionType.ATOMIC, true, request.getLinesList());
         if (!infoResult.success) {
             return replyError(infoResult);

@@ -69,6 +69,7 @@ class TransactionProcessor {
         }
         Result<Void> result = validateAssetInfo(linePbs);
         if (!result.success) {
+            log.error("validate asset info failed, {}", result);
             return Result.fail(result);
         }
 
@@ -92,6 +93,7 @@ class TransactionProcessor {
             BalanceSnapshot snapshot = walletRefToSnapshot.get(line.getWalletRef());
             result = validateSnapshot(snapshot, line);
             if (!result.success) {
+                log.error("validate snapshot failed, {}", result);
                 return Result.fail(result);
             }
 
@@ -100,6 +102,7 @@ class TransactionProcessor {
                 WalletReservation reservation = refToReservation.get(line.getReservationRef());
                 result = validateReservation(reservation, snapshot, line);
                 if (!result.success) {
+                    log.error("validate reservation failed, {}", result);
                     return Result.fail(result);
                 }
                 reservationId = reservation.getReservationId();
@@ -270,26 +273,35 @@ class TransactionProcessor {
             Result<Void> result = updateReservations(requestInfo.reservationsInTheRequest,
                     (reservation) -> updateReservationBeforePosting(reservation, walletIdToActions));
             if (!result.success) {
+                log.error("update reservations failed, {}, {}", result, requestInfo.reservationsInTheRequest);
                 return Result.fail(result);
             }
 
 
             result = updateSnapshotsBeforePosting(walletIdToActions, requestInfo.snapshots);
             if (!result.success) {
+                log.error("update snapshots failed, {}, {}", result, requestInfo.snapshots);
                 return Result.fail(result);
             }
 
-            if (walletReservationManager.batchInsert(createdReservations) != createdReservations.size()) {
-                return Result.fail(ErrorCode.WALLET_RESERVATION_DUPLICATED, "unexpected reservation duplicated");
+            if (!createdReservations.isEmpty()) {
+                if (walletReservationManager.batchInsert(createdReservations) != createdReservations.size()) {
+                    log.error("insert reservations failed, {}, {}", result, createdReservations);
+                    return Result.fail(ErrorCode.WALLET_RESERVATION_DUPLICATED, "unexpected reservation duplicated");
+                }
             }
+
             if (walletTransactionManager.insertIgnore(walletTxn) == 0) {
+                log.error("insert transaction failed, {}, {}", result, walletTxn);
                 return Result.fail(ErrorCode.WALLET_TRANSACTION_DUPLICATED, "unexpected transaction duplicated");
             }
             if (walletActionManager.batchInsert(actions) != actions.size()) {
+                log.error("insert actions failed, {}, {}", result, actions);
                 return Result.fail(ErrorCode.WALLET_ACTION_DUPLICATION, "unexpected action duplicated");
             }
             if (requestInfo.needPostLedger) {
                 if (walletOutboxManager.insertIgnore(walletOutbox) == 0) {
+                    log.error("insert outbox failed, {}, {}", result, walletOutbox);
                     return Result.fail(ErrorCode.WALLET_OUTBOX_DUPLICATED, "unexpected outbox duplicated");
                 }
             }
@@ -403,6 +415,7 @@ class TransactionProcessor {
                     case RELEASE:
                         if (balanceSnapshotManager.releaseFromWalletId(snapshot.getId(), action.getWalletId(), action.getAssetId(), action.getAmount())
                                 != 1) {
+                            log.error("failed to update snapshot to release amount, reservation: {}, action: {}", snapshot, action);
                             return Result.fail(ErrorCode.BALANCE_SNAPSHOT_UPDATE_FAILED, "failed to update snapshot to release amount");
                         }
                 }
@@ -420,12 +433,14 @@ class TransactionProcessor {
                     case TRANSFER_OUT:
                         if (balanceSnapshotManager.transferOutFromWalletId(snapshot.getId(), action.getWalletId(), action.getAssetId(), action.getAmount())
                                 != 1) {
+                            log.error("failed to update snapshot to transfer out amount, reservation: {}, action: {}", snapshot, action);
                             return Result.fail(ErrorCode.BALANCE_SNAPSHOT_UPDATE_FAILED, "failed to update snapshot to transfer out amount");
                         }
                         break;
                     case TRANSFER_IN:
                         if (balanceSnapshotManager.transferInToWalletId(snapshot.getId(), action.getWalletId(), action.getAssetId(), action.getAmount())
                                 != 1) {
+                            log.error("failed to update snapshot to transfer in amount, reservation: {}, action: {}", snapshot, action);
                             return Result.fail(ErrorCode.BALANCE_SNAPSHOT_UPDATE_FAILED, "failed to update snapshot to transfer in amount");
                         }
                         break;
@@ -468,7 +483,11 @@ class TransactionProcessor {
                 .setReferenceId(transactionInfo.walletTxn.getReferenceId())
                 .addAllEntries(entries).build();
         Result<PostTransactionReplyPb> result = postServiceClient.postTransaction(req);
-        return Result.result(null, result);
+        if (!result.success) {
+            log.error("failed to post transaction, req: {}, result: {}", req, result);
+            return Result.fail(result);
+        }
+        return Result.success();
     }
 
     Result<WalletTransaction> afterPostingLedger(RequestInfo requestInfo, TransactionInfo transactionInfo) {

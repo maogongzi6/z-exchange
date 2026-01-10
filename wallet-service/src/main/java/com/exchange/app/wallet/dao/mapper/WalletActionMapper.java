@@ -1,7 +1,6 @@
 package com.exchange.app.wallet.dao.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.exchange.app.ledger.po.ledger.LedgerEntry;
 import com.exchange.app.wallet.po.transaction.WalletAction;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Param;

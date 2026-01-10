@@ -1,13 +1,13 @@
-package com.exchange.app.wallet;
+package com.exchange.app.ledger;
 
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-@MapperScan("com.exchange.app.wallet.dao.mapper")
+@MapperScan("com.exchange.app.ledger.dao.mapper")
 @SpringBootApplication
-public class Server {
+public class LedgerServer {
     public static void main(String[] args) {
-        SpringApplication.run(Server.class, args);
+        SpringApplication.run(LedgerServer.class, args);
     }
 }

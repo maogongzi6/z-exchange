@@ -1,29 +1,26 @@
 package com.exchange.app.wallet.utils;
 
 import java.sql.Date;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class IdGenerator {
     final static public long START_TIME = Date.valueOf("2025-11-30").getTime();
-    private static long seq = 0;
+    private static final AtomicLong seq = new AtomicLong(0);
 
     public static String generateWalletId() {
-        return String.format("%9d%d", timeOffset()/1000, sequence());
-    }
-
-    public static String generateBalanceSnapshotId() {
-        return String.format("%9d%d", timeOffset()/1000, sequence());
+        return String.format("%d-%d", timeOffset(), sequence());
     }
 
     public static String generateWalletTransactionId() {
-        return String.format("%9d%d", timeOffset()/1000, sequence());
+        return String.format("%d-%d", timeOffset(), sequence());
     }
 
     public static String generateWalletActionId() {
-        return String.format("%9d%d", timeOffset()/1000, sequence());
+        return String.format("%d-%d", timeOffset(), sequence());
     }
 
     public static String generateReservationId() {
-        return String.format("%9d%d", timeOffset()/1000, sequence());
+        return String.format("%d-%d", timeOffset(), sequence());
     }
 
     private static long timeOffset() {
@@ -31,7 +28,6 @@ public class IdGenerator {
     }
 
     private static long sequence() {
-        seq = (++seq)%100;
-        return seq;
+        return seq.incrementAndGet();
     }
 }
