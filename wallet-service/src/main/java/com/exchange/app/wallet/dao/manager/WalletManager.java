@@ -2,13 +2,9 @@ package com.exchange.app.wallet.dao.manager;
 
 import com.exchange.app.wallet.dao.mapper.WalletMapper;
 import com.exchange.app.wallet.po.wallet.Wallet;
-import com.exchange.app.wallet.result.ErrorCode;
-import com.exchange.app.wallet.result.Result;
-import com.exchange.common.db.DbBaseManager;
-import lombok.RequiredArgsConstructor;
+import com.exchange.common.db.manager.DbBaseManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 
 @Slf4j

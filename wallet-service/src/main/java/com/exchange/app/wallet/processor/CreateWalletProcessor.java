@@ -45,8 +45,8 @@ public class CreateWalletProcessor {
     final private AccountServiceClient accountServiceClient;
 
     public CreateWalletReplyPb createWallet(CreateWalletRequestPb req) {
-        ServiceId serviceId = EnumMappers.serviceIdPbMapper.to(req.getServiceId());
-        OwnerType ownerType = EnumMappers.ownerTypePbMapper.to(req.getOwnerType());
+        ServiceId serviceId = EnumPbMappers.serviceIdPbMapper.to(req.getServiceId());
+        OwnerType ownerType = EnumPbMappers.ownerTypePbMapper.to(req.getOwnerType());
         Result<Void> result = validateReq(req, serviceId, ownerType);
         if (!result.success) {
             return replyError(result);

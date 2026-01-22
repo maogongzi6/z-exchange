@@ -1,10 +1,8 @@
-package com.exchange.common.db;
+package com.exchange.common.db.manager;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
-import com.baomidou.mybatisplus.extension.conditions.update.LambdaUpdateChainWrapper;
 import org.springframework.dao.DuplicateKeyException;
 
 public class DbBaseManager<T, M extends BaseMapper<T>> {

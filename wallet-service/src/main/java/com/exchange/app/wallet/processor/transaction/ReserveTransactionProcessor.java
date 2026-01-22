@@ -7,7 +7,7 @@ import com.exchange.app.wallet.po.transaction.WalletTransaction;
 import com.exchange.app.wallet.result.ErrorCode;
 import com.exchange.app.wallet.result.PbErrorBuilder;
 import com.exchange.app.wallet.result.Result;
-import com.exchange.app.wallet.utils.EnumMappers;
+import com.exchange.app.wallet.utils.EnumPbMappers;
 import com.exchange.proto.wallet.common.OperationTypePb;
 import com.exchange.proto.wallet.wallet.ReservationInfoPb;
 import com.exchange.proto.wallet.wallet.ReserveTransactionReplyPb;
@@ -18,7 +18,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -29,11 +28,7 @@ import java.util.stream.Collectors;
 public class ReserveTransactionProcessor {
     final private TransactionProcessor transactionProcessor;
     private final WalletReservationManager walletReservationManager;
-    private final TransactionTemplate transactionTemplate;
-    private final BalanceSnapshotManager balanceSnapshotManager;
     private final WalletTransactionManager walletTransactionManager;
-    private final WalletActionManager walletActionManager;
-    private final WalletOutboxManager walletOutboxManager;
 
     public ReserveTransactionReplyPb reserve(ReserveTransactionRequestPb request) {
         Result<TransactionProcessor.RequestInfo> result = validateAndGetRequestInfo(request);
@@ -119,7 +114,7 @@ public class ReserveTransactionProcessor {
         WalletTransaction txn = info.walletTxn;
         ReserveTransactionReplyPb.Builder builder = ReserveTransactionReplyPb.newBuilder()
                 .setTransactionId(txn.getTxnId())
-                .setStatus(EnumMappers.transactionStatusPbMapper.from(txn.getTxnStatus()))
+                .setStatus(EnumPbMappers.transactionStatusPbMapper.from(txn.getTxnStatus()))
                 .setError(PbErrorBuilder.build(ErrorCode.SUCCESS, detail));
         List<ReservationInfoPb> infos = new ArrayList<>();
         for (WalletReservation reservation : info.reservations) {

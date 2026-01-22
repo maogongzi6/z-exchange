@@ -7,16 +7,16 @@ import com.exchange.app.wallet.po.enums.BusinessType;
 import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.enums.transaction.TransactionStatus;
 import com.exchange.app.wallet.po.enums.transaction.TransactionType;
-import com.exchange.app.wallet.result.Result;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.exchange.common.db.po.BaseEntity;
+import lombok.*;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true)
 @AllArgsConstructor
 @NoArgsConstructor
 @TableName("wallet_transactions")
-public class WalletTransaction {
+public class WalletTransaction extends BaseEntity {
     @TableId(type = IdType.AUTO)
     private Long id;
     private String txnId;

@@ -6,7 +6,7 @@ public enum OutboxEventType {
     UNKNOWN(0),
     LEDGER_POST(1),;
 
-    @EnumValue
+    // @EnumValue
     final public int code;
 
     OutboxEventType(int code) {

@@ -5,12 +5,10 @@ import com.exchange.app.ledger.po.enums.NormalSide;
 import com.exchange.app.ledger.po.enums.OwnerType;
 import com.exchange.app.ledger.po.enums.ServiceId;
 import com.exchange.app.ledger.po.enums.Direction;
-import com.exchange.common.enums.EnumMapper;
+import com.exchange.common.utils.enums.EnumMapper;
 import com.exchange.proto.ledger.common.*;
 
-import java.util.EnumMap;
 import java.util.HashMap;
-import java.util.Map;
 
 public class EnumMappers {
     final static public EnumMapper<LedgerDirectionPb, Direction> directionPbMapper = new EnumMapper<>(

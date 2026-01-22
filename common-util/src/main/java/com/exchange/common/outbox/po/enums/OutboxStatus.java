@@ -1,4 +1,4 @@
-package com.exchange.app.wallet.po.enums.outbox;
+package com.exchange.common.outbox.po.enums;
 
 import com.baomidou.mybatisplus.annotation.EnumValue;
 

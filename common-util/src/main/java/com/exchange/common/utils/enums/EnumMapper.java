@@ -1,4 +1,4 @@
-package com.exchange.common.enums;
+package com.exchange.common.utils.enums;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;

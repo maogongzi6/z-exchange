@@ -7,9 +7,8 @@ import com.exchange.app.wallet.exception.InvalidValueException;
 import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.enums.WalletStatus;
 import com.exchange.app.wallet.po.wallet.BalanceSnapshot;
-import com.exchange.common.db.DbBaseManager;
+import com.exchange.common.db.manager.DbBaseManager;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.ibatis.annotations.Param;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 

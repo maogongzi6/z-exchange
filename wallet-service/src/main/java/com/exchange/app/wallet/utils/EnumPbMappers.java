@@ -5,12 +5,12 @@ import com.exchange.app.wallet.po.enums.BusinessType;
 import com.exchange.app.wallet.po.enums.OwnerType;
 import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.enums.transaction.TransactionStatus;
-import com.exchange.common.enums.EnumMapper;
+import com.exchange.common.utils.enums.EnumMapper;
 import com.exchange.proto.wallet.common.*;
 
 import java.util.HashMap;
 
-public class EnumMappers {
+public class EnumPbMappers {
     final static public EnumMapper<OwnerTypePb, OwnerType> ownerTypePbMapper = new EnumMapper<>(
         new HashMap<>() {{
             put(OwnerTypePb.OwnerTypePb_Unknown, OwnerType.UNKNOWN);

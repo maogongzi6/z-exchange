@@ -7,7 +7,7 @@ import com.exchange.app.wallet.exception.DbException;
 import com.exchange.app.wallet.po.enums.transaction.ReservationOutcome;
 import com.exchange.app.wallet.po.enums.transaction.ReservationStatus;
 import com.exchange.app.wallet.po.transaction.WalletReservation;
-import com.exchange.common.db.DbBaseManager;
+import com.exchange.common.db.manager.DbBaseManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;

@@ -1,57 +1,24 @@
 package com.exchange.app.wallet.processor.transaction;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.exchange.app.wallet.client.PostServiceClient;
 import com.exchange.app.wallet.dao.manager.*;
-import com.exchange.app.wallet.exception.InvalidEnumException;
-import com.exchange.app.wallet.po.enums.WalletBucket;
-import com.exchange.app.wallet.po.enums.outbox.OutboxEventType;
-import com.exchange.app.wallet.po.enums.outbox.OutboxStatus;
 import com.exchange.app.wallet.po.enums.transaction.*;
-import com.exchange.app.wallet.po.enums.BusinessType;
-import com.exchange.app.wallet.po.enums.ServiceId;
-import com.exchange.app.wallet.po.outbox.WalletOutbox;
-import com.exchange.app.wallet.po.transaction.WalletAction;
-import com.exchange.app.wallet.po.transaction.WalletReservation;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
-import com.exchange.app.wallet.po.wallet.BalanceSnapshot;
-import com.exchange.app.wallet.po.wallet.WalletAccountMapping;
 import com.exchange.app.wallet.result.ErrorCode;
 import com.exchange.app.wallet.result.PbErrorBuilder;
 import com.exchange.app.wallet.result.Result;
 import com.exchange.app.wallet.utils.*;
-import com.exchange.proto.ledger.common.LedgerDirectionPb;
-import com.exchange.proto.ledger.post.LedgerEntryPb;
-import com.exchange.proto.ledger.post.PostTransactionReplyPb;
-import com.exchange.proto.ledger.post.PostTransactionRequestPb;
-import com.exchange.proto.wallet.common.OperationTypePb;
 import com.exchange.proto.wallet.wallet.AtomicTransactionReplyPb;
 import com.exchange.proto.wallet.wallet.AtomicTransactionRequestPb;
-import com.exchange.proto.wallet.wallet.TransactionLinePb;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.support.TransactionTemplate;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class AtomicTransactionProcessor {
-    final private BalanceSnapshotManager balanceSnapshotManager;
-    final private WalletAccountMappingManager walletAccountMappingManager;
     private final WalletTransactionManager walletTransactionManager;
-    private final WalletOutboxManager walletOutboxManager;
-    private final WalletReservationManager walletReservationManager;
-    private final WalletActionManager walletActionManager;
-
-    private final PostServiceClient postServiceClient;
-    private final TransactionTemplate transactionTemplate;
 
     private final TransactionProcessor transactionProcessor;
 
@@ -67,25 +34,28 @@ public class AtomicTransactionProcessor {
         // idempotency check
         if (walletTxn == null) {
             txnInfoResult = transactionProcessor.beforePostingLedger(request.getReferenceId(), request.getIdempotencyKey(), requestInfo);
-        } else if (walletTxn.getTxnStatus() == TransactionStatus.PENDING) {
-            txnInfoResult = transactionProcessor.getTxnInfo(walletTxn, requestInfo);
         } else {
             return replySuccess(walletTxn, "txn already executed");
         }
+//        } else if (walletTxn.getTxnStatus() == TransactionStatus.PENDING) {
+//            txnInfoResult = transactionProcessor.getTxnInfo(walletTxn, requestInfo);
+//        } else {
+//            return replySuccess(walletTxn, "txn already executed");
+//        }
         if (!txnInfoResult.success) {
             return replyError(txnInfoResult);
         }
-        TransactionProcessor.TransactionInfo transactionInfo = txnInfoResult.value;
-        Result<Void> result = transactionProcessor.postLedger(transactionInfo);
-        if (!result.success) {
-            return replyError(result);
-        }
-        Result<WalletTransaction> txnResult = transactionProcessor.afterPostingLedger(requestInfo, transactionInfo);
-        if (!txnResult.success) {
-            return replyError(txnResult);
-        }
+//        TransactionProcessor.TransactionInfo transactionInfo = txnInfoResult.value;
+//        Result<Void> result = transactionProcessor.postLedger(transactionInfo);
+//        if (!result.success) {
+//            return replyError(result);
+//        }
+//        Result<WalletTransaction> txnResult = transactionProcessor.afterPostingLedger(requestInfo, transactionInfo);
+//        if (!txnResult.success) {
+//            return replyError(txnResult);
+//        }
 
-        return replySuccess(txnResult.value, "success");
+        return replySuccess(txnInfoResult.value.walletTxn, "success");
     }
 
     /*
@@ -522,7 +492,7 @@ public class AtomicTransactionProcessor {
     private AtomicTransactionReplyPb replySuccess(WalletTransaction txn, String detail) {
         return AtomicTransactionReplyPb.newBuilder()
                 .setTransactionId(txn.getTxnId())
-                .setStatus(EnumMappers.transactionStatusPbMapper.from(txn.getTxnStatus()))
+                .setStatus(EnumPbMappers.transactionStatusPbMapper.from(txn.getTxnStatus()))
                 .setError(PbErrorBuilder.build(ErrorCode.SUCCESS, detail))
                 .build();
     }

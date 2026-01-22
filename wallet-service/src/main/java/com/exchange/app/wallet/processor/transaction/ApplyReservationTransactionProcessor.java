@@ -7,10 +7,9 @@ import com.exchange.app.wallet.po.transaction.WalletTransaction;
 import com.exchange.app.wallet.result.ErrorCode;
 import com.exchange.app.wallet.result.PbErrorBuilder;
 import com.exchange.app.wallet.result.Result;
-import com.exchange.app.wallet.utils.EnumMappers;
+import com.exchange.app.wallet.utils.EnumPbMappers;
 import com.exchange.proto.wallet.wallet.ApplyReservationTransactionReplyPb;
 import com.exchange.proto.wallet.wallet.ApplyReservationTransactionRequestPb;
-import com.exchange.proto.wallet.wallet.AtomicTransactionReplyPb;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,7 +57,7 @@ public class ApplyReservationTransactionProcessor {
     private ApplyReservationTransactionReplyPb replySuccess(WalletTransaction txn, String detail) {
         return ApplyReservationTransactionReplyPb.newBuilder()
                 .setTransactionId(txn.getTxnId())
-                .setStatus(EnumMappers.transactionStatusPbMapper.from(txn.getTxnStatus()))
+                .setStatus(EnumPbMappers.transactionStatusPbMapper.from(txn.getTxnStatus()))
                 .setError(PbErrorBuilder.build(ErrorCode.SUCCESS, detail))
                 .build();
     }

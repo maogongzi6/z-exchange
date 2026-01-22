@@ -7,7 +7,7 @@ import com.exchange.app.wallet.exception.InvalidValueException;
 import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.enums.transaction.TransactionStatus;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
-import com.exchange.common.db.DbBaseManager;
+import com.exchange.common.db.manager.DbBaseManager;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;

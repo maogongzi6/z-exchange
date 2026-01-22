@@ -1,6 +1,6 @@
 package com.exchange.app.ledger.result;
 
-import com.exchange.common.result.CommonResult;
+import com.exchange.common.utils.result.CommonResult;
 
 // TODO maybe move success() fail() to common module
 public class Result<T> extends CommonResult<T, ErrorCode> {

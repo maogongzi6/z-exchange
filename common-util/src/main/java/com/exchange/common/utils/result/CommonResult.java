@@ -1,4 +1,4 @@
-package com.exchange.common.result;
+package com.exchange.common.utils.result;
 
 import lombok.AllArgsConstructor;
 import lombok.ToString;

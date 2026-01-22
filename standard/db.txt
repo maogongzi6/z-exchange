@@ -5,12 +5,6 @@
 5. decide a table order when access table in transaction:
     wallet service: reservation -> snapshot -> txn -> action -> outbox
 
-
-
-
-reserve: +reserve_amount, -wallet.available +wallet.reserve
-consume: -reserve_amount +pending_settle -> -pending_settle +consumed
-transfer_out: -wallet.reserve
-transfer_in: +wallet.available
-
-
+Lock db in PK order instead of business key order because:
+1. when batch lock many rows, PK is monotonic and clustered, which means fewer random I/O
+2. I use PK to do paginate, so lock in PK order is better

@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package common;
+
+option java_multiple_files = true;
+option java_package = "com.exchange.proto.common.event";
+
+message EventEnvelopePb {
+  // unique id for kafka event
+  string event_id = 1;
+  // unique id for business
+  string command_id = 2;
+  // String instead of Enum, since event need to cross service (sometimes cross language),
+  // String is loose coupling, better compatibility and serialization friendly
+  string event_type = 3;
+  // payload in proto bytes for better performance and schema evolution
+  bytes payload = 4;
+  int64 occurred_at = 5;
+}

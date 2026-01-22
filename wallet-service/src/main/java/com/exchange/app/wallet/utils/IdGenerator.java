@@ -23,6 +23,10 @@ public class IdGenerator {
         return String.format("%d-%d", timeOffset(), sequence());
     }
 
+    public static String generateEventId(String commandId) {
+        return String.format("%s-%d", commandId, sequence());
+    }
+
     private static long timeOffset() {
         return System.currentTimeMillis() - START_TIME;
     }

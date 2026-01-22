@@ -1,6 +1,6 @@
 package com.exchange.app.wallet.result;
 
-import com.exchange.common.result.CommonResult;
+import com.exchange.common.utils.result.CommonResult;
 
 public class Result<T> extends CommonResult<T, ErrorCode> {
 

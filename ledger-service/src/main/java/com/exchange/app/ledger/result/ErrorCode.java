@@ -1,6 +1,6 @@
 package com.exchange.app.ledger.result;
 
-import com.exchange.common.result.PbMappableErrorCode;
+import com.exchange.common.utils.result.PbMappableErrorCode;
 import com.exchange.proto.common.error.ErrorCodePb;
 
 public enum ErrorCode implements PbMappableErrorCode {
