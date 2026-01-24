@@ -10,7 +10,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
         @MapperScan("com.exchange.app.wallet.dao.mapper"),
         @MapperScan("com.exchange.common.outbox.dao.mapper")
 })
-@SpringBootApplication(scanBasePackages = {"com.exchange.app.wallet", "com.exchange.common.outbox.dao"}, scanBasePackageClasses = {AutofillMetaObjectHandler.class})
+@SpringBootApplication(
+        scanBasePackages = {
+                "com.exchange.app.wallet",
+                "com.exchange.common.outbox.dao"
+        },
+        scanBasePackageClasses = {AutofillMetaObjectHandler.class})
 public class WalletServer {
     public static void main(String[] args) {
         SpringApplication.run(WalletServer.class, args);

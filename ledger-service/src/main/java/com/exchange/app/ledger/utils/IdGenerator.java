@@ -19,6 +19,10 @@ public class IdGenerator {
         return String.format("%09d-%d", timeOffset()/1000, sequence());
     }
 
+    public static String generateEventId(String commandId) {
+        return String.format("%s-%d", commandId, sequence());
+    }
+
     private static long timeOffset() {
         return System.currentTimeMillis() - START_TIME;
     }

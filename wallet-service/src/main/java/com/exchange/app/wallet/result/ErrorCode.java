@@ -9,9 +9,10 @@ public enum ErrorCode implements PbMappableErrorCode {
     SERVER_ERROR(2, ErrorCodePb.ERROR_INTERNAL,"server_error"),
     NULL_RESULT_ERROR(3, ErrorCodePb.ERROR_INTERNAL, "null_result_error"),
     DB_ERROR(4, ErrorCodePb.ERROR_INTERNAL, "db_error"),
-    DB_STATE_MISMATCH(5, ErrorCodePb.ERROR_INTERNAL, "db_state_mismatch"),
+    DB_STATE_BROKEN(5, ErrorCodePb.ERROR_INTERNAL, "db_state_broken"),
     INVALID_VALUE_ERROR(6, ErrorCodePb.ERROR_INTERNAL, "invalid_value_error"),
     INVALID_ENUM_ERROR(7, ErrorCodePb.ERROR_INTERNAL, "invalid_enum_error"),
+    PUBLISH_KAFKA_ERROR(8, ErrorCodePb.ERROR_INTERNAL, "publish_kafka_error"),
 
     INVALID_REQUEST_PARAMETER(100, ErrorCodePb.ERROR_INVALID_ARGUMENT, "invalid_request_parameter"),
     WALLET_NOT_FOUND(1000, ErrorCodePb.ERROR_NOT_FOUND,"wallet_not_found"),

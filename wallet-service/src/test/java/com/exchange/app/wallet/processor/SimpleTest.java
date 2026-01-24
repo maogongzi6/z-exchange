@@ -26,8 +26,8 @@ public class SimpleTest {
     AutofillMetaObjectHandler autofillMetaObjectHandler;
     @Test
     public void test() throws InterruptedException {
-        String txnId = "simple-test-2";
-        WalletTransaction walletTransaction = WalletTransaction.create(txnId, "s-t", ServiceId.SYSTEM, "s-t", TransactionStatus.CLOSED, TransactionType.ADJUST, BusinessType.TRANSFER);
+        String txnId = "simple-test-4";
+        WalletTransaction walletTransaction = WalletTransaction.create(txnId, "s-t", ServiceId.SYSTEM, txnId, TransactionStatus.CLOSED, TransactionType.ADJUST, BusinessType.TRANSFER);
         walletTransactionMapper.insert(walletTransaction);
         Thread.sleep(100);
         walletTransactionMapper.update(walletTransaction, new LambdaUpdateWrapper<>() {{set(WalletTransaction::getReferenceId, "changed"); }});

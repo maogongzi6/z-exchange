@@ -21,6 +21,10 @@ public class Result<T> extends CommonResult<T, ErrorCode> {
         return new Result<>(false, null, error, errorDetail);
     }
 
+    public static <T> Result<T> fail(Result<?> result) {
+        return fail(result.errorCode, result.errorDetail);
+    }
+
     public static <T> Result<T> requireNotNull(Result<T> result) {
         return (Result<T>) requireNotNull(result, ErrorCode.NULL_RESULT);
     }
