@@ -17,19 +17,13 @@ import com.exchange.app.wallet.po.wallet.BalanceSnapshot;
 import com.exchange.app.wallet.po.wallet.WalletAccountMapping;
 import com.exchange.app.wallet.result.ErrorCode;
 import com.exchange.app.wallet.result.Result;
-import com.exchange.app.wallet.utils.DbTransactionHelper;
-import com.exchange.app.wallet.utils.EnumPbMappers;
-import com.exchange.app.wallet.utils.IdGenerator;
-import com.exchange.app.wallet.utils.OutboxHelper;
+import com.exchange.app.wallet.utils.*;
 import com.exchange.common.outbox.dao.manager.OutboxManager;
 import com.exchange.common.outbox.po.Outbox;
 import com.exchange.common.outbox.po.enums.OutboxStatus;
 import com.exchange.common.utils.time.LocalDateTimeHelper;
-import com.exchange.proto.common.event.EventEnvelope;
-import com.exchange.proto.common.event.EventEnvelopePb;
 import com.exchange.proto.ledger.common.LedgerDirectionPb;
 import com.exchange.proto.ledger.post.LedgerEntryPb;
-import com.exchange.proto.ledger.post.PostTransactionReplyPb;
 import com.exchange.proto.ledger.post.PostTransactionRequestPb;
 import com.exchange.proto.wallet.common.BusinessTypePb;
 import com.exchange.proto.wallet.common.OperationTypePb;
@@ -45,7 +39,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -53,8 +46,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
-// package private
-class TransactionProcessor {
+public class TransactionProcessor {
     private final TransactionTemplate transactionTemplate;
 
     private final PostServiceClient postServiceClient;
@@ -67,7 +59,149 @@ class TransactionProcessor {
     private final OutboxManager outboxManager;
     private final PostLedgerPublisher postLedgerPublisher;
 
-    Result<RequestInfo> validateAndGetRequestInfo(ServiceIdPb serviceIdPb, BusinessTypePb businessTypePb, TransactionType transactionType, boolean needPostLedger, List<TransactionLinePb> linePbs) {
+    // reserve -> snapshot: -available, +reserved
+    // consume -> reservation: -remaining, +pending_settle
+    // release -> snapshot, reservation: -reserved, +available | -pending_settle, +released, change status
+    // package private
+    Result<TransactionInfo> beforePostingLedger(String referenceId, ServiceIdPb serviceIdPb, String idempotenceKey, BusinessTypePb businessTypePb, TransactionType transactionType, boolean needPostLedger, List<TransactionLinePb> linePbs) {
+        Result<WalletTransaction> idempotenceResult = ifExists(serviceIdPb, idempotenceKey);
+        if (idempotenceResult.isFailed()) {
+            return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid service id " + serviceIdPb);
+        }
+        if (idempotenceResult.value != null) {
+            log.info("wallet txn already exists: {}", idempotenceResult.value);
+            return Result.success(TransactionInfo.create(idempotenceResult.value));
+        }
+
+        Result<WalletTransaction> txnResult = validateReqAndCreateTxn(referenceId, serviceIdPb, idempotenceKey, businessTypePb, transactionType, needPostLedger, linePbs);
+        if (txnResult.isFailed()) {
+            return Result.fail(txnResult);
+        }
+        WalletTransaction walletTxn = txnResult.value;
+
+        // complete txn immediately if no need to post ledger
+        if (!needPostLedger) {
+            walletTxn.setTxnStatus(TransactionStatus.COMPLETED);
+        }
+
+        // get snapshot from db
+        Set<String> walletRefs = linePbs.stream().distinct().map(TransactionLinePb::getWalletRef).collect(Collectors.toSet());
+        List<BalanceSnapshot> balanceSnapshots = balanceSnapshotManager.selectByRefs(walletTxn.getInitiator(), new ArrayList<>(walletRefs));
+        Map<String, BalanceSnapshot> walletRefToSnapshot = balanceSnapshots.stream().collect(Collectors.toMap(BalanceSnapshot::getWalletReferenceId, snapshot -> snapshot));
+
+        // get reservation from db
+        Set<String> reservationRefs = linePbs.stream()
+                .filter((line)-> !Strings.isEmpty(line.getReservationRef()))
+                .distinct().map(TransactionLinePb::getReservationRef).collect(Collectors.toSet());
+        List<WalletReservation> reservationsInRequest = new ArrayList<>();
+        if (!reservationRefs.isEmpty()) {
+            reservationsInRequest = walletReservationManager.selectByRefs(new ArrayList<>(reservationRefs));
+            if (reservationsInRequest.size() != reservationRefs.size()) {
+                log.error("reservations not found, requested_reservation: {}, reservation_in_db: {}", reservationRefs, reservationsInRequest);
+                return Result.fail(ErrorCode.WALLET_RESERVATION_NOT_FOUND, "reservations not found");
+            }
+        }
+        Map<String, WalletReservation> refToReservation = reservationsInRequest.stream().collect(Collectors.toMap(WalletReservation::getReferenceId, reservation->reservation));
+
+        // create action and reservation
+        List<WalletAction> actions = new ArrayList<>();
+        List<WalletReservation> createdReservations = new ArrayList<>();
+        for (TransactionLinePb line : linePbs) {
+            BalanceSnapshot snapshot = walletRefToSnapshot.get(line.getWalletRef());
+            if (snapshot == null) {
+                log.error("snapshot not found, line: {}", line);
+                return Result.fail(ErrorCode.BALANCE_SNAPSHOT_NOT_FOUND, "snapshot not found");
+            }
+
+            WalletReservation reservation = null;
+            switch (line.getOperationType()) {
+                case OperationTypePb_Reserve:
+                case OperationTypePb_Debit:
+                    reservation = createReservation(walletTxn, snapshot.getWalletId(), line);
+                    createdReservations.add(reservation);
+                    refToReservation.put(reservation.getReferenceId(), reservation);
+                    break;
+                case OperationTypePb_Earmark:
+                case OperationTypePb_Release:
+                    reservation = refToReservation.get(line.getReservationRef());
+                    if (reservation == null) {
+                        log.error("reservation not found, ref: {}", line);
+                        return Result.fail(ErrorCode.WALLET_RESERVATION_NOT_FOUND, "reservation not found");
+                    }
+            }
+
+            String reservationId = null;
+            if (reservation != null) {
+                reservationId = reservation.getReferenceId();
+            }
+            List<WalletAction> actionsFromLine = createActionsFromLine(walletTxn.getTxnId(), snapshot.getWalletId(), reservationId, line);
+            actions.addAll(actionsFromLine);
+        }
+
+        //validate
+        Result<Void> result = validateActionInfo(actions, balanceSnapshots, new ArrayList<>(refToReservation.values()));
+        if (result.isFailed()) {
+            log.error("validate action info failed, result: {}", result);
+            return Result.fail(result);
+        }
+
+        Outbox outbox;
+        if (needPostLedger) {
+            Result<Outbox> outboxResult = createOutbox(walletTxn, actions);
+            if (outboxResult.isFailed()) {
+                return Result.fail(outboxResult);
+            }
+            outbox = outboxResult.value;
+        } else {
+            outbox = null;
+        }
+
+        result = updateDbToCreateTxn(walletTxn, actions, balanceSnapshots, reservationsInRequest, createdReservations, outbox);
+        if (result.isFailed()) {
+            log.error("updateDbToCreateTxn failed: {}", result);
+            return Result.fail(result);
+        }
+
+        if (needPostLedger) {
+            Result<Void> publishResult = postLedgerPublisher.publish(outbox);
+            if (publishResult.success) {
+                if (outboxManager.updateStatusToFinalize(outbox, OutboxStatus.SENT, outbox.getLastAttemptAt())
+                        == 1) {
+                    outbox.setOutboxStatus(OutboxStatus.SENT);
+                    outbox.setFinalizedAt(outbox.getLastAttemptAt());
+                } else {
+                    // do not block main flow
+                    log.error("finalize outbox failed, {}", outbox);
+                }
+            } else {
+                // publish failed should not block main flow, and should return txn execute successfully
+                log.error("post ledger publish failed, outbox: {}, result: {}", outbox, publishResult);
+            }
+        }
+
+
+        // TODO this part can be removed, reservation are queried from db after receiving reply from ledger
+        // fill PK into created reservations
+//        var reservations = walletReservationManager.selectByTxnId(walletTxn.getTxnId());
+//        if (reservations.size() != createdReservations.size()) {
+//            log.error("wallet_reservation_not_found, reservationsFromDb: {}, createdReservations: {}", reservations, createdReservations);
+//            return Result.fail(ErrorCode.WALLET_RESERVATION_NOT_FOUND, "wallet_reservation_not_found");
+//        }
+
+        return Result.success(TransactionInfo.create(walletTxn, actions, new ArrayList<>(refToReservation.values()), balanceSnapshots));
+    }
+
+    private Result<WalletTransaction> ifExists(ServiceIdPb serviceIdPb, String idempotencyKey) {
+        ServiceId serviceId = EnumPbMappers.serviceIdPbMapper.to(serviceIdPb);
+        if (serviceId == null || serviceId == ServiceId.UNKNOWN) {
+            log.error("serviceId not found, serviceId: {}", serviceIdPb);
+            return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid service id: " + serviceIdPb);
+        }
+        WalletTransaction walletTxn = walletTransactionManager.selectByIdempotencyKey(serviceId, idempotencyKey);
+        return Result.success(walletTxn);
+    }
+
+    private Result<WalletTransaction> validateReqAndCreateTxn(String referenceId, ServiceIdPb serviceIdPb, String idempotenceKey, BusinessTypePb businessTypePb, TransactionType transactionType, boolean needPostLedger, List<TransactionLinePb> linePbs) {
         ServiceId serviceId = EnumPbMappers.serviceIdPbMapper.to(serviceIdPb);
         BusinessType businessType = EnumPbMappers.businessTypePbMapper.to(businessTypePb);
         if (serviceId == null || serviceId == ServiceId.UNKNOWN) {
@@ -76,54 +210,9 @@ class TransactionProcessor {
         if (businessType == null || businessType == BusinessType.UNKNOWN) {
             return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid business type: " + businessTypePb);
         }
-        Result<Void> result = validateAssetInfo(linePbs);
-        if (!result.success) {
-            log.error("validate asset info failed, {}", result);
-            return Result.fail(result);
+        if (transactionType == null || transactionType == TransactionType.UNKNOWN) {
+            return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid transaction type: " + transactionType);
         }
-
-        // get reservation from db to do precheck
-        Set<String> reservationRefs = linePbs.stream()
-                .filter((line)-> !Strings.isEmpty(line.getReservationRef()))
-                .distinct().map(TransactionLinePb::getReservationRef).collect(Collectors.toSet());
-        List<WalletReservation> reservationsInRequest = new ArrayList<>();
-        if (!reservationRefs.isEmpty()) {
-            reservationsInRequest = walletReservationManager.selectByRefs(new ArrayList<>(reservationRefs));
-        }
-        Map<String, WalletReservation> refToReservation = reservationsInRequest.stream().collect(Collectors.toMap(WalletReservation::getReferenceId, reservation->reservation));
-
-        // get snapshot from db to do precheck
-        Set<String> walletRefs = linePbs.stream().distinct().map(TransactionLinePb::getWalletRef).collect(Collectors.toSet());
-        List<BalanceSnapshot> balanceSnapshots = balanceSnapshotManager.selectByRefs(serviceId, new ArrayList<>(walletRefs));
-        Map<String, BalanceSnapshot> walletRefToSnapshot = balanceSnapshots.stream().collect(Collectors.toMap(BalanceSnapshot::getWalletReferenceId, snapshot -> snapshot));
-        List<RequestInfo.Line> lines = new ArrayList<>();
-        for (TransactionLinePb line : linePbs) {
-            BalanceSnapshot snapshot = walletRefToSnapshot.get(line.getWalletRef());
-            result = validateSnapshot(snapshot, line);
-            if (!result.success) {
-                log.error("validate snapshot failed, {}", result);
-                return Result.fail(result);
-            }
-
-            String reservationId = null;
-            if (!Strings.isEmpty(line.getReservationRef())) {
-                WalletReservation reservation = refToReservation.get(line.getReservationRef());
-                result = validateReservation(reservation, snapshot, line);
-                if (!result.success) {
-                    log.error("validate reservation failed, {}", result);
-                    return Result.fail(result);
-                }
-                reservationId = reservation.getReservationId();
-            }
-
-            lines.add(new RequestInfo.Line(snapshot.getWalletId(), line.getWalletRef(), line.getAssetCode(), line.getOperationType(), line.getAmount(), reservationId));
-        }
-
-        return Result.success(new RequestInfo(serviceId, businessType, transactionType, needPostLedger, balanceSnapshots, reservationsInRequest, lines));
-    }
-
-    private Result<Void> validateAssetInfo(List<TransactionLinePb> linePbs) {
-        Map<String, Long> inAssetToAmount = new HashMap<>(), outAssetToAmount = new HashMap<>();
         for (TransactionLinePb line : linePbs) {
             // validate action type and amount
             if (line.getOperationType() == OperationTypePb.UNRECOGNIZED || line.getOperationType() == OperationTypePb.OperationTypePb_Unknown) {
@@ -132,18 +221,101 @@ class TransactionProcessor {
             if (line.getAmount() <= 0) {
                 return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid amount: " + line);
             }
+        }
 
-            if (isTransfer(line.getOperationType())) {
+        WalletTransaction txn = createTransaction(transactionType, referenceId, serviceId, idempotenceKey, businessType);
+        return Result.success(txn);
+    }
+
+    private Result<Void> validateActionInfo(List<WalletAction> actions, List<BalanceSnapshot> snapshots, List<WalletReservation> reservations) {
+        Map<String, BalanceSnapshot> walletIdToSnapshot = Objects.requireNonNullElse(snapshots, new ArrayList<BalanceSnapshot>()).stream()
+                .collect(Collectors.toMap(BalanceSnapshot::getWalletId, snapshot -> snapshot));
+        Map<String, WalletReservation> walletIdToReservation = Objects.requireNonNullElse(reservations, new ArrayList<WalletReservation>()).stream()
+                .collect(Collectors.toMap(WalletReservation::getReferenceId, reservation->reservation));
+
+        if (actions == null || actions.isEmpty()) {
+            log.error("empty actions list");
+            return Result.fail(ErrorCode.WALLET_ACTION_NOT_FOUND, "empty actions list");
+        }
+
+        Result<Void> result = validateAssetInfo(actions);
+        if (result.isFailed()) {
+            log.error("validate asset info failed, {}", result);
+            return Result.fail(result);
+        }
+
+        for (WalletAction action : actions) {
+            BalanceSnapshot snapshot = walletIdToSnapshot.get(action.getWalletId());
+            if (!WalletTxnHelper.actionSnapshotMatched(snapshot, action)) {
+                log.error("validate action snapshot mismatch, action: {}, snapshot: {}", action, snapshot);
+                return Result.fail(ErrorCode.BALANCE_SNAPSHOT_MISMATCH, "action snapshot mismatch");
+            }
+
+            if (!Strings.isEmpty(action.getReservationId())) {
+                WalletReservation reservation = walletIdToReservation.get(action.getReservationId());
+                if (!WalletTxnHelper.actionReservationMatched(action, reservation)) {
+                    log.error("validate action reservation mismatch, action: {}, reservation: {}", action, reservation);
+                    return Result.fail(ErrorCode.WALLET_RESERVATION_MISMATCH, "action reservation mismatch");
+                }
+            }
+        }
+        return Result.success();
+    }
+
+//    {
+
+    // get reservation from db to do precheck
+//        Set<String> reservationRefs = linePbs.stream()
+//                .filter((line)-> !Strings.isEmpty(line.getReservationRef()))
+//                .distinct().map(TransactionLinePb::getReservationRef).collect(Collectors.toSet());
+//        List<WalletReservation> reservationsInRequest = new ArrayList<>();
+//        if (!reservationRefs.isEmpty()) {
+//            reservationsInRequest = walletReservationManager.selectByRefs(new ArrayList<>(reservationRefs));
+//        }
+//        Map<String, WalletReservation> refToReservation = reservationsInRequest.stream().collect(Collectors.toMap(WalletReservation::getReferenceId, reservation->reservation));
+//
+//        // get snapshot from db to do precheck
+//        Set<String> walletRefs = linePbs.stream().distinct().map(TransactionLinePb::getWalletRef).collect(Collectors.toSet());
+//        List<BalanceSnapshot> balanceSnapshots = balanceSnapshotManager.selectByRefs(serviceId, new ArrayList<>(walletRefs));
+//        Map<String, BalanceSnapshot> walletRefToSnapshot = balanceSnapshots.stream().collect(Collectors.toMap(BalanceSnapshot::getWalletReferenceId, snapshot -> snapshot));
+//        List<RequestInfo.Line> lines = new ArrayList<>();
+//        for (TransactionLinePb line : linePbs) {
+//            BalanceSnapshot snapshot = walletRefToSnapshot.get(line.getWalletRef());
+//            result = validateSnapshot(snapshot, line);
+//            if (result.isFailed()) {
+//                log.error("validate snapshot failed, {}", result);
+//                return Result.fail(result);
+//            }
+//
+//            String reservationId = null;
+//            if (!Strings.isEmpty(line.getReservationRef())) {
+//                WalletReservation reservation = refToReservation.get(line.getReservationRef());
+//                result = validateReservation(reservation, snapshot, line);
+//                if (result.isFailed()) {
+//                    log.error("validate reservation failed, {}", result);
+//                    return Result.fail(result);
+//                }
+//                reservationId = reservation.getReservationId();
+//            }
+//
+//            lines.add(new RequestInfo.Line(snapshot.getWalletId(), line.getWalletRef(), line.getAssetCode(), line.getOperationType(), line.getAmount(), reservationId));
+//        }
+//
+//        return Result.success(new RequestInfo(serviceId, businessType, transactionType, needPostLedger, balanceSnapshots, reservationsInRequest, lines));
+//    }
+
+    private Result<Void> validateAssetInfo(List<WalletAction> actions) {
+        Map<String, Long> inAssetToAmount = new HashMap<>(), outAssetToAmount = new HashMap<>();
+        for (WalletAction action : actions) {
+            if (action.isTransfer()) {
                 Map<String, Long> targetAssetToAmount;
-                if (isTransferOut(line.getOperationType())) {
-                    // debit and earmark are asset transferring out
+                if (action.getActionType() == ActionType.TRANSFER_OUT) {
                     targetAssetToAmount = outAssetToAmount;
                 } else {
-                    // credit is asset transferring in
                     targetAssetToAmount = inAssetToAmount;
                 }
-                targetAssetToAmount.putIfAbsent(line.getAssetCode(), 0L);
-                targetAssetToAmount.put(line.getAssetCode(), line.getAmount() + targetAssetToAmount.get(line.getAssetCode()));
+                targetAssetToAmount.putIfAbsent(action.getAssetId(), 0L);
+                targetAssetToAmount.put(action.getAssetId(), action.getAmount() + targetAssetToAmount.get(action.getAssetId()));
             }
         }
 
@@ -161,122 +333,31 @@ class TransactionProcessor {
         return Result.success();
     }
 
-    private boolean isTransfer(OperationTypePb operationTypePb) {
-        return isTransferIn(operationTypePb) || isTransferOut(operationTypePb);
-    }
+//    // snapshot could be not open when transaction has already been completed
+//    private Result<Void> validateSnapshot(BalanceSnapshot snapshot, WalletAction action) {
+//        if (snapshot == null) {
+//            return Result.fail(ErrorCode.BALANCE_SNAPSHOT_NOT_FOUND, "snapshot not found, action: " + action);
+//        }
+//        if (!Objects.equals(snapshot.getWalletId(), action.getWalletId()) || !Objects.equals(snapshot.getAssetId(), action.getAssetId())) {
+//            return Result.fail(ErrorCode.BALANCE_SNAPSHOT_MISMATCH, String.format("snapshot mismatch, snapshot: %s, action: %s", snapshot, action));
+//        }
+//        return Result.success();
+//    }
+//
+//    // reservation could be finished when transaction has already been completed
+//    private Result<Void> validateReservation(WalletReservation reservation, BalanceSnapshot snapshot, WalletAction action) {
+//        if (reservation == null) {
+//            return Result.fail(ErrorCode.WALLET_RESERVATION_NOT_FOUND, "reservation not found: " + action);
+//        }
+//        if (!Objects.equals(reservation.getWalletId(), snapshot.getWalletId()) || !Objects.equals(reservation.getAssetId(), snapshot.getAssetId())
+//                || !Objects.equals(reservation.getAssetId(), action.getAssetId())) {
+//            return Result.fail(ErrorCode.WALLET_RESERVATION_MISMATCH, String.format("reservation mismatch, reservation: %s, snapshot: %s, action: %s", reservation, snapshot, action));
+//        }
+//        return Result.success();
+//    }
 
-    private boolean isTransferOut(OperationTypePb operationTypePb) {
-        return operationTypePb == OperationTypePb.OperationTypePb_Earmark || operationTypePb == OperationTypePb.OperationTypePb_Debit;
-    }
-
-    private boolean isTransferIn(OperationTypePb operationTypePb) {
-        return operationTypePb == OperationTypePb.OperationTypePb_Credit;
-    }
-
-    // snapshot could be not open when transaction has already been completed
-    private Result<Void> validateSnapshot(BalanceSnapshot snapshot, TransactionLinePb line) {
-        if (snapshot == null) {
-            return Result.fail(ErrorCode.BALANCE_SNAPSHOT_NOT_FOUND, "snapshot not found, line: " + line);
-        }
-        if (!Objects.equals(snapshot.getWalletReferenceId(), line.getWalletRef()) || !Objects.equals(snapshot.getAssetId(), line.getAssetCode())) {
-            return Result.fail(ErrorCode.BALANCE_SNAPSHOT_MISMATCH, String.format("snapshot mismatch, snapshot: %s, line: %s", snapshot, line));
-        }
-        return Result.success();
-    }
-
-    // reservation could be finished when transaction has already been completed
-    private Result<Void> validateReservation(WalletReservation reservation, BalanceSnapshot snapshot, TransactionLinePb line) {
-        if (reservation == null) {
-            return Result.fail(ErrorCode.WALLET_RESERVATION_NOT_FOUND, "reservation not found: " + line);
-        }
-        if (!Objects.equals(reservation.getWalletId(), snapshot.getWalletId()) || !Objects.equals(reservation.getAssetId(), line.getAssetCode())) {
-            return Result.fail(ErrorCode.WALLET_RESERVATION_MISMATCH, String.format("reservation mismatch, reservation: %s, snapshot: %s, line: %s", reservation, snapshot, line));
-        }
-        return Result.success();
-    }
-
-    Result<TransactionInfo> getTxnInfo(WalletTransaction txn, RequestInfo requestInfo) {
-        List<WalletAction> afterPostingActions = new ArrayList<>();
-//        WalletOutbox outbox = null;
-        if (requestInfo.needPostLedger) {
-            afterPostingActions = walletActionManager.selectByTxnId(txn.getTxnId(), new LambdaQueryWrapper<>() {{
-                in(WalletAction::getActionType, ActionType.TRANSFER_IN, ActionType.TRANSFER_OUT, ActionType.CONSUME);
-            }});
-//            outbox = walletOutboxManager.selectByIdempotencyKey(txn.getReferenceId());
-        }
-
-        // get reservation created by the txn
-        List<WalletReservation> reservationsUnderTxn = walletReservationManager.selectByTxnId(txn.getTxnId());
-        List<WalletReservation> relatedReservations = new ArrayList<>();
-        List<String> reservationRefsInRequest = requestInfo.reservationsInTheRequest.stream().map(WalletReservation::getReferenceId).collect(Collectors.toList());
-        if (!reservationRefsInRequest.isEmpty()) {
-            // get reservation operated by the txn
-            relatedReservations = walletReservationManager.selectByRefs(reservationRefsInRequest);
-            if (relatedReservations.size() != reservationRefsInRequest.size()) {
-                log.error("reservation size mismatch, reservationFromDb: {}, reservationRefs: {}", relatedReservations, reservationRefsInRequest);
-                return Result.fail(ErrorCode.WALLET_RESERVATION_NOT_FOUND, "reservation size mismatch");
-            }
-        }
-        // all reservations
-        relatedReservations.addAll(reservationsUnderTxn);
-
-        // TODO fill outbox
-        TransactionInfo transactionInfo = TransactionInfo.create(txn, afterPostingActions, relatedReservations, null);
-        return Result.result(transactionInfo, validateTransferInfo(transactionInfo, requestInfo));
-    }
-
-    private Result<Void> validateTransferInfo(TransactionInfo transactionInfo, RequestInfo requestInfo) {
-        if (requestInfo.transactionType != transactionInfo.walletTxn.getTxnType()) {
-            return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "transaction type mismatch, transaction type: " + transactionInfo.walletTxn.getTxnType());
-        }
-        // TODO check if request info matches, maybe save request info in txn metadata
-
-        return Result.success();
-    }
-
-    // reserve -> snapshot: -available, +reserved
-    // consume -> reservation: -remaining, +pending_settle
-    // release -> snapshot, reservation: -reserved, +available | -pending_settle, +released, change status
-    Result<TransactionInfo> beforePostingLedger(String referenceId, String idempotencyKey, RequestInfo requestInfo) {
-        WalletTransaction walletTxn = createTransaction(requestInfo.transactionType, referenceId, idempotencyKey, requestInfo);
-        // complete txn immediately if no need to post ledger
-        if (!requestInfo.needPostLedger) {
-            walletTxn.setTxnStatus(TransactionStatus.COMPLETED);
-        }
-
-        // create action and reservation
-        List<WalletAction> actions = new ArrayList<>();
-        List<WalletReservation> createdReservations = new ArrayList<>();
-        for (RequestInfo.Line line : requestInfo.lines) {
-            List<WalletAction> actionsFromLine = createActionsFromLine(walletTxn.getTxnId(), line);
-            switch (line.operationTypePb) {
-                case OperationTypePb_Reserve:
-                case OperationTypePb_Debit:
-                    WalletReservation reservation = createReservation(walletTxn, line);
-                    createdReservations.add(reservation);
-
-                    // after creating reservation, fill reservation id into action
-                    for (WalletAction action : actionsFromLine) {
-                        if (action.getActionType() == ActionType.CONSUME || action.getActionType() == ActionType.RESERVE) {
-                            action.setReservationId(reservation.getReservationId());
-                        }
-                    }
-                    break;
-            }
-            actions.addAll(actionsFromLine);
-        }
-
-
-        Outbox outbox;
-        if (requestInfo.needPostLedger) {
-            Result<Outbox> result = createOutbox(walletTxn, actions);
-            if (!result.success) {
-                return Result.fail(result);
-            }
-            outbox = result.value;
-        } else {
-            outbox = null;
-        }
+    private Result<Void> updateDbToCreateTxn(WalletTransaction walletTxn, List<WalletAction> actions, List<BalanceSnapshot> balanceSnapshots,
+                                             List<WalletReservation> reservationsInRequest, List<WalletReservation> createdReservations, Outbox outbox) {
 
         Map<String, List<WalletAction>> walletIdToActions = new HashMap<>();
         for (WalletAction action : actions) {
@@ -284,18 +365,19 @@ class TransactionProcessor {
             walletIdToActions.get(action.getWalletId()).add(action);
         }
 
-        Result<Void> outResult = DbTransactionHelper.executeWithResult(transactionTemplate, TransactionDefinition.PROPAGATION_REQUIRED, () -> {
-            Result<Void> result = updateReservations(requestInfo.reservationsInTheRequest,
+        // immediately claim the outbox and attempt to publish it right after update db
+        return DbTransactionHelper.executeWithResult(transactionTemplate, TransactionDefinition.PROPAGATION_REQUIRED, () -> {
+            Result<Void> result = updateReservations(reservationsInRequest,
                     (reservation) -> updateReservationBeforePosting(reservation, walletIdToActions));
-            if (!result.success) {
-                log.error("update reservations failed, {}, {}", result, requestInfo.reservationsInTheRequest);
+            if (result.isFailed()) {
+                log.error("update reservations failed, {}, {}", result, reservationsInRequest);
                 return Result.fail(result);
             }
 
 
-            result = updateSnapshotsBeforePosting(walletIdToActions, requestInfo.snapshots);
-            if (!result.success) {
-                log.error("update snapshots failed, {}, {}", result, requestInfo.snapshots);
+            result = updateSnapshotsBeforePosting(walletIdToActions, balanceSnapshots);
+            if (result.isFailed()) {
+                log.error("update snapshots failed, {}, {}", result, balanceSnapshots);
                 return Result.fail(result);
             }
 
@@ -314,7 +396,7 @@ class TransactionProcessor {
                 log.error("insert actions failed, {}, {}", result, actions);
                 return Result.fail(ErrorCode.WALLET_ACTION_DUPLICATION, "unexpected action duplicated");
             }
-            if (requestInfo.needPostLedger) {
+            if (outbox != null) {
                 // immediately claim the outbox and attempt to publish it right after update db
                 if (outboxManager.insertWithClaim(outbox, LocalDateTimeHelper.nowAfterMs(OutboxConfig.BASE_ATTEMPT_INTERVAL_MS))
                         == 0) {
@@ -325,41 +407,71 @@ class TransactionProcessor {
 
             return Result.success();
         });
-        if (!outResult.success) {
-            return Result.fail(outResult);
+    }
+
+    private Result<TransactionInfo> getTxnInfo(String txnId) {
+        WalletTransaction txn = walletTransactionManager.selectByTxnId(txnId);
+        if (txn == null) {
+            log.error("getTxnInfo failed, {}", txnId);
+            return Result.fail(ErrorCode.WALLET_TRANSACTION_NOT_FOUND, "no txn found for txnId: " + txnId);
         }
 
-        if (requestInfo.needPostLedger) {
-            Result<Void> result = postLedgerPublisher.publish(outbox);
-            if (result.success) {
-                if (outboxManager.updateStatusToFinalize(outbox, OutboxStatus.SENT, outbox.getLastAttemptAt())
-                        == 1) {
-                    outbox.setOutboxStatus(OutboxStatus.SENT);
-                    outbox.setFinalizedAt(outbox.getLastAttemptAt());
-                } else {
-                    // do not block main flow
-                    log.error("finalize outbox failed, {}, {}", outbox, result);
-                }
-            } else {
-                // publish failed should not block main flow, and should return txn execute successfully
-                log.error("post ledger publish failed, outbox: {}, result: {}", outbox, result);
+        List<WalletAction> afterPostingActions = walletActionManager.selectByTxnId(txn.getTxnId(), new LambdaQueryWrapper<>() {{
+                in(WalletAction::getActionType, ActionType.TRANSFER_IN, ActionType.TRANSFER_OUT, ActionType.CONSUME);
+            }});
+
+        List<String> walletIds = afterPostingActions.stream().map(WalletAction::getWalletId).distinct().collect(Collectors.toList());
+        List<BalanceSnapshot> snapshots = balanceSnapshotManager.selectByWalletIds(walletIds);
+        if (snapshots.size() != walletIds.size()) {
+            log.error("getTxnInfo failed, snapshot not found, txn: {}, walletIds: {}, snapshotsInDb: {}", txnId, walletIds, snapshots);
+            return Result.fail(ErrorCode.BALANCE_SNAPSHOT_NOT_FOUND, "snapshot not found");
+        }
+
+        List<WalletAction> consumeActions = afterPostingActions.stream().filter(action -> action.getActionType() == ActionType.CONSUME).collect(Collectors.toList());
+        List<WalletReservation> consumeReservations = new ArrayList<>();
+        if (!consumeActions.isEmpty()) {
+            List<String> consumeReservationRefs = consumeActions.stream().map(WalletAction::getReservationId).distinct().collect(Collectors.toList());
+            consumeReservations = walletReservationManager.selectByRefs(consumeReservationRefs);
+            if (consumeReservationRefs.size() != consumeReservations.size()) {
+                log.error("reservation size mismatch, reservationFromDb: {}, reservationRefs: {}", consumeReservationRefs, consumeReservations);
+                return Result.fail(ErrorCode.WALLET_RESERVATION_NOT_FOUND, "reservation size mismatch");
             }
         }
 
-
-        // TODO this part can be removed, reservation are queried from db after receiving reply from ledger
-        // fill PK into created reservations
-//        var reservations = walletReservationManager.selectByTxnId(walletTxn.getTxnId());
-//        if (reservations.size() != createdReservations.size()) {
-//            log.error("wallet_reservation_not_found, reservationsFromDb: {}, createdReservations: {}", reservations, createdReservations);
-//            return Result.fail(ErrorCode.WALLET_RESERVATION_NOT_FOUND, "wallet_reservation_not_found");
+//        // get reservation created by the txn
+//        List<WalletReservation> reservationsUnderTxn = walletReservationManager.selectByTxnId(txn.getTxnId());
+//        List<WalletReservation> relatedReservations = new ArrayList<>();
+//        List<String> reservationRefsInRequest = requestInfo.reservationsInTheRequest.stream().map(WalletReservation::getReferenceId).collect(Collectors.toList());
+//        if (!reservationRefsInRequest.isEmpty()) {
+//            // get reservation operated by the txn
+//            relatedReservations = walletReservationManager.selectByRefs(reservationRefsInRequest);
+//            if (relatedReservations.size() != reservationRefsInRequest.size()) {
+//                log.error("reservation size mismatch, reservationFromDb: {}, reservationRefs: {}", relatedReservations, reservationRefsInRequest);
+//                return Result.fail(ErrorCode.WALLET_RESERVATION_NOT_FOUND, "reservation size mismatch");
+//            }
 //        }
-        // all reservations related to the txn
-        List<WalletReservation> reservations = new ArrayList<>(createdReservations);
-        reservations.addAll(requestInfo.reservationsInTheRequest);
+//        // all reservations
+//        relatedReservations.addAll(reservationsUnderTxn);
 
-        return Result.success(TransactionInfo.create(walletTxn, actions, reservations, outbox));
+        // only validate CONSUME/TRANSFER_IN/TRANSFER_OUT actions, only CONSUME have reservation
+        Result<Void> result = validateActionInfo(afterPostingActions, snapshots, consumeReservations);
+        if (result.isFailed()) {
+            log.error("validate action after get txn failed, result: {}", result);
+            return Result.fail(result);
+        }
+
+        TransactionInfo transactionInfo = TransactionInfo.create(txn, afterPostingActions, consumeReservations, snapshots);
+        return Result.success(transactionInfo);
     }
+
+//    private Result<Void> validateTransferInfo(TransactionInfo transactionInfo, RequestInfo requestInfo) {
+//        if (requestInfo.transactionType != transactionInfo.walletTxn.getTxnType()) {
+//            return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "transaction type mismatch, transaction type: " + transactionInfo.walletTxn.getTxnType());
+//        }
+//        // TODO check if request info matches, maybe save request info in txn metadata
+//
+//        return Result.success();
+//    }
 
     private Result<Outbox> createOutbox(WalletTransaction txn, List<WalletAction> actions) {
 //        if (true) {throw new RuntimeException();}
@@ -393,7 +505,7 @@ class TransactionProcessor {
         }
 
         PostTransactionRequestPb req = PostTransactionRequestPb.newBuilder()
-                .setReferenceId(txn.getReferenceId())
+                .setReferenceId(txn.getTxnId())
                 .addAllEntries(entries).build();
         Outbox outbox = OutboxHelper.fromPostTransactionRequest(req, txn);
         return Result.success(outbox);
@@ -442,6 +554,7 @@ class TransactionProcessor {
         }
         return Result.success(reservation);
     }
+
     private Result<Void> updateReservations(List<WalletReservation> reservations, Function<WalletReservation, Result<WalletReservation>> function) {
         if (reservations.isEmpty()) {
             return Result.success();
@@ -457,7 +570,7 @@ class TransactionProcessor {
             WalletReservation copy = new WalletReservation();
             BeanUtils.copyProperties(reservation, copy);
             Result<WalletReservation> result = function.apply(reservation);
-            if (!result.success) {
+            if (result.isFailed()) {
                 return Result.fail(result);
             }
             reservation = result.value;
@@ -526,65 +639,72 @@ class TransactionProcessor {
     }
 
     // TODO remove this
-    Result<Void> postLedger(TransactionInfo transactionInfo) {
-//        if (true) {throw new RuntimeException();}
-        List<String> walletIds = new ArrayList<>(transactionInfo.walletIdToPostActions.keySet());
-        List<WalletAccountMapping> mappings = walletAccountMappingManager.selectInWalletIds(walletIds);
-        if (mappings.size() != walletIds.size()) {
-            log.error("wallet_account_mapping_not_found, wallet_ids: {}, mappings: {}", walletIds, mappings);
-            return Result.fail(ErrorCode.WALLET_ACCOUNT_MAPPING_NOT_FOUND, "wallet_account_mapping_not_found");
-        }
-        Map<String, String> walletToAccount = mappings.stream().collect(Collectors.toMap(WalletAccountMapping::getWalletId, WalletAccountMapping::getAccountRefId));
+//    Result<Void> postLedger(TransactionInfo transactionInfo) {
+    ////        if (true) {throw new RuntimeException();}
+//        List<String> walletIds = new ArrayList<>(transactionInfo.walletIdToPostActions.keySet());
+//        List<WalletAccountMapping> mappings = walletAccountMappingManager.selectInWalletIds(walletIds);
+//        if (mappings.size() != walletIds.size()) {
+//            log.error("wallet_account_mapping_not_found, wallet_ids: {}, mappings: {}", walletIds, mappings);
+//            return Result.fail(ErrorCode.WALLET_ACCOUNT_MAPPING_NOT_FOUND, "wallet_account_mapping_not_found");
+//        }
+//        Map<String, String> walletToAccount = mappings.stream().collect(Collectors.toMap(WalletAccountMapping::getWalletId, WalletAccountMapping::getAccountRefId));
+//
+//        List<LedgerEntryPb> entries = new ArrayList<>();
+//        for (List<WalletAction> actions : transactionInfo.walletIdToPostActions.values()) {
+//            for (WalletAction action : actions) {
+//                LedgerEntryPb.Builder builder = LedgerEntryPb.newBuilder();
+//                builder.setAccountRef(walletToAccount.get(action.getWalletId())).setAmount(action.getAmount()).setAssetId(action.getAssetId());
+//                switch (action.getActionType()) {
+//                    case TRANSFER_OUT:
+//                        builder.setDirection(LedgerDirectionPb.LedgerDirection_Debit);
+//                        break;
+//                    case TRANSFER_IN:
+//                        builder.setDirection(LedgerDirectionPb.LedgerDirection_Credit);
+//                        break;
+//                    default:
+//                        continue;
+//                }
+//                entries.add(builder.build());
+//            }
+//        }
+//
+//        PostTransactionRequestPb req = PostTransactionRequestPb.newBuilder()
+//                .setReferenceId(transactionInfo.walletTxn.getTxnId())
+//                .addAllEntries(entries).build();
+//        Result<PostTransactionReplyPb> result = postServiceClient.postTransaction(req);
+//        if (result.isFailed()) {
+//            log.error("failed to post transaction, req: {}, result: {}", req, result);
+//            return Result.fail(result);
+//        }
+//        return Result.success();
+//    }
 
-        List<LedgerEntryPb> entries = new ArrayList<>();
-        for (List<WalletAction> actions : transactionInfo.walletIdToPostActions.values()) {
-            for (WalletAction action : actions) {
-                LedgerEntryPb.Builder builder = LedgerEntryPb.newBuilder();
-                builder.setAccountRef(walletToAccount.get(action.getWalletId())).setAmount(action.getAmount()).setAssetId(action.getAssetId());
-                switch (action.getActionType()) {
-                    case TRANSFER_OUT:
-                        builder.setDirection(LedgerDirectionPb.LedgerDirection_Debit);
-                        break;
-                    case TRANSFER_IN:
-                        builder.setDirection(LedgerDirectionPb.LedgerDirection_Credit);
-                        break;
-                    default:
-                        continue;
-                }
-                entries.add(builder.build());
-            }
+    public Result<WalletTransaction> afterPostLedger(String txnId) {
+        Result<TransactionInfo> txnInfoResult = getTxnInfo(txnId);
+        if (txnInfoResult.isFailed()) {
+            log.error("failed to find transaction info, txnId: {}, result: {}", txnId, txnInfoResult);
+            return Result.fail(txnInfoResult);
         }
+        TransactionInfo txnInfo = txnInfoResult.value;
 
-        PostTransactionRequestPb req = PostTransactionRequestPb.newBuilder()
-                .setReferenceId(transactionInfo.walletTxn.getReferenceId())
-                .addAllEntries(entries).build();
-        Result<PostTransactionReplyPb> result = postServiceClient.postTransaction(req);
-        if (!result.success) {
-            log.error("failed to post transaction, req: {}, result: {}", req, result);
-            return Result.fail(result);
-        }
-        return Result.success();
-    }
-
-    Result<WalletTransaction> afterPostingLedger(RequestInfo requestInfo, TransactionInfo transactionInfo) {
-        List<BalanceSnapshot> snapshotIdsInOrder = requestInfo.snapshots.stream()
+        List<BalanceSnapshot> snapshotIdsInOrder = txnInfo.snapshots.stream()
                 .sorted(Comparator.comparing(BalanceSnapshot::getId)).collect(Collectors.toList());
 
         Result<Void> outResult = DbTransactionHelper.executeWithResult(transactionTemplate, TransactionDefinition.PROPAGATION_REQUIRED, () -> {
             // should update all reservations here
-            Result<Void> result = updateReservations(transactionInfo.reservations,
-                    (reservation) -> updateReservationAfterPosting(reservation, transactionInfo.walletIdToPostActions));
-            if (!result.success) {
+            Result<Void> result = updateReservations(txnInfo.reservations,
+                    (reservation) -> updateReservationAfterPosting(reservation, txnInfo.walletIdToPostActions));
+            if (result.isFailed()) {
                 return Result.fail(result);
             }
 
-            result = updateSnapshotsAfterPosting(transactionInfo.walletIdToPostActions, snapshotIdsInOrder);
-            if (!result.success) {
+            result = updateSnapshotsAfterPosting(txnInfo.walletIdToPostActions, snapshotIdsInOrder);
+            if (result.isFailed()) {
                 return Result.fail(result);
             }
-            if (walletTransactionManager.updateTransactionStatus(transactionInfo.walletTxn.getId(), TransactionStatus.PENDING, TransactionStatus.COMPLETED)
+            if (walletTransactionManager.updateTransactionStatus(txnInfo.walletTxn.getId(), TransactionStatus.PENDING, TransactionStatus.COMPLETED)
                     != 1) {
-                log.error("wallet_transaction_update_failed, transaction: {}", transactionInfo.walletTxn);
+                log.error("wallet_transaction_update_failed, transaction: {}", txnInfo.walletTxn);
                 return Result.fail(ErrorCode.WALLET_TRANSACTION_UPDATE_FAILED, "transaction_update_failed");
             }
             return Result.success();
@@ -596,9 +716,9 @@ class TransactionProcessor {
 //        if (walletOutboxManager.finishOutbox(transactionInfo.outbox) != 1) {
 //            log.error("finish outbox failed, outbox={}", transactionInfo.outbox);
 //        }
-        WalletTransaction txn = walletTransactionManager.selectById(transactionInfo.walletTxn.getId());
+        WalletTransaction txn = walletTransactionManager.selectById(txnInfo.walletTxn.getId());
         if (txn == null) {
-            log.error("wallet_transaction_not_found, transaction: {}", transactionInfo.walletTxn);
+            log.error("wallet_transaction_not_found, transaction: {}", txnInfo.walletTxn);
             return Result.fail(ErrorCode.WALLET_TRANSACTION_NOT_FOUND, "wallet_transaction_not_found");
         }
         return Result.success(txn);
@@ -606,33 +726,33 @@ class TransactionProcessor {
 
 
 
-    WalletTransaction createTransaction(TransactionType transactionType, String referenceId, String idempotencyKey, RequestInfo requestInfo) {
+    WalletTransaction createTransaction(TransactionType transactionType, String referenceId, ServiceId serviceId, String idempotencyKey, BusinessType businessType) {
         return WalletTransaction.create(
                 IdGenerator.generateWalletTransactionId(),
                 referenceId,
-                requestInfo.serviceId,
+                serviceId,
                 idempotencyKey,
                 TransactionStatus.PENDING,
                 transactionType,
-                requestInfo.businessType
+                businessType
         );
     }
 
-    WalletReservation createReservation(WalletTransaction walletTransaction, RequestInfo.Line line) {
-        switch (line.operationTypePb) {
+    WalletReservation createReservation(WalletTransaction walletTransaction, String walletId, TransactionLinePb line) {
+        switch (line.getOperationType()) {
             case OperationTypePb_Debit:
                 // in Atomic txn, reservation asset goes into pending settle after created
                 return  WalletReservation.create(
                         IdGenerator.generateReservationId(),
                         walletTransaction.getInitiator(),
-                        walletTransaction.getReferenceId() + ":" + line.walletId,
-                        line.walletId,
-                        line.walletRef,
-                        line.assetCode,
-                        line.amount,
+                        walletTransaction.getReferenceId() + ":" + walletId,
+                        walletId,
+                        line.getWalletRef(),
+                        line.getAssetCode(),
+                        line.getAmount(),
                         0L,
                         0L,
-                        line.amount,
+                        line.getAmount(),
                         0L,
                         ReservationStatus.ACTIVE,
                         ReservationOutcome.NOT_DONE,
@@ -642,12 +762,12 @@ class TransactionProcessor {
                 return  WalletReservation.create(
                         IdGenerator.generateReservationId(),
                         walletTransaction.getInitiator(),
-                        walletTransaction.getReferenceId() + ":" + line.walletId,
-                        line.walletId,
-                        line.walletRef,
-                        line.assetCode,
-                        line.amount,
-                        line.amount,
+                        walletTransaction.getReferenceId() + ":" + walletId,
+                        walletId,
+                        line.getWalletRef(),
+                        line.getAssetCode(),
+                        line.getAmount(),
+                        line.getAmount(),
                         0L,
                         0L,
                         0L,
@@ -655,7 +775,7 @@ class TransactionProcessor {
                         ReservationOutcome.NOT_DONE,
                         walletTransaction.getTxnId()
                 );
-            default: throw new InvalidEnumException("OperationType_Reserve not supported: " + line.operationTypePb);
+            default: throw new InvalidEnumException("OperationType_Reserve not supported: " + line.getOperationType());
         }
     }
 
@@ -685,43 +805,43 @@ class TransactionProcessor {
 //        return createAction(walletTxn.getTxnId(), line, bucket, actionType);
 //    }
 
-    private List<WalletAction> createActionsFromLine(String txnId, RequestInfo.Line line) {
+    private List<WalletAction> createActionsFromLine(String txnId, String walletId, String reservationId, TransactionLinePb line) {
         List<WalletAction> actions = new ArrayList<>();
-        switch (line.operationTypePb) {
+        switch (line.getOperationType()) {
             case OperationTypePb_Reserve:
-                actions.add(createAction(txnId, WalletBucket.AVAILABLE, ActionType.RESERVE, line));
+                actions.add(createAction(txnId, walletId, null, WalletBucket.AVAILABLE, ActionType.RESERVE, line));
                 break;
             case OperationTypePb_Earmark:
-                actions.add(createAction(txnId, WalletBucket.RESERVED, ActionType.CONSUME, line));
-                actions.add(createAction(txnId, WalletBucket.RESERVED, ActionType.TRANSFER_OUT, line));
+                actions.add(createAction(txnId, walletId, reservationId, WalletBucket.RESERVED, ActionType.CONSUME, line));
+                actions.add(createAction(txnId, walletId, null, WalletBucket.RESERVED, ActionType.TRANSFER_OUT, line));
                 break;
             case OperationTypePb_Release:
-                actions.add(createAction(txnId, WalletBucket.RESERVED, ActionType.RELEASE, line));
+                actions.add(createAction(txnId, walletId, reservationId, WalletBucket.RESERVED, ActionType.RELEASE, line));
                 break;
             case OperationTypePb_Debit:
-                actions.add(createAction(txnId, WalletBucket.AVAILABLE, ActionType.RESERVE, line));
-                actions.add(createAction(txnId, WalletBucket.RESERVED, ActionType.CONSUME, line));
-                actions.add(createAction(txnId, WalletBucket.RESERVED, ActionType.TRANSFER_OUT, line));
+                actions.add(createAction(txnId, walletId, null, WalletBucket.AVAILABLE, ActionType.RESERVE, line));
+                actions.add(createAction(txnId, walletId, reservationId, WalletBucket.RESERVED, ActionType.CONSUME, line));
+                actions.add(createAction(txnId, walletId, null, WalletBucket.RESERVED, ActionType.TRANSFER_OUT, line));
                 break;
             case OperationTypePb_Credit:
-                actions.add(createAction(txnId, WalletBucket.AVAILABLE, ActionType.TRANSFER_IN, line));
+                actions.add(createAction(txnId, walletId, null, WalletBucket.AVAILABLE, ActionType.TRANSFER_IN, line));
                 break;
             default:
-                throw new InvalidEnumException("invalid operation type: " + line.operationTypePb);
+                throw new InvalidEnumException("invalid operation type: " + line.getOperationType());
         }
         return actions;
     }
 
-    private WalletAction createAction(String txnId, WalletBucket bucket, ActionType actionType, RequestInfo.Line line) {
+    private WalletAction createAction(String txnId, String walletId, String reservationId, WalletBucket bucket, ActionType actionType, TransactionLinePb line) {
         return WalletAction.create(
                 IdGenerator.generateWalletActionId(),
                 txnId,
-                line.walletId,
-                line.assetCode,
+                walletId,
+                line.getAssetCode(),
                 bucket,
                 actionType,
-                line.amount,
-                line.reservationId
+                line.getAmount(),
+                reservationId
         );
     }
 
@@ -745,7 +865,7 @@ class TransactionProcessor {
         final TransactionType transactionType;
         final boolean needPostLedger;
         final List<BalanceSnapshot> snapshots;
-//        final Map<OperationTypePb, List<BalanceSnapshot>> operationToSnapshots;
+        //        final Map<OperationTypePb, List<BalanceSnapshot>> operationToSnapshots;
         // only have reservations in the request (created by other txn), not including txn created by this txn
         final List<WalletReservation> reservationsInTheRequest;
         final List<Line> lines;
@@ -764,18 +884,25 @@ class TransactionProcessor {
     @AllArgsConstructor
     static class TransactionInfo {
         final WalletTransaction walletTxn;
-        final List<WalletAction> postAction; // only CONSUME, TRANSFER_OUT, TRANSFER_IN
+        final List<WalletAction> actions;
         final Map<String, List<WalletAction>> walletIdToPostActions; // only CONSUME, TRANSFER_OUT, TRANSFER_IN
         final List<WalletReservation> reservations;
-        final Outbox outbox;
+        final List<BalanceSnapshot> snapshots;
 
-        static TransactionInfo create(WalletTransaction txn, List<WalletAction> actions, List<WalletReservation> reservations, Outbox outbox) {
+        static TransactionInfo create(WalletTransaction txn, List<WalletAction> actions, List<WalletReservation> reservations, List<BalanceSnapshot> snapshots) {
             Map<String, List<WalletAction>> walletIdToActions = new HashMap<>();
             for (WalletAction action : actions) {
+                if (!action.isTransfer()) {
+                    continue;
+                }
                 walletIdToActions.computeIfAbsent(action.getWalletId(), k -> new ArrayList<>());
                 walletIdToActions.get(action.getWalletId()).add(action);
             }
-            return new TransactionInfo(txn, actions, walletIdToActions, reservations, outbox);
+            return new TransactionInfo(txn, actions, walletIdToActions, reservations, snapshots);
+        }
+
+        static TransactionInfo create(WalletTransaction walletTxn) {
+            return new TransactionInfo(walletTxn, null, null, null, null);
         }
     }
 }

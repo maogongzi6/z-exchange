@@ -31,42 +31,26 @@ public class ReserveTransactionProcessor {
     private final WalletTransactionManager walletTransactionManager;
 
     public ReserveTransactionReplyPb reserve(ReserveTransactionRequestPb request) {
-        Result<TransactionProcessor.RequestInfo> result = validateAndGetRequestInfo(request);
+        Result<Void> validateResult = validate(request);
+        if (validateResult.isFailed()) {
+            replyError(validateResult);
+        }
+
+        Result<TransactionProcessor.TransactionInfo> result = transactionProcessor.beforePostingLedger(request.getReferenceId(), request.getInitiator(), request.getIdempotencyKey(), request.getBusinessType(), TransactionType.TWO_STEP, false, request.getLinesList());
         if (!result.success) {
             return replyError(result);
         }
-        TransactionProcessor.RequestInfo requestInfo = result.value;
-        WalletTransaction walletTxn = walletTransactionManager.selectByIdempotencyKey(requestInfo.serviceId, request.getIdempotencyKey());
-        // idempotency check
-        if (walletTxn != null) {
-            Result<TransactionProcessor.TransactionInfo> txnInfoResult = transactionProcessor.getTxnInfo(walletTxn, requestInfo);
-            if (!txnInfoResult.success) {
-                return replyError(txnInfoResult);
-            }
-            return replySuccess(txnInfoResult.value, "SUCCESS, ALREADY RESERVED");
-        }
-        Result<TransactionProcessor.TransactionInfo> txnInfoResult = transactionProcessor.beforePostingLedger(request.getReferenceId(), request.getReferenceId(), requestInfo);
-        if (!txnInfoResult.success) {
-            return replyError(txnInfoResult);
-        }
 
-        return replySuccess(txnInfoResult.value, "SUCCESS");
+        return replySuccess(result.value, "SUCCESS");
     }
 
-    private Result<TransactionProcessor.RequestInfo> validateAndGetRequestInfo(ReserveTransactionRequestPb request) {
-        Result<TransactionProcessor.RequestInfo> result = transactionProcessor.validateAndGetRequestInfo(request.getInitiator(), request.getBusinessType(), TransactionType.TWO_STEP, false, request.getLinesList());
-        if (!result.success) {
-            return result;
-        }
-//        if (result.value.operationToSnapshots.get(OperationTypePb.OperationType_Reserve).size() != request.getLinesList().size()) {
-//            throw new InvalidValueException(String.format("unexpected, building snapshot info failed, snapshots: %s, lines: %s", result.value.operationToSnapshots.get(OperationTypePb.OperationType_Reserve), request.getLinesList()));
-//        }
+    private Result<Void> validate(ReserveTransactionRequestPb request) {
         for (TransactionLinePb line : request.getLinesList()) {
             if (line.getOperationType() != OperationTypePb.OperationTypePb_Reserve) {
                 return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid operation type: " + line.getOperationType());
             }
         }
-        return Result.success(result.value);
+        return Result.success();
     }
 
 //    private Result<ReserveResult> createReserveTransaction(ReserveTransactionRequestPb request, TransactionProcessor.RequestInfo requestInfo) {

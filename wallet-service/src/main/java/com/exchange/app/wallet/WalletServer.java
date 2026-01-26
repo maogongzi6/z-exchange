@@ -13,7 +13,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication(
         scanBasePackages = {
                 "com.exchange.app.wallet",
-                "com.exchange.common.outbox.dao"
+                "com.exchange.common.outbox.dao",
+                "com.exchange.common.kafka"
         },
         scanBasePackageClasses = {AutofillMetaObjectHandler.class})
 public class WalletServer {

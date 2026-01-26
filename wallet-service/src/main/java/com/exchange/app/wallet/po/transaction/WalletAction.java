@@ -36,6 +36,10 @@ public class WalletAction {
         this.reservationId = reservationId;
     }
 
+    public boolean isTransfer() {
+        return actionType.isTransfer();
+    }
+
     public static WalletAction create(String actionId, String txnId, String walletId, String assetId, WalletBucket bucket, ActionType actionType, Long amount, String reservationId) {
         return new WalletAction(actionId, txnId, walletId, assetId, bucket, actionType, amount, reservationId);
     }

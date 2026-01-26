@@ -42,8 +42,6 @@ public class PostListener {
             containerFactory = "concurrentCommandKafkaListenerContainerFactory"
     )
     public void onMessage(byte[] envelopeBytes, Acknowledgment ack) {
-        if (true) {throw new RetriableException(ErrorCode.UNKNOWN_ERROR, "MOCK");}
-
         try {
             var envelope = EventEnvelopePb.parseFrom(envelopeBytes);
             Outbox replyOutbox = handleMessage(envelope);
@@ -79,9 +77,15 @@ public class PostListener {
         log.info("handlePostLedger: {}", req);
         var reply = postLedgerProcessor.postTransaction(req);
         // TODO retriable error, redesign the error logic, how to specify retriable error?
-        if (reply.hasError() && reply.getError().getCode() == ErrorCodePb.ERROR_INTERNAL) {
-            log.error("internal error, wait for retry: {}", reply.getError());
-            throw new RetriableException(ErrorCode.SERVER_ERROR, "internal error, wait for retry," + reply.getError());
+        if (reply.getError().getCode() != ErrorCodePb.ERROR_OK) {
+            if (reply.getError().getCode() != ErrorCodePb.ERROR_INTERNAL) {
+                log.error("internal error, wait for retry: {}", reply.getError());
+                throw new RetriableException(ErrorCode.SERVER_ERROR, "internal error, wait for retry," + reply.getError());
+            } else {
+                log.error("non retriable, queue dlq: {}", reply.getError());
+                // TODO change exception type
+                throw new AbnormalProtoDataException(ErrorCode.SERVER_ERROR, "non retriable, queue dlq");
+            }
         }
         return OutboxHelper.fromPostTransactionReply(reply, envelope.getCommandId());
     }

@@ -1,6 +1,5 @@
 package com.exchange.app.ledger.processor.post;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.exchange.app.ledger.dao.manager.AccountManager;
 import com.exchange.app.ledger.dao.manager.LedgerTxnManager;
 import com.exchange.app.ledger.result.ErrorCode;
@@ -18,7 +17,6 @@ import com.exchange.proto.ledger.post.LedgerEntryPb;
 import com.exchange.proto.ledger.post.PostTransactionReplyPb;
 import com.exchange.proto.ledger.post.PostTransactionRequestPb;
 import com.exchange.app.ledger.utils.EnumMappers;
-import com.exchange.app.ledger.utils.EntryHelper;
 import com.exchange.app.ledger.utils.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,9 +44,9 @@ public class PostLedgerProcessor {
     public PostTransactionReplyPb postTransaction(PostTransactionRequestPb req) {
 
         Result<Void> result = validateReq(req);
-        if (!result.success) {
+        if (result.isFailed()) {
             log.error("invalid request, {}, {}", req, result);
-            return replyError(result);
+            return replyError(result.errorCode, result.errorDetail);
         }
 
         String txnId = IdGenerator.generateLedgerTxnId();
@@ -80,11 +78,11 @@ public class PostLedgerProcessor {
             }
             return Result.success();
         });
-        if (!Result.isSuccess(result)) {
-            return replyError(result);
+        if (Result.isFailed(result)) {
+            return replyError(result.errorCode, result.errorDetail);
         }
 
-        return replySuccess("success");
+        return replySuccess(req.getReferenceId(), "success");
     }
 
     private Result<Void> validateReq(PostTransactionRequestPb req) {
@@ -140,17 +138,13 @@ public class PostLedgerProcessor {
         );
     }
 
-    private PostTransactionReplyPb replySuccess(String detail) {
-        return replyError(ErrorCode.SUCCESS, detail);
+    private PostTransactionReplyPb replySuccess(String walletReferenceId, String detail) {
+        PostTransactionReplyPb.Builder builder = PostTransactionReplyPb.newBuilder();
+        return builder.setReferenceId(walletReferenceId).setError(PbErrorBuilder.build(ErrorCode.SUCCESS, detail)).build();
     }
 
     private PostTransactionReplyPb replyError(ErrorCode errorCode, String detail) {
         PostTransactionReplyPb.Builder builder = PostTransactionReplyPb.newBuilder();
         return builder.setError(PbErrorBuilder.build(errorCode, detail)).build();
-    }
-
-    private PostTransactionReplyPb replyError(Result<?> result) {
-        result = Result.requireNotNull(result);
-        return replyError(result.errorCode, result.errorDetail);
     }
 }

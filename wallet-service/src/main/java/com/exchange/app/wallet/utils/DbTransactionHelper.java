@@ -4,7 +4,6 @@ import com.exchange.app.wallet.exception.DbException;
 import com.exchange.app.wallet.result.Result;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 
 public class DbTransactionHelper {
@@ -13,7 +12,7 @@ public class DbTransactionHelper {
         return template.execute((transactionStatus) -> {
             try {
                 T result = supplier.get();
-                if (!Result.isSuccess(result)) {
+                if (Result.isFailed(result)) {
                     transactionStatus.setRollbackOnly();
                 }
                 return result;

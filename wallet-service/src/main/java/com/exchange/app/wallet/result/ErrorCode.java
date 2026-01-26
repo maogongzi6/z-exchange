@@ -13,6 +13,7 @@ public enum ErrorCode implements PbMappableErrorCode {
     INVALID_VALUE_ERROR(6, ErrorCodePb.ERROR_INTERNAL, "invalid_value_error"),
     INVALID_ENUM_ERROR(7, ErrorCodePb.ERROR_INTERNAL, "invalid_enum_error"),
     PUBLISH_KAFKA_ERROR(8, ErrorCodePb.ERROR_INTERNAL, "publish_kafka_error"),
+    SERIALIZE_ERROR(9, ErrorCodePb.ERROR_INTERNAL, "serialize_error"),
 
     INVALID_REQUEST_PARAMETER(100, ErrorCodePb.ERROR_INVALID_ARGUMENT, "invalid_request_parameter"),
     WALLET_NOT_FOUND(1000, ErrorCodePb.ERROR_NOT_FOUND,"wallet_not_found"),
@@ -50,7 +51,7 @@ public enum ErrorCode implements PbMappableErrorCode {
     ;
 
     final public int code;
-    final ErrorCodePb protoCode;
+    final public ErrorCodePb protoCode;
     final public String message;
 
     ErrorCode(int code, ErrorCodePb protoCode, String message) {

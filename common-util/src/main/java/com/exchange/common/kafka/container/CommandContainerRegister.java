@@ -1,4 +1,4 @@
-package com.exchange.app.ledger.kafka.consumer.container;
+package com.exchange.common.kafka.container;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;

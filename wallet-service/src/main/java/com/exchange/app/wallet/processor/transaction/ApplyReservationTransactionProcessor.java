@@ -23,35 +23,11 @@ public class ApplyReservationTransactionProcessor {
     private final TransactionProcessor transactionProcessor;
 
     public ApplyReservationTransactionReplyPb apply(ApplyReservationTransactionRequestPb request) {
-        Result<TransactionProcessor.RequestInfo> infoResult = transactionProcessor.validateAndGetRequestInfo(request.getInitiator(), request.getBusinessType(), TransactionType.TWO_STEP, true, request.getLinesList());
-        if (!infoResult.success) {
-            return replyError(infoResult);
-        }
-        TransactionProcessor.RequestInfo requestInfo = infoResult.value;
-        WalletTransaction walletTxn = walletTransactionManager.selectByIdempotencyKey(requestInfo.serviceId, request.getIdempotencyKey());
-        Result<TransactionProcessor.TransactionInfo> txnInfoResult;
-        // idempotency check
-        if (walletTxn == null) {
-            txnInfoResult = transactionProcessor.beforePostingLedger(request.getReferenceId(), request.getIdempotencyKey(), requestInfo);
-        } else if (walletTxn.getTxnStatus() == TransactionStatus.PENDING) {
-            txnInfoResult = transactionProcessor.getTxnInfo(walletTxn, requestInfo);
-        } else {
-            return replySuccess(walletTxn, "txn already executed");
-        }
-        if (!txnInfoResult.success) {
-            return replyError(txnInfoResult);
-        }
-        TransactionProcessor.TransactionInfo transactionInfo = txnInfoResult.value;
-        Result<Void> result = transactionProcessor.postLedger(transactionInfo);
+        Result<TransactionProcessor.TransactionInfo> result = transactionProcessor.beforePostingLedger(request.getReferenceId(), request.getInitiator(), request.getIdempotencyKey(), request.getBusinessType(), TransactionType.TWO_STEP, true, request.getLinesList());
         if (!result.success) {
             return replyError(result);
         }
-        Result<WalletTransaction> txnResult = transactionProcessor.afterPostingLedger(requestInfo, transactionInfo);
-        if (!txnResult.success) {
-            return replyError(txnResult);
-        }
-
-        return replySuccess(txnResult.value, "success");
+        return replySuccess(result.value.walletTxn, "success");
     }
 
     private ApplyReservationTransactionReplyPb replySuccess(WalletTransaction txn, String detail) {

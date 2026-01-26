@@ -42,7 +42,7 @@ public class OutboxHelper {
 
     final static public EnumMapper<Integer, String> outboxEventTypeStringMapper = new EnumMapper<>(
             new HashMap<>() {{
-                put(OutboxEventType.LEDGER_POST_REPLY.code, EventType.POST_LEDGER);
+                put(OutboxEventType.LEDGER_POST_REPLY.code, EventType.POST_LEDGER_REPLY);
             }}
     );
 

@@ -12,7 +12,7 @@ public class DbTransactionHelper {
         return template.execute((transactionStatus) -> {
             try {
                 T result = callable.call();
-                if (!Result.isSuccess(result)) {
+                if (Result.isFailed(result)) {
                     transactionStatus.setRollbackOnly();
                 }
                 return result;

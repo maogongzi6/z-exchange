@@ -19,7 +19,8 @@ message PostTransactionRequestPb {
 }
 
 message PostTransactionReplyPb {
-  common.ErrorPb error = 1;
+  string referenceId = 1;
+  common.ErrorPb error = 2;
 }
 
 message LedgerEntryPb {

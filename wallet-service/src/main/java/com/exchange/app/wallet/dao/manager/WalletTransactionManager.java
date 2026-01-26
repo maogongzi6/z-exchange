@@ -2,6 +2,7 @@ package com.exchange.app.wallet.dao.manager;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.exchange.app.wallet.dao.mapper.WalletTransactionMapper;
 import com.exchange.app.wallet.exception.InvalidValueException;
 import com.exchange.app.wallet.po.enums.ServiceId;
@@ -25,6 +26,11 @@ public class WalletTransactionManager extends DbBaseManager<WalletTransaction, W
 
     public WalletTransaction selectById(Long id) {
         return mapper.selectById(id);
+    }
+
+    public WalletTransaction selectByTxnId(String txnId) {
+        var query = Wrappers.<WalletTransaction>lambdaQuery().eq(WalletTransaction::getTxnId, txnId);
+        return mapper.selectOne(query);
     }
 
     public WalletTransaction selectByIdempotencyKey(ServiceId serviceId, String idempotencyKey) {

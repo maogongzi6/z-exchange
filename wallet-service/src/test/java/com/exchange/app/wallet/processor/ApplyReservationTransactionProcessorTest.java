@@ -15,6 +15,7 @@ import com.exchange.proto.wallet.common.OwnerTypePb;
 import com.exchange.proto.wallet.common.ServiceIdPb;
 import com.exchange.proto.wallet.wallet.*;
 import lombok.extern.slf4j.Slf4j;
+import net.bytebuddy.utility.RandomString;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -24,6 +25,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 @Slf4j
 @RunWith(SpringJUnit4ClassRunner.class)
@@ -68,7 +70,7 @@ public class ApplyReservationTransactionProcessorTest {
             throw new RuntimeException();
         }
 
-        String ref = "test-atomic-success-0";
+        String ref = "test-apply-success-" + RandomString.make();;
 
 
         BalanceSnapshot cnyReserve = balanceSnapshotManager.selectByRefs(ServiceId.USER, List.of(cnyReserveWalletRef)).get(0);
@@ -101,7 +103,7 @@ public class ApplyReservationTransactionProcessorTest {
     }
 
     private ReserveTransactionReplyPb reserve() {
-        String ref = "test-reserve-success-4";
+        String ref = "test-reserve-success-" + RandomString.make();
 
         List<TransactionLinePb> lines = new ArrayList<>() {{
             add(TransactionLinePb.newBuilder().setWalletRef(usdReserveWalletRef).setAssetCode(usdAssetId).setOperationType(OperationTypePb.OperationTypePb_Reserve).setAmount(20).build());

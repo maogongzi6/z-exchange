@@ -14,4 +14,8 @@ public enum TransactionStatus {
     TransactionStatus(int code) {
         this.code = code;
     }
+
+    public boolean hasFinalized() {
+        return this == COMPLETED || this == CLOSED;
+    }
 }

@@ -37,6 +37,10 @@ public class WalletTransaction extends BaseEntity {
         this.businessType = businessType;
     }
 
+    public boolean hasFinalized() {
+        return txnStatus.hasFinalized();
+    }
+
     public static WalletTransaction create(String txnId, String referenceId, ServiceId initiator, String idempotentKey, TransactionStatus txnStatus, TransactionType txnType, BusinessType businessType) {
         return new WalletTransaction(txnId, referenceId, initiator, idempotentKey, txnStatus, txnType, businessType);
     }
