@@ -1,6 +1,6 @@
-package com.exchange.app.ledger.kafka.consumer.error;
+package com.exchange.common.kafka.retry;
 
-import com.exchange.app.ledger.exception.AbnormalProtoDataException;
+import com.exchange.common.kafka.config.CustomKafkaConfig;
 import com.exchange.common.kafka.utils.Topics;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.TopicPartition;
@@ -9,8 +9,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
-
-import javax.sql.rowset.serial.SerialException;
 
 @Slf4j
 @Configuration
@@ -25,13 +23,13 @@ public class KafkaErrorHandlingConfig {
     }
 
     @Bean
-    public DefaultErrorHandler defaultErrorHandler(DeadLetterPublishingRecoverer deadLetterPublishingRecoverer) {
+    public DefaultErrorHandler defaultErrorHandler(DeadLetterPublishingRecoverer deadLetterPublishingRecoverer, CustomKafkaConfig customKafkaConfig) {
         long[] delays = new long[] {
                 1_000, 1_000, 1_000,     // 3x 1s
         };
         StairStepBackOff backOff = new StairStepBackOff(delays, delays.length);
         DefaultErrorHandler errorHandler = new DefaultErrorHandler(deadLetterPublishingRecoverer, backOff);
-        errorHandler.addNotRetryableExceptions(AbnormalProtoDataException.class);
+        errorHandler.addNotRetryableExceptions(customKafkaConfig.getNotRetriableExceptions());
         errorHandler.setRetryListeners(((consumerRecord, e, i) -> {
             log.error("error_handler: retry record, attempt_count = {}, record = {}, exception = {}", i, consumerRecord.key(), e.getMessage());
         }));

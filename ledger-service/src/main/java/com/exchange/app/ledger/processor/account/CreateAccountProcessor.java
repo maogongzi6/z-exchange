@@ -7,7 +7,8 @@ import com.exchange.app.ledger.po.account.Account;
 import com.exchange.app.ledger.po.asset.Asset;
 import com.exchange.app.ledger.result.ErrorCode;
 import com.exchange.app.ledger.result.PbErrorBuilder;
-import com.exchange.app.ledger.result.Result;
+import com.exchange.app.ledger.result.Results;
+import com.exchange.common.utils.result.Result;
 import com.exchange.proto.ledger.account.CreateAccountReplyPb;
 import com.exchange.proto.ledger.account.CreateAccountRequestPb;
 import com.exchange.app.ledger.utils.EnumMappers;
@@ -20,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Objects;
 
 @Slf4j
 @Component
@@ -59,23 +61,23 @@ public class CreateAccountProcessor {
 
     private Result<Void> validateReq(CreateAccountRequestPb req, ServiceId serviceId, AccountCategory category, NormalSide normalSide, OwnerType ownerType) {
         if (serviceId == null || serviceId == ServiceId.UNKNOWN) {
-            return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid_service_id: " + req.getServiceId());
+            return Results.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid_service_id: " + req.getServiceId());
         }
         if (category == null || category == AccountCategory.UNKNOWN) {
-            return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid_category: " + req.getCategory());
+            return Results.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid_category: " + req.getCategory());
         }
         if (normalSide == null || normalSide == NormalSide.UNKNOWN) {
-            return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid_normal_side: " + req.getNormalSide());
+            return Results.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid_normal_side: " + req.getNormalSide());
         }
         if (ownerType == null || ownerType == OwnerType.UNKNOWN) {
-            return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid_owner_type: " + req.getOwnerType());
+            return Results.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid_owner_type: " + req.getOwnerType());
         }
 
         if (!ValidateHelper.validateNormalSideAndCategory(normalSide, category)) {
-            return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid_normal_side_category_pair: " + req.getNormalSide());
+            return Results.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid_normal_side_category_pair: " + req.getNormalSide());
         }
 
-        return Result.success();
+        return Results.success();
     }
 
     private CreateAccountReplyPb replySuccess(String detail) {
@@ -88,7 +90,7 @@ public class CreateAccountProcessor {
     }
 
     private CreateAccountReplyPb replyError(Result<?> result) {
-        result = Result.requireNotNull(result);
-        return replyError(result.errorCode, result.errorDetail);
+        Objects.requireNonNull(result);
+        return replyError(Results.getErrorCode(result), result.errorDetail);
     }
 }

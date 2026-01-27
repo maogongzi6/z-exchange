@@ -2,13 +2,12 @@ package com.exchange.app.wallet.processor.transaction;
 
 import com.exchange.app.wallet.dao.manager.*;
 import com.exchange.app.wallet.po.enums.transaction.*;
-import com.exchange.app.wallet.po.transaction.WalletAction;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
 import com.exchange.app.wallet.result.ErrorCode;
 import com.exchange.app.wallet.result.PbErrorBuilder;
-import com.exchange.app.wallet.result.Result;
+import com.exchange.app.wallet.result.Results;
 import com.exchange.app.wallet.utils.*;
-import com.exchange.proto.ledger.post.PostTransactionReplyPb;
+import com.exchange.common.utils.result.Result;
 import com.exchange.proto.wallet.wallet.AtomicTransactionReplyPb;
 import com.exchange.proto.wallet.wallet.AtomicTransactionRequestPb;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +32,7 @@ public class AtomicTransactionProcessor {
 //        } else {
 //            return replySuccess(walletTxn, "txn already executed");
 //        }
-        if (!result.success) {
+        if (result.isFailed()) {
             return replyError(result);
         }
 //        TransactionProcessor.TransactionInfo transactionInfo = txnInfoResult.value;
@@ -63,7 +62,6 @@ public class AtomicTransactionProcessor {
     }
 
     private AtomicTransactionReplyPb replyError(Result<?> result) {
-        result = Result.requireNotNull(result);
-        return replyError(result.errorCode, result.errorDetail);
+        return replyError(Results.getErrorCode(result), result.errorDetail);
     }
 }

@@ -11,8 +11,9 @@ import com.exchange.app.ledger.po.enums.Direction;
 import com.exchange.app.ledger.po.ledger.LedgerEntry;
 import com.exchange.app.ledger.po.ledger.LedgerTxn;
 import com.exchange.app.ledger.result.PbErrorBuilder;
-import com.exchange.app.ledger.result.Result;
-import com.exchange.app.ledger.utils.DbTransactionHelper;
+import com.exchange.app.ledger.result.Results;
+import com.exchange.common.db.utils.DbTransactionHelper;
+import com.exchange.common.utils.result.Result;
 import com.exchange.proto.ledger.post.LedgerEntryPb;
 import com.exchange.proto.ledger.post.PostTransactionReplyPb;
 import com.exchange.proto.ledger.post.PostTransactionRequestPb;
@@ -33,8 +34,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class PostLedgerProcessor {
     final private LedgerEntryMapper ledgerEntryMapper;
-    final private LedgerTxnMapper ledgerTxnMapper;
-    final private AccountMapper accountMapper;
 
     final private LedgerTxnManager ledgerTxnManager;
 
@@ -46,7 +45,7 @@ public class PostLedgerProcessor {
         Result<Void> result = validateReq(req);
         if (result.isFailed()) {
             log.error("invalid request, {}, {}", req, result);
-            return replyError(result.errorCode, result.errorDetail);
+            return replyError(Results.getErrorCode(result), result.errorDetail);
         }
 
         String txnId = IdGenerator.generateLedgerTxnId();
@@ -69,17 +68,17 @@ public class PostLedgerProcessor {
         result = DbTransactionHelper.executeWithResult(transactionTemplate, TransactionDefinition.PROPAGATION_REQUIRED, () -> {
             if (ledgerTxnManager.insertIgnore(ledgerTxn) == 0) {
                 log.info("ledger txn already exists, {}", ledgerTxn);
-                return Result.success();
+                return Results.success();
             }
             if (ledgerEntryMapper.batchInsert(entries) < entries.size()) {
                 log.error("unexpected ledger txn already exists, {}", ledgerTxn);
                 // should be a server error?
-                return Result.fail(ErrorCode.SERVER_ERROR, "unexpected duplicated_ledger_entry");
+                return Results.fail(ErrorCode.SERVER_ERROR, "unexpected duplicated_ledger_entry");
             }
-            return Result.success();
+            return Results.success();
         });
-        if (Result.isFailed(result)) {
-            return replyError(result.errorCode, result.errorDetail);
+        if (result.isFailed()) {
+            return replyError(Results.getErrorCode(result), result.errorDetail);
         }
 
         return replySuccess(req.getReferenceId(), "success");
@@ -91,12 +90,12 @@ public class PostLedgerProcessor {
 
         for (LedgerEntryPb entry : req.getEntriesList()) {
             if (entry.getAmount() == 0) {
-                return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "zero_amount: " + entry);
+                return Results.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "zero_amount: " + entry);
             }
             Direction d = EnumMappers.directionPbMapper.to(entry.getDirection());
             String assetId = entry.getAssetId();
             if (d == null || d == Direction.UNKNOWN) {
-                return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid_direction: " + Direction.UNKNOWN);
+                return Results.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid_direction: " + Direction.UNKNOWN);
             }
             if (d == Direction.DEBIT) {
                 debitCount++;
@@ -111,20 +110,20 @@ public class PostLedgerProcessor {
         }
 
         if (debitCount == 0 || creditCount == 0) {
-            return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "imbalanced_entry: debit: " + debitSumMap + ", credit: " + creditSumMap);
+            return Results.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "imbalanced_entry: debit: " + debitSumMap + ", credit: " + creditSumMap);
         }
 
         if (debitSumMap.size() != creditSumMap.size()) {
-            return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "imbalanced_entry: debit: " + debitSumMap + ", credit: " + creditSumMap);
+            return Results.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "imbalanced_entry: debit: " + debitSumMap + ", credit: " + creditSumMap);
         }
         for (Map.Entry<String, Long> entry: debitSumMap.entrySet()) {
             String assetId = entry.getKey();
             Long debitAmount = entry.getValue();
             if (!Objects.equals(creditSumMap.get(assetId), debitAmount)) {
-                return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER,("imbalanced_entry: debit: " + debitSumMap + ", credit: " + creditSumMap));
+                return Results.fail(ErrorCode.INVALID_REQUEST_PARAMETER,("imbalanced_entry: debit: " + debitSumMap + ", credit: " + creditSumMap));
             }
         }
-        return Result.success();
+        return Results.success();
     }
 
     private LedgerEntry createLedgerEntry(String txnId, LedgerEntryPb entryPb, String accountId) {

@@ -1,4 +1,4 @@
-package com.exchange.app.ledger.kafka.consumer.error;
+package com.exchange.common.kafka.retry;
 
 import org.springframework.util.backoff.BackOff;
 import org.springframework.util.backoff.BackOffExecution;

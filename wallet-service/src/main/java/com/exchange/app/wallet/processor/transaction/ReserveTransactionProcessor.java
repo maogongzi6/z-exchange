@@ -6,8 +6,9 @@ import com.exchange.app.wallet.po.transaction.WalletReservation;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
 import com.exchange.app.wallet.result.ErrorCode;
 import com.exchange.app.wallet.result.PbErrorBuilder;
-import com.exchange.app.wallet.result.Result;
+import com.exchange.app.wallet.result.Results;
 import com.exchange.app.wallet.utils.EnumPbMappers;
+import com.exchange.common.utils.result.Result;
 import com.exchange.proto.wallet.common.OperationTypePb;
 import com.exchange.proto.wallet.wallet.ReservationInfoPb;
 import com.exchange.proto.wallet.wallet.ReserveTransactionReplyPb;
@@ -37,7 +38,7 @@ public class ReserveTransactionProcessor {
         }
 
         Result<TransactionProcessor.TransactionInfo> result = transactionProcessor.beforePostingLedger(request.getReferenceId(), request.getInitiator(), request.getIdempotencyKey(), request.getBusinessType(), TransactionType.TWO_STEP, false, request.getLinesList());
-        if (!result.success) {
+        if (result.isFailed()) {
             return replyError(result);
         }
 
@@ -47,10 +48,10 @@ public class ReserveTransactionProcessor {
     private Result<Void> validate(ReserveTransactionRequestPb request) {
         for (TransactionLinePb line : request.getLinesList()) {
             if (line.getOperationType() != OperationTypePb.OperationTypePb_Reserve) {
-                return Result.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid operation type: " + line.getOperationType());
+                return Results.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid operation type: " + line.getOperationType());
             }
         }
-        return Result.success();
+        return Results.success();
     }
 
 //    private Result<ReserveResult> createReserveTransaction(ReserveTransactionRequestPb request, TransactionProcessor.RequestInfo requestInfo) {
@@ -77,22 +78,22 @@ public class ReserveTransactionProcessor {
 //        return Result.success(new ReserveResult(walletTxn, reservations));
 //    }
 
-    private Result<List<WalletReservation>> getAndValidateReservation(WalletTransaction txn, List<TransactionProcessor.RequestInfo.Line> lines) {
-        List<WalletReservation> reservations = walletReservationManager.selectByTxnId(txn.getTxnId());
-        if (reservations.size() != lines.size()) {
-            return Result.fail(ErrorCode.WALLET_RESERVATION_MISMATCH, String.format("invalid reservation size, reservations: %s, lines: %s", reservations, lines));
-        }
-        Map<String, WalletReservation> walletIdToReservation = reservations.stream().collect(Collectors.toMap(WalletReservation::getWalletId, reservation->reservation));
-        for (TransactionProcessor.RequestInfo.Line line : lines) {
-            WalletReservation reservation = walletIdToReservation.get(line.walletId);
-            if (reservation == null || !Objects.equals(line.walletRef, reservation.getWalletReferenceId())
-                    || !Objects.equals(line.assetCode, reservation.getAssetId())
-                    || !Objects.equals(line.amount, reservation.getTotal())) {
-                return Result.fail(ErrorCode.WALLET_RESERVATION_MISMATCH, String.format("invalid reservation: %s, line: %s", reservation, line));
-            }
-        }
-        return Result.success(reservations);
-    }
+//    private Result<List<WalletReservation>> getAndValidateReservation(WalletTransaction txn, List<TransactionProcessor.RequestInfo.Line> lines) {
+//        List<WalletReservation> reservations = walletReservationManager.selectByTxnId(txn.getTxnId());
+//        if (reservations.size() != lines.size()) {
+//            return Results.fail(ErrorCode.WALLET_RESERVATION_MISMATCH, String.format("invalid reservation size, reservations: %s, lines: %s", reservations, lines));
+//        }
+//        Map<String, WalletReservation> walletIdToReservation = reservations.stream().collect(Collectors.toMap(WalletReservation::getWalletId, reservation->reservation));
+//        for (TransactionProcessor.RequestInfo.Line line : lines) {
+//            WalletReservation reservation = walletIdToReservation.get(line.walletId);
+//            if (reservation == null || !Objects.equals(line.walletRef, reservation.getWalletReferenceId())
+//                    || !Objects.equals(line.assetCode, reservation.getAssetId())
+//                    || !Objects.equals(line.amount, reservation.getTotal())) {
+//                return Results.fail(ErrorCode.WALLET_RESERVATION_MISMATCH, String.format("invalid reservation: %s, line: %s", reservation, line));
+//            }
+//        }
+//        return Results.success(reservations);
+//    }
 
     private ReserveTransactionReplyPb replySuccess(TransactionProcessor.TransactionInfo info, String detail) {
         WalletTransaction txn = info.walletTxn;
@@ -118,8 +119,7 @@ public class ReserveTransactionProcessor {
     }
 
     private ReserveTransactionReplyPb replyError(Result<?> result) {
-        result = Result.requireNotNull(result);
-        return replyError(result.errorCode, result.errorDetail);
+        return replyError(Results.getErrorCode(result), result.errorDetail);
     }
 
     @AllArgsConstructor

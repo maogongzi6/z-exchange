@@ -1,19 +1,18 @@
 package com.exchange.app.ledger.kafka.consumer;
 
 import com.exchange.app.ledger.constant.EventType;
-import com.exchange.app.ledger.cronjob.constant.OutboxConfig;
+import com.exchange.app.ledger.cronjob.constant.OutboxConstant;
 import com.exchange.app.ledger.exception.AbnormalProtoDataException;
 import com.exchange.app.ledger.exception.RetriableException;
 import com.exchange.app.ledger.kafka.constant.LedgerTopic;
 import com.exchange.app.ledger.kafka.producer.ReplyWalletPublisher;
 import com.exchange.app.ledger.processor.post.PostLedgerProcessor;
 import com.exchange.app.ledger.result.ErrorCode;
-import com.exchange.app.ledger.result.Result;
-import com.exchange.app.ledger.utils.IdGenerator;
 import com.exchange.app.ledger.utils.OutboxHelper;
 import com.exchange.common.outbox.dao.manager.OutboxManager;
 import com.exchange.common.outbox.po.Outbox;
 import com.exchange.common.outbox.po.enums.OutboxStatus;
+import com.exchange.common.utils.result.Result;
 import com.exchange.common.utils.time.LocalDateTimeHelper;
 import com.exchange.proto.common.error.ErrorCodePb;
 import com.exchange.proto.common.event.EventEnvelopePb;
@@ -25,8 +24,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
-
-import java.time.LocalDateTime;
 
 @Slf4j
 @Component
@@ -45,7 +42,7 @@ public class PostListener {
         try {
             var envelope = EventEnvelopePb.parseFrom(envelopeBytes);
             Outbox replyOutbox = handleMessage(envelope);
-            if (outboxManager.insertWithClaim(replyOutbox, LocalDateTimeHelper.nowAfterMs(OutboxConfig.BASE_ATTEMPT_INTERVAL_MS))
+            if (outboxManager.insertWithClaim(replyOutbox, LocalDateTimeHelper.nowAfterMs(OutboxConstant.BASE_ATTEMPT_INTERVAL_MS))
                     != 1) {
                 log.error("duplicated outbox, {}", replyOutbox);
                 throw new RetriableException(ErrorCode.LEDGER_OUTBOX_DUPLICATED, "insert outbox failed, outbox=" + replyOutbox);

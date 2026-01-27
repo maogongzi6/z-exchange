@@ -1,10 +1,11 @@
 package com.exchange.app.ledger.result;
 
+import com.exchange.common.utils.result.Result;
 import com.exchange.proto.common.error.ErrorPb;
 
 public class PbErrorBuilder {
     static public ErrorPb build(Result<?> result) {
-        return build(result.errorCode, result.errorDetail);
+        return build(Results.getErrorCode(result), result.errorDetail);
     }
 
     static public ErrorPb build(ErrorCode error) {
