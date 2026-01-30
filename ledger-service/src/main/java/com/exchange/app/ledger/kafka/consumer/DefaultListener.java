@@ -1,11 +1,11 @@
 package com.exchange.app.ledger.kafka.consumer;
 
 import com.exchange.app.ledger.constant.EventType;
-import com.exchange.app.ledger.cronjob.constant.OutboxConstant;
+import com.exchange.app.ledger.cronjob.outbox.constant.OutboxConstant;
 import com.exchange.app.ledger.exception.AbnormalProtoDataException;
 import com.exchange.app.ledger.exception.RetriableException;
 import com.exchange.app.ledger.kafka.constant.LedgerTopic;
-import com.exchange.app.ledger.kafka.producer.ReplyWalletPublisher;
+import com.exchange.app.ledger.kafka.producer.DefaultPublisher;
 import com.exchange.app.ledger.processor.post.PostLedgerProcessor;
 import com.exchange.app.ledger.result.ErrorCode;
 import com.exchange.app.ledger.utils.OutboxHelper;
@@ -28,10 +28,10 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
-public class PostListener {
+public class DefaultListener {
     private final PostLedgerProcessor postLedgerProcessor;
     private final OutboxManager outboxManager;
-    private final ReplyWalletPublisher replyWalletPublisher;
+    private final DefaultPublisher replyWalletPublisher;
 
     @KafkaListener(
             topics = LedgerTopic.WALLET_POST,
@@ -39,6 +39,7 @@ public class PostListener {
             containerFactory = "concurrentCommandKafkaListenerContainerFactory"
     )
     public void onMessage(byte[] envelopeBytes, Acknowledgment ack) {
+        log.info("onMessage");
         try {
             var envelope = EventEnvelopePb.parseFrom(envelopeBytes);
             Outbox replyOutbox = handleMessage(envelope);

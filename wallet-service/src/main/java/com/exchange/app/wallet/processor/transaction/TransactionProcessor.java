@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.exchange.app.wallet.cronjob.outbox.constant.OutboxConstant;
 import com.exchange.app.wallet.dao.manager.*;
 import com.exchange.app.wallet.exception.InvalidEnumException;
-import com.exchange.app.wallet.kafka.producer.PostLedgerPublisher;
+import com.exchange.app.wallet.kafka.producer.DefaultPublisher;
 import com.exchange.app.wallet.po.enums.BusinessType;
 import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.enums.WalletBucket;
@@ -56,7 +56,7 @@ public class TransactionProcessor {
     private final WalletActionManager walletActionManager;
     private final WalletAccountMappingManager walletAccountMappingManager;
     private final OutboxManager outboxManager;
-    private final PostLedgerPublisher postLedgerPublisher;
+    private final DefaultPublisher postLedgerPublisher;
 
     // reserve -> snapshot: -available, +reserved
     // consume -> reservation: -remaining, +pending_settle
@@ -685,6 +685,10 @@ public class TransactionProcessor {
             return Results.fail(txnInfoResult);
         }
         TransactionInfo txnInfo = txnInfoResult.value;
+        if (txnInfo.walletTxn.hasFinalized()) {
+            log.info("wallet txn has finalized, txnId: {}", txnId);
+            return Results.success(txnInfo.walletTxn);
+        }
 
         List<BalanceSnapshot> snapshotIdsInOrder = txnInfo.snapshots.stream()
                 .sorted(Comparator.comparing(BalanceSnapshot::getId)).collect(Collectors.toList());

@@ -26,8 +26,4 @@ public class Result<T> {
     public static boolean isResultFailed(Result<?> result) {
         return !result.success;
     }
-
-//    public static <T> Result<T> requireNotNull(Result<T> result, PbMappableErrorCode resultNullError) {
-//        return result == null ? new Result<>(false, null, resultNullError, "null_result") : result;
-//    }
 }

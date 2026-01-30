@@ -1,4 +1,4 @@
-package com.exchange.app.wallet.cronjob.outbox.constant;
+package com.exchange.app.ledger.cronjob.outbox.constant;
 
 import java.util.concurrent.TimeUnit;
 

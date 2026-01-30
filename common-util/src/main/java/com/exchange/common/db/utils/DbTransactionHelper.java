@@ -25,4 +25,22 @@ public class DbTransactionHelper {
             }
         });
     }
+
+    public static Boolean executeWithIfSuccess(TransactionTemplate template, int propagation, Supplier<Boolean> supplier) {
+        template.setPropagationBehavior(propagation);
+        return template.execute((transactionStatus) -> {
+            try {
+                Boolean result = supplier.get();
+                if (!result) {
+                    log.error("execute failed");
+                    transactionStatus.setRollbackOnly();
+                }
+                return result;
+            } catch (Throwable e) {
+                log.error("execute failed with exception, ", e);
+                transactionStatus.setRollbackOnly();
+                throw e;
+            }
+        });
+    }
 }

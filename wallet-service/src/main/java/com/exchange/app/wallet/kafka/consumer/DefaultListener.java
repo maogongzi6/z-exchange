@@ -6,7 +6,6 @@ import com.exchange.app.wallet.kafka.constant.WalletTopic;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
 import com.exchange.app.wallet.processor.transaction.TransactionProcessor;
 import com.exchange.app.wallet.result.ErrorCode;
-import com.exchange.common.outbox.dao.manager.OutboxManager;
 import com.exchange.common.utils.result.Result;
 import com.exchange.proto.common.event.EventEnvelopePb;
 import com.exchange.proto.ledger.post.PostTransactionReplyPb;
@@ -21,7 +20,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
-public class PostLedgerReplyListener {
+public class DefaultListener {
     private final TransactionProcessor transactionProcessor;
 
     @KafkaListener(

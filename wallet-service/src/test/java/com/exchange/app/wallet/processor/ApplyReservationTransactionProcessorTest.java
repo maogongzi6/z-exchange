@@ -55,6 +55,25 @@ public class ApplyReservationTransactionProcessorTest {
     public void testApplyReservationTransactionProcessor() {
         createWallet();
 
+        var replyPb = applyReservation();
+        log.info(replyPb.toString());
+        Assert.assertEquals(ErrorCodePb.ERROR_OK, replyPb.getError().getCode());
+    }
+
+    @Test
+    public void batchTestApplyReservationTransactionProcessor() {
+        createWallet();
+
+        int batchSize = 10;
+
+        for (int i = 0; i < batchSize; i++) {
+            var replyPb = applyReservation();
+            log.info(replyPb.toString());
+            Assert.assertEquals(ErrorCodePb.ERROR_OK, replyPb.getError().getCode());
+        }
+    }
+
+    private ApplyReservationTransactionReplyPb applyReservation() {
         var reserveReply = reserve();
         var infoList = reserveReply.getInfosList();
         String reserveCnyRef = "", reserveUsdRef = "";
@@ -70,8 +89,7 @@ public class ApplyReservationTransactionProcessorTest {
             throw new RuntimeException();
         }
 
-        String ref = "test-apply-success-" + RandomString.make();;
-
+        String ref = "test-apply-success-" + RandomString.make();
 
         BalanceSnapshot cnyReserve = balanceSnapshotManager.selectByRefs(ServiceId.USER, List.of(cnyReserveWalletRef)).get(0);
         TransactionLinePb line;
@@ -97,9 +115,7 @@ public class ApplyReservationTransactionProcessorTest {
         ApplyReservationTransactionRequestPb requestPb = ApplyReservationTransactionRequestPb.newBuilder()
                 .setReferenceId(ref).setInitiator(serviceId)
                 .setIdempotencyKey(ref).setBusinessType(businessType).addAllLines(lines).build();
-        ApplyReservationTransactionReplyPb replyPb = applyReservationTransactionProcessor.apply(requestPb);
-        log.info(replyPb.toString());
-        Assert.assertEquals(ErrorCodePb.ERROR_OK, replyPb.getError().getCode());
+        return applyReservationTransactionProcessor.apply(requestPb);
     }
 
     private ReserveTransactionReplyPb reserve() {

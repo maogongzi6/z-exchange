@@ -1,8 +1,9 @@
-package com.exchange.app.wallet.kafka.producer;
+package com.exchange.app.ledger.kafka.producer;
 
-import com.exchange.app.wallet.result.ErrorCode;
-import com.exchange.app.wallet.result.Results;
-import com.exchange.app.wallet.utils.OutboxHelper;
+import com.exchange.app.ledger.result.ErrorCode;
+import com.exchange.app.ledger.result.Results;
+import com.exchange.app.ledger.utils.OutboxHelper;
+import com.exchange.common.kafka.producer.IPublisher;
 import com.exchange.common.outbox.po.Outbox;
 import com.exchange.common.utils.result.Result;
 import com.exchange.proto.common.event.EventEnvelopePb;
@@ -17,11 +18,12 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Component
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
-public class PostLedgerPublisher {
-    final private KafkaTemplate<String, byte[]> kafkaTemplate;
+public class DefaultPublisher implements IPublisher {
+    private final KafkaTemplate<String, byte[]> kafkaTemplate;
+
     public Result<Void> publish(Outbox outbox) {
         Result<EventEnvelopePb> result = OutboxHelper.toEventEnvelope(outbox);
-        if (result.isFailed()) {
+        if (!result.success) {
             log.error("outbox to event envelope failed: {}", outbox);
             return Results.fail(result);
         }
@@ -32,5 +34,4 @@ public class PostLedgerPublisher {
             return Results.fail(ErrorCode.PUBLISH_KAFKA_ERROR, outbox.getCommandId());
         }
         return Results.success();
-    }
-}
+    }}

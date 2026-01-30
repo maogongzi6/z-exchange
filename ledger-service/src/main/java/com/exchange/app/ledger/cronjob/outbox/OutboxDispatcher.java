@@ -1,4 +1,4 @@
-package com.exchange.app.wallet.cronjob.outbox;
+package com.exchange.app.ledger.cronjob.outbox;
 
 import com.exchange.common.outbox.retry.OutboxRetryHandler;
 import lombok.RequiredArgsConstructor;
