@@ -1,9 +1,9 @@
 package com.exchange.app.wallet.processor;
 
 import com.exchange.app.wallet.client.AccountServiceClient;
-import com.exchange.app.wallet.dao.manager.BalanceSnapshotManager;
-import com.exchange.app.wallet.dao.manager.WalletAccountMappingManager;
-import com.exchange.app.wallet.dao.manager.WalletManager;
+import com.exchange.app.wallet.dao.repository.BalanceSnapshotRepository;
+import com.exchange.app.wallet.dao.repository.WalletAccountMappingRepository;
+import com.exchange.app.wallet.dao.repository.WalletRepository;
 import com.exchange.app.wallet.dao.mapper.WalletMapper;
 import com.exchange.app.wallet.po.enums.OwnerType;
 import com.exchange.app.wallet.po.enums.ServiceId;
@@ -39,10 +39,10 @@ public class CreateWalletProcessor {
     final private TransactionTemplate transactionTemplate;
 
     final private WalletMapper walletMapper;
-    final private BalanceSnapshotManager balanceSnapshotManager;
-    final private WalletAccountMappingManager walletAccountMappingManager;
+    final private BalanceSnapshotRepository balanceSnapshotManager;
+    final private WalletAccountMappingRepository walletAccountMappingManager;
 
-    final private WalletManager walletManager;
+    final private WalletRepository walletManager;
 
     final private AccountServiceClient accountServiceClient;
 

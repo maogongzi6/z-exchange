@@ -1,10 +1,9 @@
 package com.exchange.app.wallet.processor;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.exchange.app.wallet.dao.manager.BalanceSnapshotManager;
+import com.exchange.app.wallet.dao.repository.BalanceSnapshotRepository;
 import com.exchange.app.wallet.dao.mapper.BalanceSnapshotMapper;
 import com.exchange.app.wallet.po.enums.ServiceId;
-import com.exchange.app.wallet.po.transaction.WalletAction;
 import com.exchange.app.wallet.po.wallet.BalanceSnapshot;
 import com.exchange.app.wallet.processor.transaction.ApplyReservationTransactionProcessor;
 import com.exchange.app.wallet.processor.transaction.ReserveTransactionProcessor;
@@ -25,7 +24,6 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 @Slf4j
 @RunWith(SpringJUnit4ClassRunner.class)
@@ -43,7 +41,7 @@ public class ApplyReservationTransactionProcessorTest {
     @Autowired
     private CreateWalletProcessor createWalletProcessor;
     @Autowired
-    private BalanceSnapshotManager balanceSnapshotManager;
+    private BalanceSnapshotRepository balanceSnapshotManager;
     @Autowired
     private BalanceSnapshotMapper balanceSnapshotMapper;
     @Autowired

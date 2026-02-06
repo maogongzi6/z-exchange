@@ -1,4 +1,4 @@
-package com.exchange.app.wallet.dao.manager;
+package com.exchange.app.wallet.dao.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -8,7 +8,7 @@ import com.exchange.app.wallet.exception.InvalidValueException;
 import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.enums.WalletStatus;
 import com.exchange.app.wallet.po.wallet.BalanceSnapshot;
-import com.exchange.common.db.manager.DbBaseManager;
+import com.exchange.common.db.manager.DbBaseRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -17,9 +17,9 @@ import java.util.List;
 
 @Slf4j
 @Component
-public class BalanceSnapshotManager extends DbBaseManager<BalanceSnapshot, BalanceSnapshotMapper> {
+public class BalanceSnapshotRepository extends DbBaseRepository<BalanceSnapshot, BalanceSnapshotMapper> {
     @Autowired
-    public BalanceSnapshotManager(BalanceSnapshotMapper mapper) {
+    public BalanceSnapshotRepository(BalanceSnapshotMapper mapper) {
         super(mapper);
     }
 

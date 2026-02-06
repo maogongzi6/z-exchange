@@ -1,6 +1,6 @@
 package com.exchange.app.wallet.processor.transaction;
 
-import com.exchange.app.wallet.dao.manager.*;
+import com.exchange.app.wallet.dao.repository.*;
 import com.exchange.app.wallet.po.enums.transaction.TransactionType;
 import com.exchange.app.wallet.po.transaction.WalletReservation;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
@@ -21,15 +21,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class ReserveTransactionProcessor {
     final private TransactionProcessor transactionProcessor;
-    private final WalletReservationManager walletReservationManager;
-    private final WalletTransactionManager walletTransactionManager;
+    private final WalletReservationRepository walletReservationManager;
+    private final WalletTransactionRepository walletTransactionManager;
 
     public ReserveTransactionReplyPb reserve(ReserveTransactionRequestPb request) {
         Result<Void> validateResult = validate(request);

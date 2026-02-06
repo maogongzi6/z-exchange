@@ -1,4 +1,4 @@
-package com.exchange.app.wallet.dao.manager;
+package com.exchange.app.wallet.dao.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -8,7 +8,7 @@ import com.exchange.app.wallet.exception.InvalidValueException;
 import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.enums.transaction.TransactionStatus;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
-import com.exchange.common.db.manager.DbBaseManager;
+import com.exchange.common.db.manager.DbBaseRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,9 +18,9 @@ import java.util.Objects;
 
 @Slf4j
 @Component
-public class WalletTransactionManager extends DbBaseManager<WalletTransaction, WalletTransactionMapper> {
+public class WalletTransactionRepository extends DbBaseRepository<WalletTransaction, WalletTransactionMapper> {
     @Autowired
-    public WalletTransactionManager(WalletTransactionMapper walletTransactionMapper) {
+    public WalletTransactionRepository(WalletTransactionMapper walletTransactionMapper) {
         super(walletTransactionMapper);
     }
 

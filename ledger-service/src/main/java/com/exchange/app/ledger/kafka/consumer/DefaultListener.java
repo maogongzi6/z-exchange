@@ -9,7 +9,7 @@ import com.exchange.app.ledger.kafka.producer.DefaultPublisher;
 import com.exchange.app.ledger.processor.post.PostLedgerProcessor;
 import com.exchange.app.ledger.result.ErrorCode;
 import com.exchange.app.ledger.utils.OutboxHelper;
-import com.exchange.common.outbox.dao.manager.OutboxManager;
+import com.exchange.common.outbox.dao.repository.OutboxRepository;
 import com.exchange.common.outbox.po.Outbox;
 import com.exchange.common.outbox.po.enums.OutboxStatus;
 import com.exchange.common.utils.result.Result;
@@ -30,7 +30,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class DefaultListener {
     private final PostLedgerProcessor postLedgerProcessor;
-    private final OutboxManager outboxManager;
+    private final OutboxRepository outboxManager;
     private final DefaultPublisher replyWalletPublisher;
 
     @KafkaListener(

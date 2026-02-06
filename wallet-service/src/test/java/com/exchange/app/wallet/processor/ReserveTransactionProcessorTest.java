@@ -1,7 +1,7 @@
 package com.exchange.app.wallet.processor;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.exchange.app.wallet.dao.manager.BalanceSnapshotManager;
+import com.exchange.app.wallet.dao.repository.BalanceSnapshotRepository;
 import com.exchange.app.wallet.dao.mapper.BalanceSnapshotMapper;
 import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.wallet.BalanceSnapshot;
@@ -41,7 +41,7 @@ public class ReserveTransactionProcessorTest {
     @Autowired
     private ReserveTransactionProcessor reserveTransactionProcessor;
     @Autowired
-    private BalanceSnapshotManager balanceSnapshotManager;
+    private BalanceSnapshotRepository balanceSnapshotManager;
 
     @Test
     public void testReserveTransactionProcessor() {

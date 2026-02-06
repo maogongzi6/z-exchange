@@ -2,7 +2,7 @@ package com.exchange.app.wallet.processor.transaction;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.exchange.app.wallet.cronjob.outbox.constant.OutboxConstant;
-import com.exchange.app.wallet.dao.manager.*;
+import com.exchange.app.wallet.dao.repository.*;
 import com.exchange.app.wallet.exception.InvalidEnumException;
 import com.exchange.app.wallet.kafka.producer.DefaultPublisher;
 import com.exchange.app.wallet.po.enums.BusinessType;
@@ -18,7 +18,7 @@ import com.exchange.app.wallet.result.ErrorCode;
 import com.exchange.app.wallet.result.Results;
 import com.exchange.app.wallet.utils.*;
 import com.exchange.common.db.utils.DbTransactionHelper;
-import com.exchange.common.outbox.dao.manager.OutboxManager;
+import com.exchange.common.outbox.dao.repository.OutboxRepository;
 import com.exchange.common.outbox.po.Outbox;
 import com.exchange.common.outbox.po.enums.OutboxStatus;
 import com.exchange.common.utils.result.Result;
@@ -50,12 +50,12 @@ import java.util.stream.Collectors;
 public class TransactionProcessor {
     private final TransactionTemplate transactionTemplate;
 
-    private final BalanceSnapshotManager balanceSnapshotManager;
-    private final WalletReservationManager walletReservationManager;
-    private final WalletTransactionManager walletTransactionManager;
-    private final WalletActionManager walletActionManager;
-    private final WalletAccountMappingManager walletAccountMappingManager;
-    private final OutboxManager outboxManager;
+    private final BalanceSnapshotRepository balanceSnapshotManager;
+    private final WalletReservationRepository walletReservationManager;
+    private final WalletTransactionRepository walletTransactionManager;
+    private final WalletActionRepository walletActionManager;
+    private final WalletAccountMappingRepository walletAccountMappingManager;
+    private final OutboxRepository outboxManager;
     private final DefaultPublisher postLedgerPublisher;
 
     // reserve -> snapshot: -available, +reserved

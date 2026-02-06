@@ -1,6 +1,6 @@
 package com.exchange.app.wallet.processor.transaction;
 
-import com.exchange.app.wallet.dao.manager.*;
+import com.exchange.app.wallet.dao.repository.*;
 import com.exchange.app.wallet.po.enums.transaction.*;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
 import com.exchange.app.wallet.result.ErrorCode;
@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class AtomicTransactionProcessor {
-    private final WalletTransactionManager walletTransactionManager;
+    private final WalletTransactionRepository walletTransactionManager;
 
     private final TransactionProcessor transactionProcessor;
 

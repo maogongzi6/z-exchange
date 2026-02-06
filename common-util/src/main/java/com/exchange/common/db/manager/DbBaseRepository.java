@@ -5,10 +5,10 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.springframework.dao.DuplicateKeyException;
 
-public class DbBaseManager<T, M extends BaseMapper<T>> {
+public class DbBaseRepository<T, M extends BaseMapper<T>> {
     protected final M mapper;
 
-    public DbBaseManager(M mapper) {
+    public DbBaseRepository(M mapper) {
         this.mapper = mapper;
     }
 

@@ -1,8 +1,8 @@
-package com.exchange.common.outbox.dao.manager;
+package com.exchange.common.outbox.dao.repository;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.exchange.common.db.manager.DbBaseManager;
+import com.exchange.common.db.manager.DbBaseRepository;
 import com.exchange.common.outbox.dao.mapper.OutboxMapper;
 import com.exchange.common.outbox.po.Outbox;
 import com.exchange.common.outbox.po.enums.OutboxStatus;
@@ -12,8 +12,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
-public class OutboxManager extends DbBaseManager<Outbox, OutboxMapper> {
-    public OutboxManager(OutboxMapper mapper) {
+public class OutboxRepository extends DbBaseRepository<Outbox, OutboxMapper> {
+    public OutboxRepository(OutboxMapper mapper) {
         super(mapper);
     }
 

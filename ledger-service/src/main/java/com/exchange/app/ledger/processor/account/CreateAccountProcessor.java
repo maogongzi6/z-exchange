@@ -1,7 +1,7 @@
 package com.exchange.app.ledger.processor.account;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.exchange.app.ledger.dao.manager.AccountManager;
+import com.exchange.app.ledger.dao.repository.AccountRepository;
 import com.exchange.app.ledger.dao.mapper.AssetMapper;
 import com.exchange.app.ledger.po.account.Account;
 import com.exchange.app.ledger.po.asset.Asset;
@@ -27,7 +27,7 @@ import java.util.Objects;
 @Component
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class CreateAccountProcessor {
-    final private AccountManager accountManager;
+    final private AccountRepository accountManager;
     final private AssetMapper assetMapper;
 
     public CreateAccountReplyPb createAccount(CreateAccountRequestPb req) {

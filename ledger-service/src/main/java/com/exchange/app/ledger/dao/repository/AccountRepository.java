@@ -1,9 +1,9 @@
-package com.exchange.app.ledger.dao.manager;
+package com.exchange.app.ledger.dao.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.exchange.app.ledger.dao.mapper.AccountMapper;
 import com.exchange.app.ledger.po.account.Account;
-import com.exchange.common.db.manager.DbBaseManager;
+import com.exchange.common.db.manager.DbBaseRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -12,9 +12,9 @@ import java.util.List;
 
 @Slf4j
 @Component
-public class AccountManager extends DbBaseManager<Account, AccountMapper> {
+public class AccountRepository extends DbBaseRepository<Account, AccountMapper> {
     @Autowired
-    public AccountManager(AccountMapper mapper) {
+    public AccountRepository(AccountMapper mapper) {
         super(mapper);
     }
 

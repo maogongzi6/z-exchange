@@ -1,11 +1,9 @@
 package com.exchange.app.ledger.processor.post;
 
-import com.exchange.app.ledger.dao.manager.AccountManager;
-import com.exchange.app.ledger.dao.manager.LedgerTxnManager;
+import com.exchange.app.ledger.dao.repository.AccountRepository;
+import com.exchange.app.ledger.dao.repository.LedgerTxnRepository;
 import com.exchange.app.ledger.result.ErrorCode;
-import com.exchange.app.ledger.dao.mapper.AccountMapper;
 import com.exchange.app.ledger.dao.mapper.LedgerEntryMapper;
-import com.exchange.app.ledger.dao.mapper.LedgerTxnMapper;
 import com.exchange.app.ledger.po.account.Account;
 import com.exchange.app.ledger.po.enums.Direction;
 import com.exchange.app.ledger.po.ledger.LedgerEntry;
@@ -35,10 +33,10 @@ import java.util.stream.Collectors;
 public class PostLedgerProcessor {
     final private LedgerEntryMapper ledgerEntryMapper;
 
-    final private LedgerTxnManager ledgerTxnManager;
+    final private LedgerTxnRepository ledgerTxnManager;
 
     final private TransactionTemplate transactionTemplate;
-    private final AccountManager accountManager;
+    private final AccountRepository accountManager;
 
     public PostTransactionReplyPb postTransaction(PostTransactionRequestPb req) {
 

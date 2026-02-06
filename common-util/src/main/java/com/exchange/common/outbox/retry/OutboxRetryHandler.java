@@ -3,7 +3,7 @@ package com.exchange.common.outbox.retry;
 import com.exchange.common.db.utils.DbTransactionHelper;
 import com.exchange.common.kafka.producer.IPublisher;
 import com.exchange.common.outbox.config.OutboxConfig;
-import com.exchange.common.outbox.dao.manager.OutboxManager;
+import com.exchange.common.outbox.dao.repository.OutboxRepository;
 import com.exchange.common.outbox.po.Outbox;
 import com.exchange.common.outbox.po.enums.OutboxStatus;
 import com.exchange.common.utils.result.Result;
@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class OutboxRetryHandler {
     private final OutboxConfig outboxConfig;
-    private final OutboxManager outboxManager;
+    private final OutboxRepository outboxManager;
     private final TransactionTemplate transactionTemplate;
     private final IPublisher publisher;
 

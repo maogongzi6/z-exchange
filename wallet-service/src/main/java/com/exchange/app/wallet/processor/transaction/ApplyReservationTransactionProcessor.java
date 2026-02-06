@@ -1,6 +1,6 @@
 package com.exchange.app.wallet.processor.transaction;
 
-import com.exchange.app.wallet.dao.manager.WalletTransactionManager;
+import com.exchange.app.wallet.dao.repository.WalletTransactionRepository;
 import com.exchange.app.wallet.po.enums.transaction.TransactionType;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
 import com.exchange.app.wallet.result.ErrorCode;
@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class ApplyReservationTransactionProcessor {
-    private final WalletTransactionManager walletTransactionManager;
+    private final WalletTransactionRepository walletTransactionManager;
     private final TransactionProcessor transactionProcessor;
 
     public ApplyReservationTransactionReplyPb apply(ApplyReservationTransactionRequestPb request) {
