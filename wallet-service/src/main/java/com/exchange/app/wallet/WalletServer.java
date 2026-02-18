@@ -16,7 +16,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         scanBasePackages = {
                 "com.exchange.app.wallet",
                 "com.exchange.common.outbox",
-                "com.exchange.common.kafka"
+                "com.exchange.common.kafka",
+                "com.exchange.common.cache"
         },
         scanBasePackageClasses = {AutofillMetaObjectHandler.class})
 public class WalletServer {

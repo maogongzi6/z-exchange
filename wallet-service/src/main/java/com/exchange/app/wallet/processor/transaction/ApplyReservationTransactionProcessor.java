@@ -12,8 +12,11 @@ import com.exchange.proto.wallet.wallet.ApplyReservationTransactionReplyPb;
 import com.exchange.proto.wallet.wallet.ApplyReservationTransactionRequestPb;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import java.util.Objects;
 
 @Slf4j
 @Component
@@ -23,14 +26,30 @@ public class ApplyReservationTransactionProcessor {
     private final TransactionProcessor transactionProcessor;
 
     public ApplyReservationTransactionReplyPb apply(ApplyReservationTransactionRequestPb request) {
-        Result<TransactionProcessor.TransactionInfo> result = transactionProcessor.beforePostingLedger(request.getReferenceId(), request.getInitiator(), request.getIdempotencyKey(), request.getBusinessType(), TransactionType.TWO_STEP, true, request.getLinesList());
+        TransactionProcessor.RequestInfo requestInfo = new TransactionProcessor.RequestInfo(request.getReferenceId(), request.getInitiator(), request.getIdempotencyKey(), request.getBusinessType(), TransactionType.TWO_STEP, request.getLinesList(), ApplyReservationTransactionRequestPb.getDescriptor().getName());
+        Result<String> idempResult = transactionProcessor.idempCheckAndReqValidate(requestInfo);
+        if (idempResult.isFailed()) {
+            return replyError(idempResult);
+        } else if (!Strings.isEmpty(idempResult.value)) {
+            return replySuccess(idempResult.value, idempResult.errorDetail);
+        }
+
+        Result<TransactionProcessor.TransactionInfo> result = transactionProcessor.beforePostingLedger(requestInfo, true);
         if (result.isFailed()) {
             return replyError(result);
         }
-        return replySuccess(result.value.walletTxn, "success");
+        return replySuccess(result.value.walletTxn, result.errorDetail);
+    }
+
+    private ApplyReservationTransactionReplyPb replySuccess(String txnId, String detail) {
+        detail = Objects.requireNonNullElse(detail, "");
+        return ApplyReservationTransactionReplyPb.newBuilder().setTransactionId(txnId)
+                .setError(PbErrorBuilder.build(ErrorCode.SUCCESS, detail))
+                .build();
     }
 
     private ApplyReservationTransactionReplyPb replySuccess(WalletTransaction txn, String detail) {
+        detail = Objects.requireNonNullElse(detail, "");
         return ApplyReservationTransactionReplyPb.newBuilder()
                 .setTransactionId(txn.getTxnId())
                 .setStatus(EnumPbMappers.transactionStatusPbMapper.from(txn.getTxnStatus()))

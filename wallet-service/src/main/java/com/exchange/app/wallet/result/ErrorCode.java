@@ -16,6 +16,8 @@ public enum ErrorCode implements PbMappableErrorCode {
     SERIALIZE_ERROR(9, ErrorCodePb.ERROR_INTERNAL, "serialize_error"),
 
     INVALID_REQUEST_PARAMETER(100, ErrorCodePb.ERROR_INVALID_ARGUMENT, "invalid_request_parameter"),
+    REQUEST_HASH_CONFLICT(200, ErrorCodePb.ERROR_FAILED_PRECONDITION, "request_hash_conflict"),
+    REQUEST_IN_PROCESSING(201, ErrorCodePb.ERROR_PROCESSING, "request_in_processing"),
     WALLET_NOT_FOUND(1000, ErrorCodePb.ERROR_NOT_FOUND,"wallet_not_found"),
     WALLET_DUPLICATED(1001, ErrorCodePb.ERROR_ALREADY_EXISTS, "wallet_duplicated"),
     WALLET_UPDATE_FAILED(1002, ErrorCodePb.ERROR_CONFLICT,"wallet_update_failed"),

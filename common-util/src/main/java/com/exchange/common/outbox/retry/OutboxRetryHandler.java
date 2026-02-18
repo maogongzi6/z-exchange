@@ -48,6 +48,7 @@ public class OutboxRetryHandler {
                 int claimedCount = outboxManager.batchClaim(locked.stream().map(Outbox::getId).collect(Collectors.toList()), now.plusSeconds(outboxConfig.getAttemptIntervalSec()));
                 if (claimedCount != locked.size()) {
                     log.error("unexpected claim outbox failure, claimed: {}, locked: {}", claimedCount, locked);
+                    // maybe use Result + CommonErrorCode
                     return false;
                 }
                 return true;

@@ -21,6 +21,7 @@ enum ErrorCodePb {
   // 1xxx business condition violations
   ERROR_FAILED_PRECONDITION = 1000;  // use this error when you need a generic error for business logic but don't care about the specific reason
   ERROR_CONFLICT = 1001;
+  ERROR_PROCESSING = 1002; // for example, another request with same params is in processing
 
   // 2xxx validation
   ERROR_INVALID_ARGUMENT = 2000;

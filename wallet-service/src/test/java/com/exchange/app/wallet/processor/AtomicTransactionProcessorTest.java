@@ -8,6 +8,7 @@ import com.exchange.proto.common.error.ErrorCodePb;
 import com.exchange.proto.wallet.common.*;
 import com.exchange.proto.wallet.wallet.*;
 import lombok.extern.slf4j.Slf4j;
+import net.bytebuddy.utility.RandomString;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -40,8 +41,8 @@ public class AtomicTransactionProcessorTest {
     public void testAtomicSuccess() {
         createWallet();
 
-        String ref = "test-atomic-success-27";
-
+        //String ref = "test-atomic-success-" + RandomString.make();
+        String ref = "test-atomic-success-1" + "1";
         List<TransactionLinePb> lines = new ArrayList<>() {{
             add(TransactionLinePb.newBuilder().setWalletRef(usdOutWalletRef).setAssetCode(usdAssetId).setOperationType(OperationTypePb.OperationTypePb_Debit).setAmount(10).build());
             add(TransactionLinePb.newBuilder().setWalletRef(usdInWalletRef).setAssetCode(usdAssetId).setOperationType(OperationTypePb.OperationTypePb_Credit).setAmount(10).build());

@@ -12,8 +12,11 @@ import com.exchange.proto.wallet.wallet.AtomicTransactionReplyPb;
 import com.exchange.proto.wallet.wallet.AtomicTransactionRequestPb;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import java.util.Objects;
 
 @Slf4j
 @Component
@@ -24,31 +27,32 @@ public class AtomicTransactionProcessor {
     private final TransactionProcessor transactionProcessor;
 
     public AtomicTransactionReplyPb executeAtomic(AtomicTransactionRequestPb request) {
+        TransactionProcessor.RequestInfo requestInfo = new TransactionProcessor.RequestInfo(request.getReferenceId(), request.getInitiator(), request.getIdempotencyKey(), request.getBusinessType(), TransactionType.ATOMIC, request.getLinesList(), AtomicTransactionRequestPb.getDescriptor().getName());
+        Result<String> idempResult = transactionProcessor.idempCheckAndReqValidate(requestInfo);
+        if (idempResult.isFailed()) {
+            return replyError(idempResult);
+        } else if (!Strings.isEmpty(idempResult.value)) {
+            return replySuccess(idempResult.value, idempResult.errorDetail);
+        }
 
-        Result<TransactionProcessor.TransactionInfo> result = transactionProcessor.beforePostingLedger(request.getReferenceId(), request.getInitiator(), request.getIdempotencyKey(), request.getBusinessType(), TransactionType.ATOMIC, true, request.getLinesList());
+        Result<TransactionProcessor.TransactionInfo> result = transactionProcessor.beforePostingLedger(requestInfo, true);
 
-//        } else if (walletTxn.getTxnStatus() == TransactionStatus.PENDING) {
-//            txnInfoResult = transactionProcessor.getTxnInfo(walletTxn, requestInfo);
-//        } else {
-//            return replySuccess(walletTxn, "txn already executed");
-//        }
         if (result.isFailed()) {
             return replyError(result);
         }
-//        TransactionProcessor.TransactionInfo transactionInfo = txnInfoResult.value;
-//        Result<Void> result = transactionProcessor.postLedger(transactionInfo);
-//        if (!result.success) {
-//            return replyError(result);
-//        }
-//        Result<WalletTransaction> txnResult = transactionProcessor.afterPostingLedger(requestInfo, transactionInfo);
-//        if (!txnResult.success) {
-//            return replyError(txnResult);
-//        }
+        return replySuccess(result.value.walletTxn, result.errorDetail);
+    }
 
-        return replySuccess(result.value.walletTxn, "success");
+    private AtomicTransactionReplyPb replySuccess(String txnId, String detail) {
+        detail = Objects.requireNonNullElse(detail, "");
+        return AtomicTransactionReplyPb.newBuilder()
+                .setTransactionId(txnId)
+                .setError(PbErrorBuilder.build(ErrorCode.SUCCESS, detail))
+                .build();
     }
 
     private AtomicTransactionReplyPb replySuccess(WalletTransaction txn, String detail) {
+        detail = Objects.requireNonNullElse(detail, "");
         return AtomicTransactionReplyPb.newBuilder()
                 .setTransactionId(txn.getTxnId())
                 .setStatus(EnumPbMappers.transactionStatusPbMapper.from(txn.getTxnStatus()))

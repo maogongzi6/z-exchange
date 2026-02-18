@@ -5,6 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class Results {
+    public static <T> Result<T> success(T value, String detail) {
+        return new Result<>(true, value, ErrorCode.success(), detail);
+    }
+
     public static <T> Result<T> success(T value) {
         return new Result<>(true, value, ErrorCode.success(), null);
     }

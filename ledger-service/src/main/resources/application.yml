@@ -1,0 +1,52 @@
+spring:
+  datasource:
+    url: "jdbc:mysql://localhost:3306/trade_ledgerservice?serverTimezone=GMT%2B8&characterEncoding=utf-8&useSSL=false"
+    username: root
+    password: "0000"
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  kafka:
+    bootstrap-servers: 192.168.52.100:9092
+
+    consumer:
+      auto-offset-reset: latest
+      fetch-min-size: 256
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
+
+    listener:
+      ack-mode: manual
+      type: single
+
+    producer:
+      compression-type: lz4
+      retries: 5
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
+
+      properties:
+        enable:
+          idempotence: true
+
+
+mybatis-plus:
+  type-enums-package: com.exchange.app.ledger.po
+
+
+server:
+  port: 8081
+
+
+grpc:
+  server:
+    port: 9091
+
+
+app:
+  kafka:
+    not-retriable-exceptions: com.exchange.app.ledger.exception.AbnormalProtoDataException
+
+  outbox:
+    interval: "*/5 * * * * ?"
+    page-limit: 2
