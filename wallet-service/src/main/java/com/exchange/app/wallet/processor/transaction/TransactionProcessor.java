@@ -71,6 +71,7 @@ public class TransactionProcessor {
     // TODO temporary
     static final private String SCOPE = "post_transaction";
 
+    // FIXME if process fails halfway, the idemp key is still hold for an interval (state=P). fix this by safely delete the key when holding the token (compare then del)
     // return txn_id if exists
     // return null if not exists
     Result<String> idempCheckAndReqValidate(RequestInfo requestInfo) {
@@ -398,6 +399,7 @@ public class TransactionProcessor {
             }
 
             if (walletTransactionManager.insertIgnore(walletTxn) == 0) {
+                // TODO maybe get txn and return if info match
                 log.error("insert transaction failed, {}, {}", result, walletTxn);
                 return Results.fail(ErrorCode.WALLET_TRANSACTION_DUPLICATED, "unexpected transaction duplicated");
             }

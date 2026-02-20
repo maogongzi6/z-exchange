@@ -14,11 +14,9 @@ public enum ErrorCode implements PbMappableErrorCode {
     INVALID_ENUM_ERROR(7, ErrorCodePb.ERROR_INTERNAL, "invalid_enum_error"),
     PUBLISH_KAFKA_ERROR(8, ErrorCodePb.ERROR_INTERNAL, "publish_kafka_error"),
 
-    //    BAD_REQUEST(1, "bad_request"),
-//    BAD_REPLY(2, "bad_reply"),
     INVALID_REQUEST_PARAMETER(100, ErrorCodePb.ERROR_INVALID_ARGUMENT, "invalid_request_parameter"),
-//    INVALID_LEDGER_DIRECTION(1000, "invalid_ledger_direction"),
-//    IMBALANCED_LEDGER_TXN(1010, "imbalanced_ledger_txn"),
+    REQUEST_HASH_CONFLICT(200, ErrorCodePb.ERROR_FAILED_PRECONDITION, "request_hash_conflict"),
+    REQUEST_IN_PROCESSING(201, ErrorCodePb.ERROR_PROCESSING, "request_in_processing"),
     LEDGER_DUPLICATED(1020, ErrorCodePb.ERROR_ALREADY_EXISTS, "ledger_duplicated"),
     ACCOUNT_NOT_FOUND(1100, ErrorCodePb.ERROR_NOT_FOUND, "account_not_found"),
     ACCOUNT_DUPLICATED(1101, ErrorCodePb.ERROR_ALREADY_EXISTS, "account_duplicated"),

@@ -53,10 +53,10 @@ public class PostLedgerProcessorTest {
 
     @Test
     public void testPostTxnSuccess() {
-        String refId = "txn-13";
+        String refId = "txn-a-5";
         PostTransactionRequestPb request = PostTransactionRequestPb.newBuilder().setReferenceId(refId).setDescription("description").addAllEntries(List.of(
-                LedgerEntryPb.newBuilder().setAccountRef("   5632161").setDirection(LedgerDirectionPb.LedgerDirection_Debit).setAmount(100).setAssetId("asset-1").build(),
-                LedgerEntryPb.newBuilder().setAccountRef("   5797651").setDirection(LedgerDirectionPb.LedgerDirection_Credit).setAmount(100).setAssetId("asset-1").build()
+                LedgerEntryPb.newBuilder().setAccountRef("5367025801-1").setDirection(LedgerDirectionPb.LedgerDirection_Debit).setAmount(100).setAssetId("asset-1").build(),
+                LedgerEntryPb.newBuilder().setAccountRef("5367025801-1").setDirection(LedgerDirectionPb.LedgerDirection_Credit).setAmount(100).setAssetId("asset-1").build()
         )).build();
         PostTransactionReplyPb reply = postLedgerProcessor.postTransaction(request);
 

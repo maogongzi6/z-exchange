@@ -1,5 +1,6 @@
 package com.exchange.app.ledger.processor.post;
 
+import com.exchange.app.ledger.config.CustomCacheConfig;
 import com.exchange.app.ledger.dao.repository.AccountRepository;
 import com.exchange.app.ledger.dao.repository.LedgerTxnRepository;
 import com.exchange.app.ledger.result.ErrorCode;
@@ -10,7 +11,12 @@ import com.exchange.app.ledger.po.ledger.LedgerEntry;
 import com.exchange.app.ledger.po.ledger.LedgerTxn;
 import com.exchange.app.ledger.result.PbErrorBuilder;
 import com.exchange.app.ledger.result.Results;
+import com.exchange.common.cache.client.IdempRedisClient;
+import com.exchange.common.cache.utils.CommonIdempHelper;
+import com.exchange.common.cache.utils.IdempValue;
+import com.exchange.common.constant.GlobalServiceId;
 import com.exchange.common.db.utils.DbTransactionHelper;
+import com.exchange.common.utils.StableHashHelper;
 import com.exchange.common.utils.result.Result;
 import com.exchange.proto.ledger.post.LedgerEntryPb;
 import com.exchange.proto.ledger.post.PostTransactionReplyPb;
@@ -19,6 +25,7 @@ import com.exchange.app.ledger.utils.EnumMappers;
 import com.exchange.app.ledger.utils.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.TransactionDefinition;
@@ -31,26 +38,29 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class PostLedgerProcessor {
-    final private LedgerEntryMapper ledgerEntryMapper;
+    static final private String SCOPE = "post_ledger";
 
+    final private CustomCacheConfig.Idemp idempConfig;
+
+    final private LedgerEntryMapper ledgerEntryMapper;
+    final private AccountRepository accountManager;
     final private LedgerTxnRepository ledgerTxnManager;
 
+    final private IdempRedisClient idempRedisClient;
+
     final private TransactionTemplate transactionTemplate;
-    private final AccountRepository accountManager;
 
     public PostTransactionReplyPb postTransaction(PostTransactionRequestPb req) {
-
-        Result<Void> result = validateReq(req);
-        if (result.isFailed()) {
-            log.error("invalid request, {}, {}", req, result);
-            return replyError(Results.getErrorCode(result), result.errorDetail);
+        Result<String> txnIdResult = idempCheckAndReqValidate(req);
+        if (txnIdResult.isFailed()) {
+            return replyError(Results.getErrorCode(txnIdResult), txnIdResult.errorDetail);
+        } else if (!Strings.isEmpty(txnIdResult.value)) {
+            return replySuccess(req.getReferenceId(), txnIdResult.value, "already exists");
         }
 
         String txnId = IdGenerator.generateLedgerTxnId();
         LedgerTxn ledgerTxn = LedgerTxn.create(txnId, req.getReferenceId(), "TODO");
-//        List<LedgerEntry> entries = req.getEntriesList().stream().map(entry -> EntryHelper.protoToDto(ledgerTxn.getTxnId(), IdGenerator.generateLedgerEntryId(), entry)).collect(Collectors.toList());
-//        Set<String> accountIds = entries.stream().map(LedgerEntry::getAccountId).collect(Collectors.toSet());
-        List<String> accountRefs = req.getEntriesList().stream().map(LedgerEntryPb::getAccountRef).collect(Collectors.toList());
+        List<String> accountRefs = req.getEntriesList().stream().map(LedgerEntryPb::getAccountRef).distinct().collect(Collectors.toList());
         Map<String, String> accountRefToAccountId = accountManager.getAccountIdInRef(accountRefs).stream()
                 .collect(Collectors.toMap(Account::getReferenceId, Account::getAccountId));
         if (accountRefToAccountId.size() != accountRefs.size()) {
@@ -63,10 +73,11 @@ public class PostLedgerProcessor {
         for (LedgerEntryPb entryPb : req.getEntriesList()) {
             entries.add(createLedgerEntry(txnId, entryPb, accountRefToAccountId.get(entryPb.getAccountRef())));
         }
-        result = DbTransactionHelper.executeWithResult(transactionTemplate, TransactionDefinition.PROPAGATION_REQUIRED, () -> {
+        Result<Void> result = DbTransactionHelper.executeWithResult(transactionTemplate, TransactionDefinition.PROPAGATION_REQUIRED, () -> {
             if (ledgerTxnManager.insertIgnore(ledgerTxn) == 0) {
-                log.info("ledger txn already exists, {}", ledgerTxn);
-                return Results.success();
+                // TODO maybe get txn and return if info match
+                log.error("duplicated ledger txn: {}", ledgerTxn);
+                return Results.fail(ErrorCode.LEDGER_DUPLICATED, "duplicated ledger txn");
             }
             if (ledgerEntryMapper.batchInsert(entries) < entries.size()) {
                 log.error("unexpected ledger txn already exists, {}", ledgerTxn);
@@ -78,11 +89,73 @@ public class PostLedgerProcessor {
         if (result.isFailed()) {
             return replyError(Results.getErrorCode(result), result.errorDetail);
         }
+        // set idemp to DONE when found ledger txn
+        idempRedisClient.setIdempDone(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(), getReqStableHash(req), txnId, idempConfig.getDoneTtl());
 
-        return replySuccess(req.getReferenceId(), "success");
+        return replySuccess(req.getReferenceId(), txnId, "success");
     }
 
-    private Result<Void> validateReq(PostTransactionRequestPb req) {
+    private Result<String> idempCheckAndReqValidate(PostTransactionRequestPb req) {
+        Result<Void> precheckResult = reqPrecheck(req);
+        if (precheckResult.isFailed()) {
+            return Results.fail(precheckResult);
+        }
+
+        Result<IdempValue> idempValueResult = idempCacheSetIfAbsent(req);
+        if (idempValueResult.isFailed()) {
+            return Results.fail(idempValueResult);
+        }
+
+        IdempValue idempValue = idempValueResult.value;
+        if (idempValue != null) {
+            switch (idempValue.status) {
+                case PENDING:
+                    // another request with same params is in processing (but likely no wallet_txn has been persisted in db)
+                    log.error("another same request in processing, request:{}, idempValue:{}", req, idempValue);
+                    return Results.fail(ErrorCode.REQUEST_IN_PROCESSING, "request still processing");
+                case ACCEPTED:
+                    log.info("request accepted, idempValue:{}", idempValue);
+                    return Results.success(idempValue.content);
+                default:
+                    log.error("unknown idemp state:{}", idempValue);
+                    return Results.fail(ErrorCode.INVALID_ENUM_ERROR, "unknown idemp state");
+            }
+        }
+
+        LedgerTxn txn = ledgerTxnManager.findByRefId(req.getReferenceId());
+        if (txn != null) {
+            // set idemp to DONE when found ledger txn
+            idempRedisClient.setIdempDone(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(), getReqStableHash(req), txn.getTxnId(), idempConfig.getDoneTtl());
+            log.info("ledger txn already exists, {}", txn);
+            return Results.success(txn.getTxnId());
+        }
+        return Results.success();
+    }
+
+    private Result<IdempValue> idempCacheSetIfAbsent(PostTransactionRequestPb req) {
+        String reqHash = getReqStableHash(req);
+        if (idempRedisClient.setIdempPendingIfAbsent(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(), reqHash, idempConfig.getPendingTtl())) {
+            return Results.success();
+        }
+
+        String idempV = idempRedisClient.getIdemp(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId());
+        Result<IdempValue> valueResult = CommonIdempHelper.parseIdempValue(idempV);
+        if (valueResult.isFailed()) {
+            log.error("parse idemp value failed, key:{} , value:{} result:{}", req.getReferenceId(), idempV, valueResult);
+            // delete invalid value to self recover
+            idempRedisClient.deleteIdemp(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId());
+            // return null then access db to check if exists
+            return Results.success();
+        }
+        IdempValue idempValue = valueResult.value;
+        if (!Objects.equals(idempValue.hash, reqHash)) {
+            log.error("req hash does not match, reqHash={}, idemp: {}", reqHash, idempValue);
+            return Results.fail(ErrorCode.REQUEST_HASH_CONFLICT, "req_hash_conflict");
+        }
+        return Results.success(idempValue);
+    }
+
+    private Result<Void> reqPrecheck(PostTransactionRequestPb req) {
         Map<String, Long> debitSumMap = new HashMap<>(), creditSumMap = new HashMap<>();
         int debitCount = 0, creditCount = 0;
 
@@ -135,13 +208,33 @@ public class PostLedgerProcessor {
         );
     }
 
-    private PostTransactionReplyPb replySuccess(String walletReferenceId, String detail) {
+    private PostTransactionReplyPb replySuccess(String walletReferenceId, String ledgerTxnId, String detail) {
         PostTransactionReplyPb.Builder builder = PostTransactionReplyPb.newBuilder();
-        return builder.setReferenceId(walletReferenceId).setError(PbErrorBuilder.build(ErrorCode.SUCCESS, detail)).build();
+        return builder.setReferenceId(walletReferenceId)
+                .setLedgerTxnId(ledgerTxnId)
+                .setError(PbErrorBuilder.build(ErrorCode.SUCCESS, detail)).build();
     }
 
     private PostTransactionReplyPb replyError(ErrorCode errorCode, String detail) {
         PostTransactionReplyPb.Builder builder = PostTransactionReplyPb.newBuilder();
         return builder.setError(PbErrorBuilder.build(errorCode, detail)).build();
+    }
+
+    private String getReqStableHash(PostTransactionRequestPb req) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(req.getReferenceId()).append("|")
+                .append(req.getDescription()).append("|");
+        List<LedgerEntryPb> sorted = new ArrayList<>(req.getEntriesList());
+        sorted.sort(Comparator.comparing(LedgerEntryPb::getAccountRef)
+                .thenComparing(LedgerEntryPb::getDirection)
+                .thenComparing(LedgerEntryPb::getAmount)
+                .thenComparing(LedgerEntryPb::getAssetId));
+        for (LedgerEntryPb entry : sorted) {
+            sb.append(entry.getAccountRef()).append("|")
+                    .append(entry.getDirection()).append("|")
+                    .append(entry.getAmount()).append("|")
+                    .append(entry.getAssetId()).append("|");
+        }
+        return StableHashHelper.stableHash(sb.toString());
     }
 }

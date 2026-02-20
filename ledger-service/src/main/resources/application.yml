@@ -5,6 +5,12 @@ spring:
     password: "0000"
     driver-class-name: com.mysql.cj.jdbc.Driver
 
+  cache:
+    type: redis
+  redis:
+    host: 192.168.52.100
+    port: 6379
+
   kafka:
     bootstrap-servers: 192.168.52.100:9092
 
@@ -50,3 +56,7 @@ app:
   outbox:
     interval: "*/5 * * * * ?"
     page-limit: 2
+
+  cache.idemp:
+    pending-ttl: 120s
+    done-ttl: 24h

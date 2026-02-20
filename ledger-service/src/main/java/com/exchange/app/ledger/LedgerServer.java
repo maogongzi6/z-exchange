@@ -18,6 +18,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
                 "com.exchange.app.ledger",
                 "com.exchange.common.outbox",
                 "com.exchange.common.kafka",
+                "com.exchange.common.cache"
         },
         scanBasePackageClasses = {AutofillMetaObjectHandler.class})
 public class LedgerServer {
