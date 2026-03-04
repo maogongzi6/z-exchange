@@ -40,20 +40,9 @@ public class PostLedgerProcessorTest {
     @Autowired
     private LedgerTxnMapper ledgerTxnMapper;
 
-//    @Test
-//    public void test() {
-//        String id1 = "5632161", id2 = "5797651";
-//        LambdaQueryWrapper<Account> wrapper = new LambdaQueryWrapper<>();
-//        //wrapper.select(Account::getAccountId).in(Account::getAccountId, List.of(id1, id2));
-//        wrapper.select(Account::getAccountId).eq(Account::getAccountId, id1);
-//        //List<String> accountIdFromDb = accountMapper.selectList(wrapper).stream().map(Account::getAccountId).collect(Collectors.toList());
-//        log.info("accountIdFromDb: {}", accountMapper.selectList(wrapper));
-//
-//    }
-
     @Test
     public void testPostTxnSuccess() {
-        String refId = "txn-a-5";
+        String refId = "txn-a-12";
         PostTransactionRequestPb request = PostTransactionRequestPb.newBuilder().setReferenceId(refId).setDescription("description").addAllEntries(List.of(
                 LedgerEntryPb.newBuilder().setAccountRef("5367025801-1").setDirection(LedgerDirectionPb.LedgerDirection_Debit).setAmount(100).setAssetId("asset-1").build(),
                 LedgerEntryPb.newBuilder().setAccountRef("5367025801-1").setDirection(LedgerDirectionPb.LedgerDirection_Credit).setAmount(100).setAssetId("asset-1").build()

@@ -13,7 +13,10 @@ public class CustomCacheConfig {
     @Configuration
     @ConfigurationProperties(prefix = "app.cache.idemp")
     static public class Idemp {
+        // this ttl should be long enough to cover business flow, so that status can turn to ACCEPTED before key expiration in happy flow
         private Duration pendingTtl;
         private Duration doneTtl;
     }
+
+
 }

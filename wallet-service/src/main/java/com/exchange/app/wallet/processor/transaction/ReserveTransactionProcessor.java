@@ -7,6 +7,8 @@ import com.exchange.app.wallet.result.ErrorCode;
 import com.exchange.app.wallet.result.PbErrorBuilder;
 import com.exchange.app.wallet.result.Results;
 import com.exchange.app.wallet.utils.EnumPbMappers;
+import com.exchange.common.constant.GlobalServiceId;
+import com.exchange.common.utils.TokenHelper;
 import com.exchange.common.utils.result.Result;
 import com.exchange.proto.wallet.common.OperationTypePb;
 import com.exchange.proto.wallet.wallet.*;
@@ -28,10 +30,11 @@ public class ReserveTransactionProcessor {
     public ReserveTransactionReplyPb reserve(ReserveTransactionRequestPb request) {
         Result<Void> validateResult = validate(request);
         if (validateResult.isFailed()) {
-            replyError(validateResult);
+            return replyError(validateResult);
         }
 
-        TransactionProcessor.RequestInfo requestInfo = new TransactionProcessor.RequestInfo(request.getReferenceId(), request.getInitiator(), request.getIdempotencyKey(), request.getBusinessType(), TransactionType.TWO_STEP, request.getLinesList(), ReserveTransactionRequestPb.getDescriptor().getName());
+        String token = TokenHelper.generateToken(GlobalServiceId.LEDGER.name());
+        TransactionProcessor.RequestInfo requestInfo = new TransactionProcessor.RequestInfo(request.getReferenceId(), request.getInitiator(), request.getIdempotencyKey(), request.getBusinessType(), TransactionType.TWO_STEP, request.getLinesList(), ReserveTransactionRequestPb.getDescriptor().getName(), token);
         Result<String> idempResult = transactionProcessor.idempCheckAndReqValidate(requestInfo);
         if (idempResult.isFailed()) {
             return replyError(idempResult);

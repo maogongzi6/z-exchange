@@ -1,0 +1,14 @@
+use redisson client to run lua script to do this:
+{
+    value = get by ARG(key)
+    if not get:
+        return ""
+    arr = split value by ":"
+    if arr.size < 4:
+        throw exception
+    if arr[1] == "P" && arr[3] == ARG(token):
+        delete key
+        return value
+    else:
+        return ""
+}

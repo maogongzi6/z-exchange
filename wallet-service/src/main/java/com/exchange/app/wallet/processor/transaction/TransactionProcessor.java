@@ -37,7 +37,6 @@ import com.exchange.proto.wallet.common.OperationTypePb;
 import com.exchange.proto.wallet.common.ServiceIdPb;
 import com.exchange.proto.wallet.wallet.TransactionLinePb;
 import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
@@ -71,21 +70,23 @@ public class TransactionProcessor {
     // TODO temporary
     static final private String SCOPE = "post_transaction";
 
-    // FIXME if process fails halfway, the idemp key is still hold for an interval (state=P). fix this by safely delete the key when holding the token (compare then del)
     // return txn_id if exists
     // return null if not exists
     Result<String> idempCheckAndReqValidate(RequestInfo requestInfo) {
         Result<Void> precheckResult = requestPrecheck(requestInfo);
         if (precheckResult.isFailed()) {
-            // fast fail
+            // fast fail before claim idemp
             return Results.fail(precheckResult);
         }
 
-        Result<IdempValue> valueResult = idempCacheSetIfAbsent(requestInfo);
+        Result<IdempValue> valueResult = claimIdempCacheIfAbsent(requestInfo);
+        // there should be no idemp value with the given token in the cache if fails here. no need to release here
         if (valueResult.isFailed()) {
             return Results.fail(valueResult);
         }
+
         IdempValue value = valueResult.value;
+        // when value is not null, it means claim idemp fails because it has been claimed, no need to release here
         if (value != null) {
             switch (value.status) {
                 case PENDING:
@@ -104,8 +105,8 @@ public class TransactionProcessor {
         WalletTransaction walletTxn = idempDbCheck(requestInfo.serviceIdPb, requestInfo.idempotenceKey);
         if (walletTxn != null) {
             // set idemp to DONE when found wallet txn
-            idempRedisClient.setIdempDone(GlobalServiceId.WALLET.code, SCOPE, requestInfo.idempotenceKey,
-                    String.valueOf(requestInfo.getStableHash()), walletTxn.getTxnId(), idempConfig.getDoneTtl());
+            idempRedisClient.markIdempDone(GlobalServiceId.WALLET.code, SCOPE, requestInfo.idempotenceKey,
+                    String.valueOf(requestInfo.getStableHash()), requestInfo.token, walletTxn.getTxnId(), idempConfig.getDoneTtl());
 
             log.info("wallet txn already exists: {}", walletTxn);
             return Results.success(walletTxn.getTxnId(), "wallet txn already exists");
@@ -114,7 +115,7 @@ public class TransactionProcessor {
         return Results.success();
     }
 
-    // simple precheck, validate simple rules like enum and amount>0
+    // simply precheck, validate simple rules like enum and amount>0
     private Result<Void> requestPrecheck(RequestInfo requestInfo) {
         ServiceId serviceId = EnumPbMappers.serviceIdPbMapper.to(requestInfo.serviceIdPb);
         if (serviceId == null || serviceId == ServiceId.UNKNOWN) {
@@ -145,12 +146,12 @@ public class TransactionProcessor {
     }
 
     // return null if set success
-    // return idemp info in the cache if set fails
-    private Result<IdempValue> idempCacheSetIfAbsent(RequestInfo requestInfo) {
+    // return idemp info in the cache when fail to set
+    private Result<IdempValue> claimIdempCacheIfAbsent(RequestInfo requestInfo) {
         String globalCode = GlobalServiceId.WALLET.code;
         String reqHash = requestInfo.getStableHash();
         String key = CommonIdempHelper.idempKey(globalCode, SCOPE, requestInfo.idempotenceKey);
-        Boolean success = idempRedisClient.setIdempPendingIfAbsent(globalCode, SCOPE, requestInfo.idempotenceKey, reqHash, idempConfig.getPendingTtl());
+        Boolean success = idempRedisClient.claimIdempIfAbsent(globalCode, SCOPE, requestInfo.idempotenceKey, reqHash, requestInfo.token, idempConfig.getPendingTtl());
         if (success) {
             return Results.success();
         }
@@ -159,8 +160,9 @@ public class TransactionProcessor {
         Result<IdempValue> parseResult = CommonIdempHelper.parseIdempValue(idempV);
         if (parseResult.isFailed()) {
             log.error("parse idemp value failed, key:{} , value:{} result:{}", key, idempV, parseResult);
-            // delete invalid value to self recover
-            idempRedisClient.deleteIdemp(globalCode, SCOPE, requestInfo.idempotenceKey);
+            // rare case, delete invalid value to self-recover.
+            // force delete here, value is malformed and possibly cannot get a token to verify the owner.
+            idempRedisClient.forceDeleteIdemp(globalCode, SCOPE, requestInfo.idempotenceKey);
             // return null then access db to check if exists
             return Results.success();
         }
@@ -184,6 +186,7 @@ public class TransactionProcessor {
     // consume -> reservation: -remaining, +pending_settle
     // release -> snapshot, reservation: -reserved, +available | -pending_settle, +released, change status
     // package private
+    // need to release the claimed idemp key if token matches
     Result<TransactionInfo> beforePostingLedger(RequestInfo requestInfo, boolean needPostLedger) {
         WalletTransaction walletTxn = createTxn(requestInfo);
 
@@ -208,6 +211,7 @@ public class TransactionProcessor {
             reservationsInRequest = walletReservationManager.selectByRefs(new ArrayList<>(reservationRefs));
             if (reservationsInRequest.size() != reservationRefs.size()) {
                 log.error("reservations not found, requested_reservation: {}, reservation_in_db: {}", reservationRefs, reservationsInRequest);
+                releaseIdempBeforeReturnError(requestInfo.idempotenceKey, requestInfo.getStableHash(), requestInfo.token);
                 return Results.fail(ErrorCode.WALLET_RESERVATION_NOT_FOUND, "reservations not found");
             }
         }
@@ -220,6 +224,7 @@ public class TransactionProcessor {
             BalanceSnapshot snapshot = walletRefToSnapshot.get(line.getWalletRef());
             if (snapshot == null) {
                 log.error("snapshot not found, line: {}", line);
+                releaseIdempBeforeReturnError(requestInfo.idempotenceKey, requestInfo.getStableHash(), requestInfo.token);
                 return Results.fail(ErrorCode.BALANCE_SNAPSHOT_NOT_FOUND, "snapshot not found");
             }
 
@@ -236,6 +241,7 @@ public class TransactionProcessor {
                     reservation = refToReservation.get(line.getReservationRef());
                     if (reservation == null) {
                         log.error("reservation not found, ref: {}", line);
+                        releaseIdempBeforeReturnError(requestInfo.idempotenceKey, requestInfo.getStableHash(), requestInfo.token);
                         return Results.fail(ErrorCode.WALLET_RESERVATION_NOT_FOUND, "reservation not found");
                     }
             }
@@ -252,6 +258,7 @@ public class TransactionProcessor {
         Result<Void> result = validateActionInfo(actions, balanceSnapshots, new ArrayList<>(refToReservation.values()));
         if (result.isFailed()) {
             log.error("validate action info failed, result: {}", result);
+            releaseIdempBeforeReturnError(requestInfo.idempotenceKey, requestInfo.getStableHash(), requestInfo.token);
             return Results.fail(result);
         }
 
@@ -259,6 +266,8 @@ public class TransactionProcessor {
         if (needPostLedger) {
             Result<Outbox> outboxResult = createOutbox(walletTxn, actions);
             if (outboxResult.isFailed()) {
+                log.error("createOutbox failed: {}", outboxResult);
+                releaseIdempBeforeReturnError(requestInfo.idempotenceKey, requestInfo.getStableHash(), requestInfo.token);
                 return Results.fail(outboxResult);
             }
             outbox = outboxResult.value;
@@ -269,11 +278,12 @@ public class TransactionProcessor {
         result = updateDbToCreateTxn(walletTxn, actions, balanceSnapshots, reservationsInRequest, createdReservations, outbox);
         if (result.isFailed()) {
             log.error("updateDbToCreateTxn failed: {}", result);
+            releaseIdempBeforeReturnError(requestInfo.idempotenceKey, requestInfo.getStableHash(), requestInfo.token);
             return Results.fail(result);
         }
         // set idemp to DONE when found wallet txn
-        idempRedisClient.setIdempDone(GlobalServiceId.WALLET.code, SCOPE, requestInfo.idempotenceKey,
-                String.valueOf(requestInfo.getStableHash()), walletTxn.getTxnId(), idempConfig.getDoneTtl());
+        idempRedisClient.markIdempDone(GlobalServiceId.WALLET.code, SCOPE, requestInfo.idempotenceKey,
+                String.valueOf(requestInfo.getStableHash()), requestInfo.token, walletTxn.getTxnId(), idempConfig.getDoneTtl());
 
         if (needPostLedger) {
             Result<Void> publishResult = postLedgerPublisher.publish(outbox);
@@ -283,7 +293,7 @@ public class TransactionProcessor {
                     outbox.setOutboxStatus(OutboxStatus.SENT);
                     outbox.setFinalizedAt(outbox.getLastAttemptAt());
                 } else {
-                    // do not block main flow
+                    // do not block the main flow
                     log.error("finalize outbox failed, {}", outbox);
                 }
             } else {
@@ -293,6 +303,15 @@ public class TransactionProcessor {
         }
 
         return Results.success(TransactionInfo.create(walletTxn, actions, new ArrayList<>(refToReservation.values()), balanceSnapshots));
+    }
+
+    private void releaseIdempBeforeReturnError(String IdempKey, String hash, String token) {
+        String idempV = CommonIdempHelper.idempPendingValue(hash, token);
+        Result<String> releaseResult = idempRedisClient.releaseIdempIfOwned(GlobalServiceId.WALLET.code, SCOPE, IdempKey, idempV);
+        if (releaseResult.isFailed()) {
+            // log the error
+            log.error("release idemp failed, key:{} , result:{}", IdempKey, releaseResult);
+        }
     }
 
     private WalletTransaction createTxn(RequestInfo requestInfo) {
@@ -662,10 +681,6 @@ public class TransactionProcessor {
         if (outResult.isFailed()) {
             return Results.fail(outResult);
         }
-        // outbox should not block main flow
-//        if (walletOutboxManager.finishOutbox(transactionInfo.outbox) != 1) {
-//            log.error("finish outbox failed, outbox={}", transactionInfo.outbox);
-//        }
         WalletTransaction txn = walletTransactionManager.selectById(txnInfo.walletTxn.getId());
         if (txn == null) {
             log.error("wallet_transaction_not_found, transaction: {}", txnInfo.walletTxn);
@@ -769,7 +784,6 @@ public class TransactionProcessor {
         );
     }
 
-    @AllArgsConstructor
     static class RequestInfo {
         final String referenceId;
         final ServiceIdPb serviceIdPb;
@@ -779,7 +793,27 @@ public class TransactionProcessor {
         final List<TransactionLinePb> linePbs;
         final String requestName;
 
+        // token is uuid (which is random) and not included in stable hash computation
+        final String token;
+
+        private String stableHash;
+
+        RequestInfo(String referenceId, ServiceIdPb serviceIdPb, String idempotenceKey, BusinessTypePb businessTypePb, TransactionType transactionType, List<TransactionLinePb> linePbs, String requestName, String token) {
+            this.referenceId = referenceId;
+            this.serviceIdPb = serviceIdPb;
+            this.idempotenceKey = idempotenceKey;
+            this.businessTypePb = businessTypePb;
+            this.transactionType = transactionType;
+            this.linePbs = linePbs;
+            this.requestName = requestName;
+            this.token = token;
+        }
+
         String getStableHash() {
+            if (!Strings.isEmpty(stableHash)) {
+                return stableHash;
+            }
+
             StringBuilder sb = new StringBuilder();
             sb.append(referenceId).append("|")
                     .append(serviceIdPb).append("|")
@@ -801,7 +835,8 @@ public class TransactionProcessor {
                         .append(linePb.getAmount()).append("|")
                         .append(linePb.getReservationRef());
             }
-            return StableHashHelper.stableHash(sb.toString());
+            stableHash = StableHashHelper.stableHash(sb.toString());
+            return stableHash;
         }
     }
 

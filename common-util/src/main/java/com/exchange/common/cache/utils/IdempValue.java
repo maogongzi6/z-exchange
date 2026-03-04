@@ -9,5 +9,6 @@ import lombok.Data;
 public class IdempValue {
     final public CommonIdempStatus status;
     final public String hash;
+    final public String token;
     final public String content;
 }

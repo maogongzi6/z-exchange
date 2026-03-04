@@ -7,6 +7,8 @@ import com.exchange.app.wallet.result.ErrorCode;
 import com.exchange.app.wallet.result.PbErrorBuilder;
 import com.exchange.app.wallet.result.Results;
 import com.exchange.app.wallet.utils.*;
+import com.exchange.common.constant.GlobalServiceId;
+import com.exchange.common.utils.TokenHelper;
 import com.exchange.common.utils.result.Result;
 import com.exchange.proto.wallet.wallet.AtomicTransactionReplyPb;
 import com.exchange.proto.wallet.wallet.AtomicTransactionRequestPb;
@@ -27,7 +29,9 @@ public class AtomicTransactionProcessor {
     private final TransactionProcessor transactionProcessor;
 
     public AtomicTransactionReplyPb executeAtomic(AtomicTransactionRequestPb request) {
-        TransactionProcessor.RequestInfo requestInfo = new TransactionProcessor.RequestInfo(request.getReferenceId(), request.getInitiator(), request.getIdempotencyKey(), request.getBusinessType(), TransactionType.ATOMIC, request.getLinesList(), AtomicTransactionRequestPb.getDescriptor().getName());
+        String token = TokenHelper.generateToken(GlobalServiceId.LEDGER.name());
+
+        TransactionProcessor.RequestInfo requestInfo = new TransactionProcessor.RequestInfo(request.getReferenceId(), request.getInitiator(), request.getIdempotencyKey(), request.getBusinessType(), TransactionType.ATOMIC, request.getLinesList(), AtomicTransactionRequestPb.getDescriptor().getName(), token);
         Result<String> idempResult = transactionProcessor.idempCheckAndReqValidate(requestInfo);
         if (idempResult.isFailed()) {
             return replyError(idempResult);

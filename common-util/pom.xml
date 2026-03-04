@@ -24,6 +24,12 @@
         </dependency>
 
         <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson-spring-boot-starter</artifactId>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
         </dependency>
@@ -61,6 +67,7 @@
             <groupId>com.exchange</groupId>
             <artifactId>common-proto</artifactId>
         </dependency>
+
 
     </dependencies>
 

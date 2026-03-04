@@ -16,17 +16,21 @@ public class CommonIdempHelper {
         return String.format("idemp_k:%s:%s:%s", service, scope, idempId);
     }
 
-    // idemp_v:{status}:{hash}
-    static public String idempValue(CommonIdempStatus status, String hash) {
-        return idempValue(status, hash, null);
+    static public String idempPendingValue(String hash, String token) {
+        return idempValue(CommonIdempStatus.PENDING, hash, token);
     }
 
-    // idemp_v:{status}:{hash}:{value}
-    static public String idempValue(CommonIdempStatus status, String hash, String value) {
+    // idemp_v:{status}:{hash}:{token}
+    static public String idempValue(CommonIdempStatus status, String hash, String token) {
+        return idempValue(status, hash, token, null);
+    }
+
+    // idemp_v:{status}:{hash}:{token}:{value}
+    static public String idempValue(CommonIdempStatus status, String hash, String token, String value) {
         if (Strings.isEmpty(value)) {
-            return String.format("idemp_v:%s:%s", status.code, hash);
+            return String.format("idemp_v:%s:%s:%s", status.code, hash, token);
         } else {
-            return String.format("idemp_v:%s:%s:%s", status.code, hash, value);
+            return String.format("idemp_v:%s:%s:%s:%s", status.code, hash, token, value);
         }
     }
 
@@ -41,7 +45,7 @@ public class CommonIdempHelper {
 
     static public Result<IdempValue> parseIdempValue(String value) {
         String[] v = value.split(":");
-        if (v.length < 3) {
+        if (v.length < 4) {
             log.error("parseIdempValue error, invalid value:{}", value);
             return Results.fail(CommonErrorCode.INVALID_IDEMP_VALUE, "invalid idemp value: " + value);
         }
@@ -50,8 +54,11 @@ public class CommonIdempHelper {
             log.error("parseIdempValue error, invalid value, unknown status:{}", value);
             return Results.fail(CommonErrorCode.INVALID_IDEMP_VALUE, "invalid value, unknown status: " + value);
         }
-        return Results.success(new IdempValue(status, v[2], v.length > 3 ? v[3] : null));
+        if (status == CommonIdempStatus.ACCEPTED && v.length != 5) {
+            log.error("parseIdempValue error, empty value with accepted status:{}", value);
+            return Results.fail(CommonErrorCode.INVALID_IDEMP_VALUE, "empty value with accepted status: " + value);
+        }
+        return Results.success(new IdempValue(status, v[2], v[3], status == CommonIdempStatus.ACCEPTED ? v[4] : null));
     }
-
 
 }

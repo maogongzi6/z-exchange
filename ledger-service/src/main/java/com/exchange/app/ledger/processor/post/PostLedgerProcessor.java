@@ -17,6 +17,7 @@ import com.exchange.common.cache.utils.IdempValue;
 import com.exchange.common.constant.GlobalServiceId;
 import com.exchange.common.db.utils.DbTransactionHelper;
 import com.exchange.common.utils.StableHashHelper;
+import com.exchange.common.utils.TokenHelper;
 import com.exchange.common.utils.result.Result;
 import com.exchange.proto.ledger.post.LedgerEntryPb;
 import com.exchange.proto.ledger.post.PostTransactionReplyPb;
@@ -51,11 +52,14 @@ public class PostLedgerProcessor {
     final private TransactionTemplate transactionTemplate;
 
     public PostTransactionReplyPb postTransaction(PostTransactionRequestPb req) {
-        Result<String> txnIdResult = idempCheckAndReqValidate(req);
+        String token = TokenHelper.generateToken(GlobalServiceId.LEDGER.name());
+
+        Result<String> txnIdResult = idempClaimAndReqValidate(req, token);
         if (txnIdResult.isFailed()) {
-            return replyError(Results.getErrorCode(txnIdResult), txnIdResult.errorDetail);
+            // TODO no need to release claimed key here, since there should not be a key in cache with given token
+            return onError(req, token, Results.getErrorCode(txnIdResult), txnIdResult.errorDetail);
         } else if (!Strings.isEmpty(txnIdResult.value)) {
-            return replySuccess(req.getReferenceId(), txnIdResult.value, "already exists");
+            return onSuccess(req.getReferenceId(), txnIdResult.value, "already exists");
         }
 
         String txnId = IdGenerator.generateLedgerTxnId();
@@ -66,7 +70,7 @@ public class PostLedgerProcessor {
         if (accountRefToAccountId.size() != accountRefs.size()) {
             Set<String> notFound = new HashSet<>(accountRefs) {{removeAll(accountRefToAccountId.keySet());}};
             log.error("account not found, notFoundRefs={}", notFound);
-            return replyError(ErrorCode.ACCOUNT_NOT_FOUND, "account_not_found, refs: " + notFound);
+            return onError(req, token, ErrorCode.ACCOUNT_NOT_FOUND, "account_not_found, refs: " + notFound);
         }
 
         List<LedgerEntry> entries = new ArrayList<>();
@@ -87,21 +91,21 @@ public class PostLedgerProcessor {
             return Results.success();
         });
         if (result.isFailed()) {
-            return replyError(Results.getErrorCode(result), result.errorDetail);
+            return onError(req, token, Results.getErrorCode(result), result.errorDetail);
         }
         // set idemp to DONE when found ledger txn
-        idempRedisClient.setIdempDone(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(), getReqStableHash(req), txnId, idempConfig.getDoneTtl());
+        idempRedisClient.markIdempDone(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(), getReqStableHash(req), token, txnId, idempConfig.getDoneTtl());
 
-        return replySuccess(req.getReferenceId(), txnId, "success");
+        return onSuccess(req.getReferenceId(), txnId, "success");
     }
 
-    private Result<String> idempCheckAndReqValidate(PostTransactionRequestPb req) {
+    private Result<String> idempClaimAndReqValidate(PostTransactionRequestPb req, String token) {
         Result<Void> precheckResult = reqPrecheck(req);
         if (precheckResult.isFailed()) {
             return Results.fail(precheckResult);
         }
 
-        Result<IdempValue> idempValueResult = idempCacheSetIfAbsent(req);
+        Result<IdempValue> idempValueResult = claimIdempCacheIfAbsent(req, token);
         if (idempValueResult.isFailed()) {
             return Results.fail(idempValueResult);
         }
@@ -125,26 +129,29 @@ public class PostLedgerProcessor {
         LedgerTxn txn = ledgerTxnManager.findByRefId(req.getReferenceId());
         if (txn != null) {
             // set idemp to DONE when found ledger txn
-            idempRedisClient.setIdempDone(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(), getReqStableHash(req), txn.getTxnId(), idempConfig.getDoneTtl());
+            idempRedisClient.markIdempDone(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(), getReqStableHash(req), token, txn.getTxnId(), idempConfig.getDoneTtl());
             log.info("ledger txn already exists, {}", txn);
             return Results.success(txn.getTxnId());
         }
         return Results.success();
     }
 
-    private Result<IdempValue> idempCacheSetIfAbsent(PostTransactionRequestPb req) {
+    private Result<IdempValue> claimIdempCacheIfAbsent(PostTransactionRequestPb req, String token) {
         String reqHash = getReqStableHash(req);
-        if (idempRedisClient.setIdempPendingIfAbsent(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(), reqHash, idempConfig.getPendingTtl())) {
+        if (idempRedisClient.claimIdempIfAbsent(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(), reqHash, token, idempConfig.getPendingTtl())) {
             return Results.success();
         }
 
         String idempV = idempRedisClient.getIdemp(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId());
         Result<IdempValue> valueResult = CommonIdempHelper.parseIdempValue(idempV);
         if (valueResult.isFailed()) {
-            log.error("parse idemp value failed, key:{} , value:{} result:{}", req.getReferenceId(), idempV, valueResult);
-            // delete invalid value to self recover
-            idempRedisClient.deleteIdemp(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId());
-            // return null then access db to check if exists
+            log.error("parse idemp value failed, key:{} , value:{}, result:{}", req.getReferenceId(), idempV, valueResult);
+            // rare case, delete invalid value to self-recover.
+            // force delete key here, value is malformed and possibly cannot get a token to verify the owner.
+            // this could mis-delete the key created by a concurrent identical request, but this is extremely rare,
+            // and we have db idemp as the backstop
+            idempRedisClient.forceDeleteIdemp(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId());
+            // return null, then access db to check if exists
             return Results.success();
         }
         IdempValue idempValue = valueResult.value;
@@ -208,16 +215,28 @@ public class PostLedgerProcessor {
         );
     }
 
-    private PostTransactionReplyPb replySuccess(String walletReferenceId, String ledgerTxnId, String detail) {
+    private PostTransactionReplyPb onSuccess(String walletReferenceId, String ledgerTxnId, String detail) {
         PostTransactionReplyPb.Builder builder = PostTransactionReplyPb.newBuilder();
         return builder.setReferenceId(walletReferenceId)
                 .setLedgerTxnId(ledgerTxnId)
                 .setError(PbErrorBuilder.build(ErrorCode.SUCCESS, detail)).build();
     }
 
-    private PostTransactionReplyPb replyError(ErrorCode errorCode, String detail) {
+    // release the owned idemp key if txn not persisted in db when an error occurs. this can help idemp check recover from error
+    private PostTransactionReplyPb onError(PostTransactionRequestPb req, String token, ErrorCode errorCode, String detail) {
+        releaseIdempIfOwned(req.getReferenceId(), getReqStableHash(req), token);
+
         PostTransactionReplyPb.Builder builder = PostTransactionReplyPb.newBuilder();
         return builder.setError(PbErrorBuilder.build(errorCode, detail)).build();
+    }
+
+    private void releaseIdempIfOwned(String refId, String hash, String token) {
+        String idempV = CommonIdempHelper.idempPendingValue(hash, token);
+        Result<String> releaseResult = idempRedisClient.releaseIdempIfOwned(GlobalServiceId.LEDGER.code, SCOPE, refId, idempV);
+        if (releaseResult.isFailed()) {
+            // log the error
+            log.error("release idemp failed, key:{} , result:{}", refId, releaseResult);
+        }
     }
 
     private String getReqStableHash(PostTransactionRequestPb req) {

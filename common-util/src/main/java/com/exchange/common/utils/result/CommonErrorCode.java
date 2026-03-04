@@ -6,7 +6,8 @@ public enum CommonErrorCode implements PbMappableErrorCode{
     SUCCESS(0,ErrorCodePb.ERROR_OK, "success"),
     // common-util always return ErrorCodePb.ERROR_INTERNAL, service should convert it to specific code
     INVALID_IDEMP_KEY(-1, ErrorCodePb.ERROR_INTERNAL, "invalid_idemp_key"),
-    INVALID_IDEMP_VALUE(-2, ErrorCodePb.ERROR_INTERNAL, "invalid_idemp_value")
+    INVALID_IDEMP_VALUE(-2, ErrorCodePb.ERROR_INTERNAL, "invalid_idemp_value"),
+    LUA_SCRIPT_EXECUTE_ERROR(-3, ErrorCodePb.ERROR_INTERNAL, "lua_script_execute_error"),
     ;
 
     final public int code;
