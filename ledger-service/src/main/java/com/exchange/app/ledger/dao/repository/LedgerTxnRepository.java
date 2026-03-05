@@ -25,4 +25,14 @@ public class LedgerTxnRepository extends DbBaseRepository<LedgerTxn, LedgerTxnMa
         var query = Wrappers.<LedgerTxn>lambdaQuery().eq(LedgerTxn::getReferenceId, referenceId);
         return mapper.selectOne(query);
     }
+
+    // update version field in business code or re-get if needed
+    public int updateMetadataById(LedgerTxn txn) {
+        LedgerTxn toUpdate = new LedgerTxn() {{
+            setId(txn.getId());
+            setMetadata(txn.getMetadata());
+            setVersion(txn.getVersion());
+        }};
+        return mapper.updateById(toUpdate);
+    }
 }

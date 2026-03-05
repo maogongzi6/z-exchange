@@ -1,5 +1,6 @@
 package com.exchange.app.ledger;
 
+import com.exchange.common.db.config.CommonDbComponentRegister;
 import com.exchange.common.db.handler.AutofillMetaObjectHandler;
 import com.exchange.common.kafka.config.CustomKafkaConfig;
 import org.mybatis.spring.annotation.MapperScan;
@@ -20,7 +21,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
                 "com.exchange.common.kafka",
                 "com.exchange.common.cache"
         },
-        scanBasePackageClasses = {AutofillMetaObjectHandler.class})
+        scanBasePackageClasses = {CommonDbComponentRegister.class})
 public class LedgerServer {
     public static void main(String[] args) {
         SpringApplication.run(LedgerServer.class, args);

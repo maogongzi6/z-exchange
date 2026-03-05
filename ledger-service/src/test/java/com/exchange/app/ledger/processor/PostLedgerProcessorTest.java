@@ -6,6 +6,9 @@ import com.exchange.app.ledger.dao.mapper.AccountMapper;
 import com.exchange.app.ledger.dao.mapper.AssetMapper;
 import com.exchange.app.ledger.dao.mapper.LedgerEntryMapper;
 import com.exchange.app.ledger.dao.mapper.LedgerTxnMapper;
+import com.exchange.app.ledger.dao.repository.AccountRepository;
+import com.exchange.app.ledger.po.account.Account;
+import com.exchange.app.ledger.po.enums.*;
 import com.exchange.app.ledger.po.ledger.LedgerTxn;
 import com.exchange.app.ledger.processor.post.PostLedgerProcessor;
 import com.exchange.app.ledger.po.ledger.LedgerEntry;
@@ -39,10 +42,15 @@ public class PostLedgerProcessorTest {
     private LedgerEntryMapper ledgerEntryMapper;
     @Autowired
     private LedgerTxnMapper ledgerTxnMapper;
+    @Autowired
+    private AccountRepository accountRepository;
 
     @Test
     public void testPostTxnSuccess() {
-        String refId = "txn-a-12";
+        String accountRef = "5367025801-1";
+        createAccount(accountRef);
+
+        String refId = "txn-a-16";
         PostTransactionRequestPb request = PostTransactionRequestPb.newBuilder().setReferenceId(refId).setDescription("description").addAllEntries(List.of(
                 LedgerEntryPb.newBuilder().setAccountRef("5367025801-1").setDirection(LedgerDirectionPb.LedgerDirection_Debit).setAmount(100).setAssetId("asset-1").build(),
                 LedgerEntryPb.newBuilder().setAccountRef("5367025801-1").setDirection(LedgerDirectionPb.LedgerDirection_Credit).setAmount(100).setAssetId("asset-1").build()
@@ -68,5 +76,19 @@ public class PostLedgerProcessorTest {
         log.info("txn: {}", txn);
         log.info("entry: {}", entries);
         log.info("reply: {}", reply);
+    }
+    
+    private void createAccount(String refId) {
+        Account testAccount = new Account();
+        testAccount.setAccountId(refId);
+        testAccount.setReferenceId(refId);
+        testAccount.setAssetId("asset-1");
+        testAccount.setServiceId(ServiceId.WALLET);
+        testAccount.setCategory(AccountCategory.ASSET);
+        testAccount.setNormalSide(NormalSide.CREDIT);
+        testAccount.setOwnerId("owner-1");
+        testAccount.setOwnerType(OwnerType.SYSTEM);
+        testAccount.setAccountStatus(AccountStatus.OPEN);
+        accountRepository.insertIgnore(testAccount);
     }
 }

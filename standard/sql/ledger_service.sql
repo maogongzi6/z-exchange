@@ -50,7 +50,10 @@ create table ledger_transactions (
 	id bigint auto_increment primary key,
     txn_id varchar(64) not null,
     reference_id varchar(64) not null,
-    extra_data text,
+    metadata json not null default (JSON_OBJECT()),
+    version bigint not null,
+    created_at timestamp(3) not null,
+    updated_at timestamp(3) not null,
     unique key(txn_id),
     unique key(reference_id)
 );

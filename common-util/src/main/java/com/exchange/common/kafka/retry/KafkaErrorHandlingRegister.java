@@ -12,7 +12,7 @@ import org.springframework.kafka.listener.DefaultErrorHandler;
 
 @Slf4j
 @Configuration
-public class KafkaErrorHandlingConfig {
+public class KafkaErrorHandlingRegister {
     @Bean
     public DeadLetterPublishingRecoverer deadLetterPublishingRecoverer(KafkaTemplate<String, byte[]> kafkaTemplate) {
         return new DeadLetterPublishingRecoverer(kafkaTemplate, (record, e) -> {

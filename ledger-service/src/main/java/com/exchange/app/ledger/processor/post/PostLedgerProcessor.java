@@ -63,7 +63,7 @@ public class PostLedgerProcessor {
         }
 
         String txnId = IdGenerator.generateLedgerTxnId();
-        LedgerTxn ledgerTxn = LedgerTxn.create(txnId, req.getReferenceId(), "TODO");
+        LedgerTxn ledgerTxn = LedgerTxn.create(txnId, req.getReferenceId());
         List<String> accountRefs = req.getEntriesList().stream().map(LedgerEntryPb::getAccountRef).distinct().collect(Collectors.toList());
         Map<String, String> accountRefToAccountId = accountManager.getAccountIdInRef(accountRefs).stream()
                 .collect(Collectors.toMap(Account::getReferenceId, Account::getAccountId));

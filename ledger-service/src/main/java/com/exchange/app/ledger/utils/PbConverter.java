@@ -16,7 +16,7 @@ public class PbConverter {
         return LedgerTransactionPb.newBuilder()
                 .setLedgerTxnId(txn.getTxnId())
                 .setReferenceId(txn.getReferenceId())
-                .setExtraData(txn.getExtraData())
+                .setExtraData(txn.getMetadata())
                 .build();
     }
 
