@@ -5,6 +5,9 @@
     <option name="excludedDirectories">
       <list>
         <option value="$PROJECT_DIR$/grpc-proto" />
+        <option value="$PROJECT_DIR$/common-util/src/test" />
+        <option value="$PROJECT_DIR$/ledger-service/src/test" />
+        <option value="$PROJECT_DIR$/wallet-service/src/test" />
       </list>
     </option>
   </component>
