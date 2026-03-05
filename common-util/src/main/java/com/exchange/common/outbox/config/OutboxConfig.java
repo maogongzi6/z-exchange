@@ -3,11 +3,16 @@ package com.exchange.common.outbox.config;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.validation.annotation.Validated;
+
+import javax.validation.constraints.NotBlank;
 
 @Data
+@Validated
 @Configuration
 @ConfigurationProperties(prefix = "app.outbox")
 public class OutboxConfig {
+    @NotBlank
     private String interval;
     private int attemptIntervalSec = 5;
     private int maxRetries = 5;
