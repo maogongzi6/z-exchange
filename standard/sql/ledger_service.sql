@@ -42,7 +42,7 @@ create table ledger_entries (
     amount bigint not null,
     direction tinyint not null,
     unique key(entry_id),
-    key(txn_id),
+    key(txn_id, id),
     key(account_id, direction)
 );
 

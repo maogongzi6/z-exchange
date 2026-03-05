@@ -1,7 +1,5 @@
 package com.exchange.app.ledger.dao.repository;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.exchange.app.ledger.dao.mapper.LedgerTxnMapper;
 import com.exchange.app.ledger.po.ledger.LedgerTxn;
@@ -18,7 +16,12 @@ public class LedgerTxnRepository extends DbBaseRepository<LedgerTxn, LedgerTxnMa
         super(mapper);
     }
 
-    public LedgerTxn findByRefId(String referenceId) {
+    public LedgerTxn getByTxnId(String txnId) {
+        var query = Wrappers.<LedgerTxn>lambdaQuery().eq(LedgerTxn::getTxnId, txnId);
+        return mapper.selectOne(query);
+    }
+
+    public LedgerTxn getByRefId(String referenceId) {
         var query = Wrappers.<LedgerTxn>lambdaQuery().eq(LedgerTxn::getReferenceId, referenceId);
         return mapper.selectOne(query);
     }

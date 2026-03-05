@@ -52,6 +52,10 @@ grpc:
 
 
 app:
+  db:
+    query:
+      default-batch-size: 3
+
   kafka:
     not-retriable-exceptions: com.exchange.app.ledger.exception.AbnormalProtoDataException
 

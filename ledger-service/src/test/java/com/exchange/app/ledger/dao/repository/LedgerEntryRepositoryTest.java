@@ -1,110 +1,79 @@
 package com.exchange.app.ledger.dao.repository;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.exchange.app.ledger.config.DbQueryConfig;
-import com.exchange.app.ledger.dao.mapper.LedgerEntryMapper;
 import com.exchange.app.ledger.po.ledger.LedgerEntry;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@DataJpaTest
+@SpringBootTest
 public class LedgerEntryRepositoryTest {
-
-    @Autowired
-    private LedgerEntryRepository ledgerEntryRepository;
-
+    @SpyBean
+    private LedgerEntryRepository repo;
     @MockBean
-    private LedgerEntryMapper ledgerEntryMapper;
-
-    @MockBean
-    private DbQueryConfig dbQueryConfig;
+    DbQueryConfig dbQueryConfig;
 
     @Test
-    void testGetByTransactionId_NoEntriesFound() {
-        String transactionId = "txn-123";
-        long lastId = 0L;
-
-        when(dbQueryConfig.getDefaultBatchSize()).thenReturn(10);
-        when(ledgerEntryMapper.selectList(Wrappers.<LedgerEntry>lambdaQuery()
-                .eq(LedgerEntry::getTxnId, transactionId)
-                .gt(LedgerEntry::getId, lastId)
-                .orderByAsc(LedgerEntry::getId)
-                .last("LIMIT " + 10))).thenReturn(Collections.emptyList());
-
-        List<LedgerEntry> result = ledgerEntryRepository.getByTransactionId(transactionId);
-
-        assertEquals(0, result.size(), "Expected no entries to be found");
-    }
-
-    @Test
-    void testGetByTransactionId_SingleBatch() {
-        String transactionId = "txn-123";
-        List<LedgerEntry> mockEntries = Arrays.asList(
-                new LedgerEntry(1L, transactionId, "asset-1", "account-1", 1000L, null),
-                new LedgerEntry(2L, transactionId, "asset-1", "account-2", 2000L, null)
-        );
-
-        when(dbQueryConfig.getDefaultBatchSize()).thenReturn(10);
-        when(ledgerEntryMapper.selectList(Wrappers.<LedgerEntry>lambdaQuery()
-                .eq(LedgerEntry::getTxnId, transactionId)
-                .gt(LedgerEntry::getId, 0L)
-                .orderByAsc(LedgerEntry::getId)
-                .last("LIMIT " + 10))).thenReturn(mockEntries);
-
-        List<LedgerEntry> result = ledgerEntryRepository.getByTransactionId(transactionId);
-
-        assertEquals(2, result.size(), "Expected two entries to be returned");
-        assertEquals(mockEntries, result, "Result must match the mock data");
-    }
-
-    @Test
-    void testGetByTransactionId_MultipleBatches() {
-        String transactionId = "txn-123";
-        List<LedgerEntry> firstBatch = Arrays.asList(
-                new LedgerEntry(1L, transactionId, "asset-1", "account-1", 1000L, null),
-                new LedgerEntry(2L, transactionId, "asset-2", "account-1", 1500L, null)
-        );
-        List<LedgerEntry> secondBatch = Arrays.asList(
-                new LedgerEntry(3L, transactionId, "asset-1", "account-3", 2000L, null)
-        );
+    void getByTransactionId_shouldPaginateUntilBatchSmallerThanBatchSize() {
+        // Arrange
+        String txnId = "TXN_TEST_001"; // placeholder
 
         when(dbQueryConfig.getDefaultBatchSize()).thenReturn(2);
 
-        when(ledgerEntryMapper.selectList(Wrappers.<LedgerEntry>lambdaQuery()
-                .eq(LedgerEntry::getTxnId, transactionId)
-                .gt(LedgerEntry::getId, 0L)
-                .orderByAsc(LedgerEntry::getId)
-                .last("LIMIT " + 2))).thenReturn(firstBatch);
+        LedgerEntry e1 = new LedgerEntry();
+        e1.setId(1L);
+        LedgerEntry e2 = new LedgerEntry();
+        e2.setId(2L);
+        LedgerEntry e3 = new LedgerEntry();
+        e3.setId(3L);
 
-        when(ledgerEntryMapper.selectList(Wrappers.<LedgerEntry>lambdaQuery()
-                .eq(LedgerEntry::getTxnId, transactionId)
-                .gt(LedgerEntry::getId, 2L)
-                .orderByAsc(LedgerEntry::getId)
-                .last("LIMIT " + 2))).thenReturn(secondBatch);
+        // Page 1: returns batchSize => loop continues, lastId becomes 2
+        doReturn(List.of(e1, e2))
+                .when(repo).getByTransactionIdAndLastId(txnId, 0L, 2);
 
-        when(ledgerEntryMapper.selectList(Wrappers.<LedgerEntry>lambdaQuery()
-                .eq(LedgerEntry::getTxnId, transactionId)
-                .gt(LedgerEntry::getId, 3L)
-                .orderByAsc(LedgerEntry::getId)
-                .last("LIMIT " + 2))).thenReturn(Collections.emptyList());
+        // Page 2: returns smaller batch => loop ends
+        doReturn(List.of(e3))
+                .when(repo).getByTransactionIdAndLastId(txnId, 2L, 2);
 
-        List<LedgerEntry> result = ledgerEntryRepository.getByTransactionId(transactionId);
+        // Act
+        List<LedgerEntry> all = repo.getByTransactionId(txnId);
 
-        List<LedgerEntry> expectedEntries = new ArrayList<>();
-        expectedEntries.addAll(firstBatch);
-        expectedEntries.addAll(secondBatch);
+        // Assert
+        assertThat(all).extracting(LedgerEntry::getId).containsExactly(1L, 2L, 3L);
 
-        assertEquals(3, result.size(), "Expected three entries to be returned");
-        assertEquals(expectedEntries, result, "Result must match the combined mock data");
+        verify(repo, times(2)).getByTransactionIdAndLastId(anyString(), anyLong(), anyInt());
+        verify(repo).getByTransactionIdAndLastId(txnId, 0L, 2);
+        verify(repo).getByTransactionIdAndLastId(txnId, 2L, 2);
+    }
+
+    @Test
+    void getByTransactionId_shouldStopImmediatelyWhenFirstBatchIsEmpty() {
+        // Arrange
+        String txnId = "TXN_TEST_002"; // placeholder
+
+        when(dbQueryConfig.getDefaultBatchSize()).thenReturn(3);
+
+        doReturn(List.of())
+                .when(repo).getByTransactionIdAndLastId(txnId, 0L, 3);
+
+        // Act
+        List<LedgerEntry> all = repo.getByTransactionId(txnId);
+
+        // Assert
+        assertThat(all).isEmpty();
+        verify(repo).getByTransactionIdAndLastId(txnId, 0L, 3);
+        verify(repo, times(1)).getByTransactionIdAndLastId(anyString(), anyLong(), anyInt());
     }
 }

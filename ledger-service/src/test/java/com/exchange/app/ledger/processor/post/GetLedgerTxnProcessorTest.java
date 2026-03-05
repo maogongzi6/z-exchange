@@ -7,10 +7,9 @@ import com.exchange.app.ledger.po.ledger.LedgerTxn;
 import com.exchange.app.ledger.result.ErrorCode;
 import com.exchange.common.utils.result.Result;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 
 import java.util.Collections;
 
@@ -18,20 +17,16 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest
-class GetLedgerTxnProcessorTest {
+public class GetLedgerTxnProcessorTest {
 
-    @Mock
+    @MockBean
     private LedgerTxnRepository ledgerTxnRepository;
 
-    @Mock
+    @MockBean
     private LedgerEntryRepository ledgerEntryRepository;
 
-    @InjectMocks
+    @Autowired
     private GetLedgerTxnProcessor getLedgerTxnProcessor;
-
-    public GetLedgerTxnProcessorTest() {
-        MockitoAnnotations.openMocks(this);
-    }
 
     @Test
     void shouldReturnInvalidParameterErrorWhenLookupValueIsEmpty() {
@@ -75,10 +70,12 @@ class GetLedgerTxnProcessorTest {
 
     @Test
     void shouldReturnSuccessWhenLedgerFoundByTxnIdWithoutEntries() {
+        String id = "testTxnId";
         LedgerTxn mockTxn = new LedgerTxn();
-        when(ledgerTxnRepository.getByTxnId("testTxnId")).thenReturn(mockTxn);
+        mockTxn.setTxnId(id);
+        when(ledgerTxnRepository.getByTxnId(id)).thenReturn(mockTxn);
 
-        Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.TXN_ID, "testTxnId", false);
+        Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.TXN_ID, id, false);
 
         assertTrue(result.success);
         assertEquals(mockTxn, result.value.txn);
@@ -88,6 +85,7 @@ class GetLedgerTxnProcessorTest {
     @Test
     void shouldReturnSuccessWhenLedgerFoundByRefIdWithoutEntries() {
         LedgerTxn mockTxn = new LedgerTxn();
+        mockTxn.setReferenceId("testRefId");
         when(ledgerTxnRepository.getByRefId("testRefId")).thenReturn(mockTxn);
 
         Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.REF_ID, "testRefId", false);
@@ -101,10 +99,12 @@ class GetLedgerTxnProcessorTest {
     void shouldReturnSuccessWhenLedgerFoundWithEntries() {
         LedgerTxn mockTxn = new LedgerTxn();
         LedgerEntry mockEntry = new LedgerEntry();
-        when(ledgerTxnRepository.getByTxnId("testTxnId")).thenReturn(mockTxn);
-        when(ledgerEntryRepository.getByTransactionId("testTxnId")).thenReturn(Collections.singletonList(mockEntry));
+        String id = "testTxnId";
+        mockTxn.setTxnId("testTxnId");
+        when(ledgerTxnRepository.getByTxnId(id)).thenReturn(mockTxn);
+        when(ledgerEntryRepository.getByTransactionId(id)).thenReturn(Collections.singletonList(mockEntry));
 
-        Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.TXN_ID, "testTxnId", true);
+        Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.TXN_ID, id, true);
 
         assertTrue(result.success);
         assertEquals(mockTxn, result.value.txn);
@@ -115,6 +115,7 @@ class GetLedgerTxnProcessorTest {
     @Test
     void shouldReturnInternalErrorWhenEntriesNotFoundForTxnId() {
         LedgerTxn mockTxn = new LedgerTxn();
+        mockTxn.setTxnId("testTxnId");
         when(ledgerTxnRepository.getByTxnId("testTxnId")).thenReturn(mockTxn);
         when(ledgerEntryRepository.getByTransactionId("testTxnId")).thenReturn(null);
 

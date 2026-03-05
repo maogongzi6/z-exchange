@@ -126,7 +126,7 @@ public class PostLedgerProcessor {
             }
         }
 
-        LedgerTxn txn = ledgerTxnManager.findByRefId(req.getReferenceId());
+        LedgerTxn txn = ledgerTxnManager.getByRefId(req.getReferenceId());
         if (txn != null) {
             // set idemp to DONE when found ledger txn
             idempRedisClient.markIdempDone(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(), getReqStableHash(req), token, txn.getTxnId(), idempConfig.getDoneTtl());

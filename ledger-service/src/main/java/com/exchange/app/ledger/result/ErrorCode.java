@@ -6,18 +6,24 @@ import com.exchange.proto.common.error.ErrorCodePb;
 public enum ErrorCode implements PbMappableErrorCode {
     SUCCESS(0, ErrorCodePb.ERROR_OK, "success"),
     UNKNOWN_ERROR(1, ErrorCodePb.ERROR_INTERNAL, "unknown_error"),
-    SERVER_ERROR(2, ErrorCodePb.ERROR_INTERNAL,"server_error"),
-    NULL_RESULT(3, ErrorCodePb.ERROR_INTERNAL, "null_result"),
-    DB_ERROR(4, ErrorCodePb.ERROR_INTERNAL, "db_error"),
-    SERIALIZE_ERROR(5, ErrorCodePb.ERROR_INTERNAL, "serialize_error"),
-    INVALID_VALUE_ERROR(6, ErrorCodePb.ERROR_INTERNAL, "invalid_value_error"),
-    INVALID_ENUM_ERROR(7, ErrorCodePb.ERROR_INTERNAL, "invalid_enum_error"),
-    PUBLISH_KAFKA_ERROR(8, ErrorCodePb.ERROR_INTERNAL, "publish_kafka_error"),
+    INTERNAL_ERROR(2, ErrorCodePb.ERROR_INTERNAL, "internal_error"),
+    SERVER_ERROR(3, ErrorCodePb.ERROR_INTERNAL,"server_error"),
+
+    NULL_RESULT(10, ErrorCodePb.ERROR_INTERNAL, "null_result"),
+    DB_ERROR(11, ErrorCodePb.ERROR_INTERNAL, "db_error"),
+    SERIALIZE_ERROR(12, ErrorCodePb.ERROR_INTERNAL, "serialize_error"),
+    INVALID_VALUE_ERROR(13, ErrorCodePb.ERROR_INTERNAL, "invalid_value_error"),
+    INVALID_ENUM_ERROR(14, ErrorCodePb.ERROR_INTERNAL, "invalid_enum_error"),
+    PUBLISH_KAFKA_ERROR(15, ErrorCodePb.ERROR_INTERNAL, "publish_kafka_error"),
+
+
 
     INVALID_REQUEST_PARAMETER(100, ErrorCodePb.ERROR_INVALID_ARGUMENT, "invalid_request_parameter"),
     REQUEST_HASH_CONFLICT(200, ErrorCodePb.ERROR_FAILED_PRECONDITION, "request_hash_conflict"),
     REQUEST_IN_PROCESSING(201, ErrorCodePb.ERROR_PROCESSING, "request_in_processing"),
-    LEDGER_DUPLICATED(1020, ErrorCodePb.ERROR_ALREADY_EXISTS, "ledger_duplicated"),
+    LEDGER_DUPLICATED(1000, ErrorCodePb.ERROR_ALREADY_EXISTS, "ledger_duplicated"),
+    LEDGER_NOT_FOUND(1001, ErrorCodePb.ERROR_NOT_FOUND, "ledger_not_found"),
+    LEDGER_ENTRY_NOT_FOUND(1010, ErrorCodePb.ERROR_NOT_FOUND, "ledger_entry_not_found"),
     ACCOUNT_NOT_FOUND(1100, ErrorCodePb.ERROR_NOT_FOUND, "account_not_found"),
     ACCOUNT_DUPLICATED(1101, ErrorCodePb.ERROR_ALREADY_EXISTS, "account_duplicated"),
     ASSET_NOT_FOUND(1200, ErrorCodePb.ERROR_NOT_FOUND, "asset_not_found"),
