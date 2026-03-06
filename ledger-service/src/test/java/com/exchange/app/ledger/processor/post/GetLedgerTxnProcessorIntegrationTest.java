@@ -5,6 +5,7 @@ import com.exchange.app.ledger.dao.mapper.LedgerEntryMapper;
 import com.exchange.app.ledger.dao.mapper.LedgerTxnMapper;
 import com.exchange.app.ledger.dao.repository.LedgerEntryRepository;
 import com.exchange.app.ledger.dao.repository.LedgerTxnRepository;
+import com.exchange.app.ledger.dao.store.LedgerTxnStore;
 import com.exchange.app.ledger.po.enums.Direction;
 import com.exchange.app.ledger.po.ledger.LedgerEntry;
 import com.exchange.app.ledger.po.ledger.LedgerTxn;
@@ -31,11 +32,14 @@ public class GetLedgerTxnProcessorIntegrationTest {
     @Autowired
     private LedgerEntryMapper ledgerEntryMapper;
 
+    String id = "FIXED_ID_1";
+
     @Test
-    void shouldReturnSuccessWhenLookupByTxnIdAndIncludeEntries() {
+    void shouldReturnSuccessWhenLookupByTxnIdAndIncludeEntries() throws InterruptedException {
 
         // Arrange
         String txnId = "TXN_TEST_" + System.currentTimeMillis() + "_" + Math.random();
+        //String txnId = id;
         String refId = "REF_TEST_" + System.currentTimeMillis() + "_" + Math.random();
         ledgerTxnMapper.delete(Wrappers.<LedgerTxn>lambdaQuery().eq(LedgerTxn::getTxnId, txnId));
         LedgerTxn txn = LedgerTxn.create(txnId, refId, "{\"k\":\"v\"}");

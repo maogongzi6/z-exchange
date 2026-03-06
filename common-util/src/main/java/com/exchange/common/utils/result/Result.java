@@ -11,6 +11,9 @@ import java.util.Objects;
 public class Result<T> {
     public final boolean success;
     public final T value;
+
+    // TODO add SCOPE here
+
     @NonNull
     public final PbMappableErrorCode errorCode;
     public final String errorDetail;

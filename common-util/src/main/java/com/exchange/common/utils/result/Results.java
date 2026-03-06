@@ -1,5 +1,7 @@
 package com.exchange.common.utils.result;
 
+import java.util.Objects;
+
 public class Results {
     public static <T> Result<T> success(T value) {
         return new Result<>(true, value, CommonErrorCode.success(), null);
@@ -9,7 +11,12 @@ public class Results {
         return success(null);
     }
 
-    public static <T> Result<T> fail(CommonErrorCode error, String errorDetail) {
+    public static <T> Result<T> fail(PbMappableErrorCode error, String errorDetail) {
         return new Result<>(false, null, error, errorDetail);
+    }
+
+    public static <T> Result<T> result(T newValue, Result<T> result) {
+        Objects.requireNonNull(result);
+        return new Result<>(result.success, newValue, result.errorCode, result.errorDetail);
     }
 }

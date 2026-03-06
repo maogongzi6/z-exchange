@@ -1,6 +1,5 @@
 package com.exchange.app.ledger.config;
 
-import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.validation.annotation.Validated;
@@ -9,10 +8,10 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.time.Duration;
 
-@Data
+@lombok.Data
 @Configuration
 public class CustomCacheConfig {
-    @Data
+    @lombok.Data
     @Validated
     @Configuration
     @ConfigurationProperties(prefix = "app.cache.idemp")
@@ -24,5 +23,16 @@ public class CustomCacheConfig {
         private Duration doneTtl;
     }
 
-
+    @lombok.Data
+    @Validated
+    @Configuration
+    @ConfigurationProperties(prefix = "app.cache.data")
+    static public class Data {
+        @NotNull
+        private Duration indexCacheTtl;
+        @NotNull
+        private Duration dataCacheTtl;
+        @NotNull
+        private Duration tombstoneTtl;
+    }
 }

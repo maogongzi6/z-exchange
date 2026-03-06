@@ -1,5 +1,6 @@
 package com.exchange.app.ledger.processor.post;
 
+import com.exchange.app.ledger.dao.store.LedgerTxnStore;
 import com.exchange.app.ledger.po.ledger.LedgerEntry;
 import com.exchange.app.ledger.po.ledger.LedgerTxn;
 import com.exchange.app.ledger.result.ErrorCode;
@@ -23,6 +24,7 @@ import java.util.List;
 public class GetLedgerTxnProcessor {
     private final LedgerTxnRepository ledgerTxnRepository;
     private final LedgerEntryRepository ledgerEntryRepository;
+    private final LedgerTxnStore ledgerTxnStore;
 
     public enum LookupType {
         TXN_ID, REF_ID
@@ -47,9 +49,15 @@ public class GetLedgerTxnProcessor {
 
         // Step 2: Query the ledger transaction
         LedgerTxn ledgerTxn;
+        Result<LedgerTxn> ledgerResult = null;
         switch (type) {
             case TXN_ID:
-                ledgerTxn = ledgerTxnRepository.getByTxnId(lookupValue);
+                ledgerResult = ledgerTxnStore.getTxnByTxnId(lookupValue);
+                if (!ledgerResult.success) {
+                    log.error("load ledger txn failed, txn_id: {}", lookupValue);
+                    return Results.fail(ErrorCode.INTERNAL_ERROR, "load ledger txn failed");
+                }
+                ledgerTxn = ledgerResult.value;
                 break;
             case REF_ID:
                 ledgerTxn = ledgerTxnRepository.getByRefId(lookupValue);

@@ -1,12 +1,12 @@
 package com.exchange.app.ledger.result;
 
 
+import com.exchange.common.utils.result.PbMappableErrorCode;
 import com.exchange.common.utils.result.Result;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Objects;
 
-// TODO maybe move success() fail() to common module
 @Slf4j
 public class Results {
     public static <T> Result<T> success(T value) {
@@ -28,6 +28,10 @@ public class Results {
     public static <T> Result<T> result(T newValue, Result<T> result) {
         Objects.requireNonNull(result);
         return new Result<>(result.success, newValue, getErrorCode(result), result.errorDetail);
+    }
+
+    public static boolean is(Result<?> result, PbMappableErrorCode errorCode) {
+        return result != null && result.errorCode.equals(errorCode);
     }
 
     public static ErrorCode getErrorCode(Result<?> result) {
