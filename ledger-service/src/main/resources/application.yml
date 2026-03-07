@@ -52,6 +52,10 @@ grpc:
 
 
 app:
+  db:
+    query:
+      default-batch-size: 3
+
   kafka:
     not-retriable-exceptions: com.exchange.app.ledger.exception.AbnormalProtoDataException
 
@@ -59,6 +63,11 @@ app:
     interval: "*/5 * * * * ?"
     page-limit: 2
 
-  cache.idemp:
-    pending-ttl: 120s
-    done-ttl: 24h
+  cache:
+    idemp:
+      pending-ttl: 120s
+      done-ttl: 24h
+    data:
+      data-cache-ttl: 120s
+      index-cache-ttl: 1h
+      tombstone-ttl: 120s # should be short to only cover request ttl

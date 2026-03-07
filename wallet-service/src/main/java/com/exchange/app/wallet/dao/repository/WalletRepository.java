@@ -14,14 +14,5 @@ public class WalletRepository extends DbBaseRepository<Wallet, WalletMapper> {
     public WalletRepository(WalletMapper mapper) {
         super(mapper);
     }
-//    public int insertIgnoreDuplicateError(Wallet wallet) {
-//        try {
-//            return walletMapper.insert(wallet);
-//        } catch (Exception e) {
-//            if (e instanceof DuplicateKeyException) {
-//                return 0;
-//            }
-//            throw e;
-//        }
-//    }
+
 }

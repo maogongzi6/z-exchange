@@ -51,23 +51,25 @@ public class WalletReservationRepository extends DbBaseRepository<WalletReservat
 
     // id is explicit and necessary to force using PK in db txn
     // pending-settle -> consumed
-    public int fullySettleReservation(Long id, WalletReservation reservation, Long amount) {
-        LambdaUpdateWrapper<WalletReservation> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper = updateWrapper.eq(WalletReservation::getReserveTxnId, reservation.getReserveTxnId())
-                .eq(WalletReservation::getId, id)
-                .eq(WalletReservation::getWalletId, reservation.getWalletId())
-                .eq(WalletReservation::getAssetId, reservation.getAssetId())
-                .eq(WalletReservation::getPendingSettle, amount)
-                .eq(WalletReservation::getReserveTxnId, reservation.getReserveTxnId())
-                .eq(WalletReservation::getReservationStatus, ReservationStatus.ACTIVE)
-                .set(WalletReservation::getPendingSettle, 0)
-                .set(WalletReservation::getConsumed, amount)
-                .set(WalletReservation::getReservationStatus, ReservationStatus.FINISHED)
-                .set(WalletReservation::getReservationOutcome, ReservationOutcome.CONSUMED);
-        return mapper.update(reservation, updateWrapper);
-    }
+    // TODO restrict update fields, only update status and amount
+//    public int fullySettleReservation(Long id, WalletReservation reservation, Long amount) {
+//        LambdaUpdateWrapper<WalletReservation> updateWrapper = new LambdaUpdateWrapper<>();
+//        updateWrapper = updateWrapper.eq(WalletReservation::getReserveTxnId, reservation.getReserveTxnId())
+//                .eq(WalletReservation::getId, id)
+//                .eq(WalletReservation::getWalletId, reservation.getWalletId())
+//                .eq(WalletReservation::getAssetId, reservation.getAssetId())
+//                .eq(WalletReservation::getPendingSettle, amount)
+//                .eq(WalletReservation::getReserveTxnId, reservation.getReserveTxnId())
+//                .eq(WalletReservation::getReservationStatus, ReservationStatus.ACTIVE)
+//                .set(WalletReservation::getPendingSettle, 0)
+//                .set(WalletReservation::getConsumed, amount)
+//                .set(WalletReservation::getReservationStatus, ReservationStatus.FINISHED)
+//                .set(WalletReservation::getReservationOutcome, ReservationOutcome.CONSUMED);
+//        return mapper.update(updateWrapper);
+//    }
 
     // update with optimistic lock of amount and status
+    // update with all fields of now
     public int updateWithOptimisticLock(WalletReservation now, WalletReservation old) {
         var wrapper = updateLambdaWrapper().eq(WalletReservation::getId, now.getId())
                 .eq(WalletReservation::getReservationStatus, old.getReservationStatus())

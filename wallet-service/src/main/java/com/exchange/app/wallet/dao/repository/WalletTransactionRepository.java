@@ -46,9 +46,16 @@ public class WalletTransactionRepository extends DbBaseRepository<WalletTransact
         return mapper.selectOne(query);
     }
 
-    public int updateTransactionStatus(Long id, TransactionStatus oldStatus, TransactionStatus newStatus) {
+    // restrict the update field, only update status
+    public int updateTransactionStatus(WalletTransaction txn, Long id, TransactionStatus newStatus) {
         LambdaUpdateWrapper<WalletTransaction> update = new LambdaUpdateWrapper<>();
-        update.eq(WalletTransaction::getId, id).eq(WalletTransaction::getTxnStatus, oldStatus).set(WalletTransaction::getTxnStatus, newStatus);
-        return mapper.update(update);
+        update.eq(WalletTransaction::getId, id).eq(WalletTransaction::getTxnStatus, txn.getTxnStatus());
+        WalletTransaction updateTxn = new WalletTransaction();
+        updateTxn.setTxnStatus(newStatus);
+
+        int affected = mapper.update(updateTxn, update);
+        // update txn info to align with db
+        txn.setTxnStatus(updateTxn.getTxnStatus());
+        return affected;
     }
 }

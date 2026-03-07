@@ -1,6 +1,7 @@
 package com.exchange.app.wallet.processor;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.exchange.app.wallet.dao.mapper.WalletTransactionMapper;
 import com.exchange.app.wallet.po.enums.BusinessType;
 import com.exchange.app.wallet.po.enums.ServiceId;
@@ -29,9 +30,15 @@ public class SimpleTest {
         String txnId = "simple-test-4";
         WalletTransaction walletTransaction = WalletTransaction.create(txnId, "s-t", ServiceId.SYSTEM, txnId, TransactionStatus.CLOSED, TransactionType.ADJUST, BusinessType.TRANSFER);
         walletTransactionMapper.insert(walletTransaction);
-        Thread.sleep(100);
-        walletTransactionMapper.update(walletTransaction, new LambdaUpdateWrapper<>() {{set(WalletTransaction::getReferenceId, "changed"); }});
         WalletTransaction txn = walletTransactionMapper.selectOne(new LambdaUpdateWrapper<>() {{eq(WalletTransaction::getTxnId, txnId); }});
+
+        walletTransaction.setTxnStatus(TransactionStatus.PENDING);
+        walletTransaction.setInitiator(ServiceId.USER);
+        walletTransaction.setReferenceId("updated");
+        LambdaUpdateWrapper<WalletTransaction> update =  Wrappers.lambdaUpdate();
+        update = update.eq(WalletTransaction::getId,txn.getId());
+        walletTransactionMapper.update(walletTransaction, update);
+        txn = walletTransactionMapper.selectOne(new LambdaUpdateWrapper<>() {{eq(WalletTransaction::getTxnId, txnId); }});
         System.out.println(txn);
     }
 }

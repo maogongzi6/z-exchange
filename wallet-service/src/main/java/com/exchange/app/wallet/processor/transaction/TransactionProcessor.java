@@ -671,7 +671,7 @@ public class TransactionProcessor {
             if (result.isFailed()) {
                 return Results.fail(result);
             }
-            if (walletTransactionManager.updateTransactionStatus(txnInfo.walletTxn.getId(), TransactionStatus.PENDING, TransactionStatus.COMPLETED)
+            if (walletTransactionManager.updateTransactionStatus(txnInfo.walletTxn, txnInfo.walletTxn.getId(), TransactionStatus.COMPLETED)
                     != 1) {
                 log.error("wallet_transaction_update_failed, transaction: {}", txnInfo.walletTxn);
                 return Results.fail(ErrorCode.WALLET_TRANSACTION_UPDATE_FAILED, "transaction_update_failed");

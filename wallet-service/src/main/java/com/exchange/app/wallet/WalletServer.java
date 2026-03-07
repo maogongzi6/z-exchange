@@ -1,6 +1,9 @@
 package com.exchange.app.wallet;
 
+import com.exchange.common.cache.register.RedisCacheRegister;
+import com.exchange.common.cache.register.RedisIdempRegister;
 import com.exchange.common.db.handler.AutofillMetaObjectHandler;
+import com.exchange.common.db.register.CommonDbComponentRegister;
 import org.mybatis.spring.annotation.MapperScan;
 import org.mybatis.spring.annotation.MapperScans;
 import org.springframework.boot.SpringApplication;
@@ -17,9 +20,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
                 "com.exchange.app.wallet",
                 "com.exchange.common.outbox",
                 "com.exchange.common.kafka",
-                "com.exchange.common.cache"
         },
-        scanBasePackageClasses = {AutofillMetaObjectHandler.class})
+        scanBasePackageClasses = {CommonDbComponentRegister.class, RedisCacheRegister.class, RedisIdempRegister.class})
 public class WalletServer {
     public static void main(String[] args) {
         SpringApplication.run(WalletServer.class, args);
