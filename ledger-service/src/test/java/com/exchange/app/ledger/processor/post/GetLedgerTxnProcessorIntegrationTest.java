@@ -69,8 +69,10 @@ public class GetLedgerTxnProcessorIntegrationTest {
     @Test
     void shouldReturnSuccessWhenLookupByRefIdWithMultipleEntries() {
         // Arrange
-        String refId = "REF_TEST_" + System.currentTimeMillis(); // unique reference ID
-        String txnId = "TXN_TEST_" + System.currentTimeMillis(); // unique transaction ID
+        //String refId = "REF_TEST_" + System.currentTimeMillis(); // unique reference ID
+        //        String txnId = "TXN_TEST_" + System.currentTimeMillis(); // unique transaction ID
+        String refId = "FIXED_REF_TEST_2";
+        String txnId = "FIXED_TXN_TEST_2";
         ledgerTxnMapper.delete(Wrappers.<LedgerTxn>lambdaQuery().eq(LedgerTxn::getTxnId, txnId));
         LedgerTxn txn = LedgerTxn.create(txnId, refId, "{\"k\":\"v\"}");
         ledgerTxnRepository.insertIgnore(txn);

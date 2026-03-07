@@ -9,23 +9,19 @@ public class CacheRedisClient<T> {
         this.baseRedisSupport = baseRedisSupport;
     }
 
-    protected void set(String key, T value) {
-        baseRedisSupport.set(key, value);
-    }
-
-    protected void set(String key, T value, Duration ttl) {
+    public void set(String key, T value, Duration ttl) {
         baseRedisSupport.set(key, value, ttl);
     }
 
-    protected T get(String key) {
+    public T get(String key) {
         return baseRedisSupport.get(key);
     }
 
-    protected Boolean setIfAbsent(String key, T value, Duration ttl) {
+    public Boolean setIfAbsent(String key, T value, Duration ttl) {
         return baseRedisSupport.setIfAbsent(key, value, ttl);
     }
 
-    protected Boolean delete(String key) {
+    public Boolean delete(String key) {
         return baseRedisSupport.delete(key);
     }
 }
