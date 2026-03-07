@@ -3,6 +3,10 @@ package com.exchange.app.wallet.processor.transaction;
 import com.exchange.app.wallet.po.enums.transaction.TransactionType;
 import com.exchange.app.wallet.po.transaction.WalletReservation;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
+import com.exchange.app.wallet.processor.transaction.model.RequestInfo;
+import com.exchange.app.wallet.processor.transaction.model.TransactionInfo;
+import com.exchange.app.wallet.processor.transaction.step.BeforePostLedgerProcessor;
+import com.exchange.app.wallet.processor.transaction.step.IdempPrecheckProcessor;
 import com.exchange.app.wallet.result.ErrorCode;
 import com.exchange.app.wallet.result.PbErrorBuilder;
 import com.exchange.app.wallet.result.Results;
@@ -25,7 +29,8 @@ import java.util.*;
 @Component
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class ReserveTransactionProcessor {
-    final private TransactionProcessor transactionProcessor;
+    final private BeforePostLedgerProcessor beforePostLedgerProcessor;
+    private final IdempPrecheckProcessor idempPrecheckProcessor;
 
     public ReserveTransactionReplyPb reserve(ReserveTransactionRequestPb request) {
         Result<Void> validateResult = validate(request);
@@ -34,15 +39,15 @@ public class ReserveTransactionProcessor {
         }
 
         String token = TokenHelper.generateToken(GlobalServiceId.LEDGER.name());
-        TransactionProcessor.RequestInfo requestInfo = new TransactionProcessor.RequestInfo(request.getReferenceId(), request.getInitiator(), request.getIdempotencyKey(), request.getBusinessType(), TransactionType.TWO_STEP, request.getLinesList(), ReserveTransactionRequestPb.getDescriptor().getName(), token);
-        Result<String> idempResult = transactionProcessor.idempCheckAndReqValidate(requestInfo);
+        RequestInfo requestInfo = new RequestInfo(request.getReferenceId(), request.getInitiator(), request.getIdempotencyKey(), request.getBusinessType(), TransactionType.TWO_STEP, request.getLinesList(), ReserveTransactionRequestPb.getDescriptor().getName(), token);
+        Result<String> idempResult = idempPrecheckProcessor.idempAndValidatePrecheck(requestInfo);
         if (idempResult.isFailed()) {
             return replyError(idempResult);
         } else if (!Strings.isEmpty(idempResult.value)) {
             return replySuccess(idempResult.value, idempResult.errorDetail);
         }
 
-        Result<TransactionProcessor.TransactionInfo> result = transactionProcessor.beforePostingLedger(requestInfo, false);
+        Result<TransactionInfo> result = beforePostLedgerProcessor.beforePostingLedger(requestInfo, false);
         if (result.isFailed()) {
             return replyError(result);
         }
@@ -67,7 +72,7 @@ public class ReserveTransactionProcessor {
                 .build();
     }
 
-    private ReserveTransactionReplyPb replySuccess(TransactionProcessor.TransactionInfo info, String detail) {
+    private ReserveTransactionReplyPb replySuccess(TransactionInfo info, String detail) {
         detail = Objects.requireNonNullElse(detail, "");
         WalletTransaction txn = info.walletTxn;
         ReserveTransactionReplyPb.Builder builder = ReserveTransactionReplyPb.newBuilder()

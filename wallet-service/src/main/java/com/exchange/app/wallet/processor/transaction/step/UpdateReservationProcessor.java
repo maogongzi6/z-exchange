@@ -1,0 +1,58 @@
+package com.exchange.app.wallet.processor.transaction.step;
+
+import com.exchange.app.wallet.config.CustomCacheConfig;
+import com.exchange.app.wallet.dao.repository.*;
+import com.exchange.app.wallet.kafka.producer.DefaultPublisher;
+import com.exchange.app.wallet.po.transaction.WalletReservation;
+import com.exchange.app.wallet.result.ErrorCode;
+import com.exchange.app.wallet.result.Results;
+import com.exchange.common.cache.client.IdempRedisClient;
+import com.exchange.common.outbox.dao.repository.OutboxRepository;
+import com.exchange.common.utils.result.Result;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import java.util.List;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+@Slf4j
+@Component
+@RequiredArgsConstructor(onConstructor_ = @Autowired)
+public class UpdateReservationProcessor {
+    private final WalletReservationRepository walletReservationManager;
+
+    public Result<Void> updateReservations(List<WalletReservation> reservations, Function<WalletReservation, Result<WalletReservation>> function) {
+        if (reservations.isEmpty()) {
+            return Results.success();
+        }
+        List<Long> modifyReservationIds = reservations.stream().map(WalletReservation::getId).collect(Collectors.toList());
+        // select for update to lock the rows in PK order
+        var reservationFromDb = walletReservationManager.selectInIdForUpdate(modifyReservationIds);
+        if (reservationFromDb.size() != modifyReservationIds.size()) {
+            return Results.fail(ErrorCode.WALLET_RESERVATION_NOT_FOUND, String.format("wallet_reservation_not_found, ids: %s, reservationFromDb: %s", modifyReservationIds, reservationFromDb));
+        }
+
+        for (WalletReservation reservation : reservationFromDb) {
+            WalletReservation copy = new WalletReservation();
+            BeanUtils.copyProperties(reservation, copy);
+            Result<WalletReservation> result = function.apply(reservation);
+            if (result.isFailed()) {
+                return Results.fail(result);
+            }
+            reservation = result.value;
+
+            if (!Objects.equals(reservation, copy)) {
+                if (walletReservationManager.updateWithOptimisticLock(reservation, copy) != 1) {
+                    return Results.fail(ErrorCode.WALLET_RESERVATION_UPDATE_FAILED, String.format("failed to update reservation, reservation: %s, copy: %s", reservation, copy));
+                }
+            }
+        }
+        return Results.success();
+    }
+}

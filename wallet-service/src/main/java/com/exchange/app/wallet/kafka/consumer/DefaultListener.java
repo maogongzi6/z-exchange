@@ -4,11 +4,13 @@ import com.exchange.app.wallet.exception.AbnormalProtoDataException;
 import com.exchange.app.wallet.exception.RetriableException;
 import com.exchange.app.wallet.kafka.constant.WalletTopic;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
-import com.exchange.app.wallet.processor.transaction.TransactionProcessor;
+import com.exchange.app.wallet.processor.transaction.step.AfterPostLedgerProcessor;
+import com.exchange.app.wallet.processor.transaction.step.BeforePostLedgerProcessor;
 import com.exchange.app.wallet.result.ErrorCode;
 import com.exchange.common.utils.result.Result;
 import com.exchange.proto.common.event.EventEnvelopePb;
 import com.exchange.proto.ledger.post.PostTransactionReplyPb;
+import com.exchange.proto.ledger.post.PostTransactionRequestPb;
 import com.google.protobuf.InvalidProtocolBufferException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +23,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class DefaultListener {
-    private final TransactionProcessor transactionProcessor;
+    private final AfterPostLedgerProcessor afterPostLedgerProcessor;
 
     @KafkaListener(
             topics = WalletTopic.LEDGER_REPLY,
@@ -53,7 +55,7 @@ public class DefaultListener {
     private void handlePostLedgerReply(EventEnvelopePb envelope) throws InvalidProtocolBufferException{
         var reply = PostTransactionReplyPb.parseFrom(envelope.getPayload());
         log.info("handlePostLedgerReply: {}", reply);
-        Result<WalletTransaction> result = transactionProcessor.afterPostLedger(reply.getReferenceId());
+        Result<WalletTransaction> result = afterPostLedgerProcessor.afterPostLedger(reply.getReferenceId());
         // TODO retry base on error
         if (result.isFailed()) {
             log.error("wait for retry: {}", reply.getError());
