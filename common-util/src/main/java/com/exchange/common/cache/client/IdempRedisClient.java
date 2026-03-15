@@ -2,7 +2,6 @@ package com.exchange.common.cache.client;
 
 import com.exchange.common.cache.constant.CommonIdempStatus;
 import com.exchange.common.cache.utils.CommonIdempHelper;
-import com.exchange.common.utils.result.CommonErrorCode;
 import com.exchange.common.utils.result.Result;
 import com.exchange.common.utils.result.Results;
 import lombok.RequiredArgsConstructor;
@@ -10,11 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RScript;
 import org.redisson.api.RedissonClient;
 import org.redisson.client.codec.StringCodec;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
@@ -69,7 +65,7 @@ public class IdempRedisClient {
     public Result<String> releaseIdempIfOwned(String service, String scope, String idempId, String value) {
         String key = CommonIdempHelper.idempKey(service, scope, idempId);
         Object result = redissonClient.getScript(StringCodec.INSTANCE)
-                .eval(RScript.Mode.READ_ONLY, releaseIdempIfOwnedScript, RScript.ReturnType.VALUE, Collections.singletonList(key), value);
+                .eval(RScript.Mode.READ_WRITE, releaseIdempIfOwnedScript, RScript.ReturnType.VALUE, Collections.singletonList(key), value);
         return Results.success((String) result);
     }
 
