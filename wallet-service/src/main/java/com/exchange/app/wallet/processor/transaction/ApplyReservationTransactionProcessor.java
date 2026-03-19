@@ -1,6 +1,5 @@
 package com.exchange.app.wallet.processor.transaction;
 
-import com.exchange.app.wallet.dao.repository.WalletTransactionRepository;
 import com.exchange.app.wallet.po.enums.transaction.TransactionType;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
 import com.exchange.app.wallet.processor.transaction.model.RequestInfo;
@@ -28,7 +27,6 @@ import java.util.Objects;
 @Component
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class ApplyReservationTransactionProcessor {
-    private final WalletTransactionRepository walletTransactionManager;
     private final BeforePostLedgerProcessor beforePostLedgerProcessor;
     private final IdempPrecheckProcessor idempPrecheckProcessor;
 

@@ -7,6 +7,7 @@ import com.exchange.app.ledger.po.ledger.LedgerTxn;
 import com.exchange.app.ledger.result.Results;
 import com.exchange.common.cache.client.CacheRedisClient;
 import com.exchange.common.cache.client.JsonVersionedCacheRedisClient;
+import com.exchange.common.utils.JitterHelper;
 import com.exchange.common.utils.result.CommonErrorCode;
 import com.exchange.common.utils.result.Result;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,10 @@ public class LedgerTxnStore {
     private final CustomCacheConfig.Data dataCacheConfig;
     private final CacheRedisClient<String> cacheRedisClient;
 
+    // ledger txn is rarely modified, using a version CAS cache here is like overkill
+    // in fact, I'm testing version CAS cache in the ledger txn query,
+    // since ledger service is a dummy ledger and its business flow is simple,
+    // which is a good place to do tech drill
     public Result<LedgerTxn> getByTxnId(String txnId) {
         String cacheKey = CacheScope.ledgerTxnIdKey(txnId);
         // check cache
@@ -49,7 +54,8 @@ public class LedgerTxnStore {
 
         // update cache
         if (ledgerTxn != null) {
-            Result<Boolean> setResult = versionedCacheRedisClient.setIfAbsentOrNewer(cacheKey, ledgerTxn, ledgerTxn.getVersion(), dataCacheConfig.getDataCacheTtl());
+            Result<Boolean> setResult = versionedCacheRedisClient.setIfAbsentOrNewer(cacheKey, ledgerTxn, ledgerTxn.getVersion(),
+                    JitterHelper.jitter(dataCacheConfig.getDataCacheTtl(), dataCacheConfig.getJitterMs()));
             if (!setResult.success) {
                 // cache error should not block the main flow
                 log.error("cache set failed, txn_id: {}, txn: {}, result: {}", txnId, ledgerTxn, setResult);
@@ -61,6 +67,9 @@ public class LedgerTxnStore {
         return Results.success(ledgerTxn);
     }
 
+    // TODO add negative value for cache miss, key -> NULL
+    //  sometimes query by ref id is external api call,
+    //  need to protect external api from random query attack and massive query miss
     // no race condition for ref_id -> txn_id cache, ref_id is stable in our system
     public Result<LedgerTxn> getByRefId(String refId) {
         String refKey = CacheScope.ledgerRefIdKey(refId);
@@ -78,8 +87,10 @@ public class LedgerTxnStore {
         txn = ledgerTxnRepository.getByRefId(refId);
         if (txn != null) {
             String txnIdKey = CacheScope.ledgerTxnIdKey(txn.getTxnId());
-            cacheRedisClient.set(refKey, txn.getTxnId(), dataCacheConfig.getIndexCacheTtl());
-            Result<Boolean> setCacheResult = versionedCacheRedisClient.setIfAbsentOrNewer(txnIdKey, txn, txn.getVersion(), dataCacheConfig.getDataCacheTtl());
+            cacheRedisClient.set(refKey, txn.getTxnId(),
+                    JitterHelper.jitter(dataCacheConfig.getIndexCacheTtl(), dataCacheConfig.getJitterMs()));
+            Result<Boolean> setCacheResult = versionedCacheRedisClient.setIfAbsentOrNewer(txnIdKey, txn, txn.getVersion(),
+                    JitterHelper.jitter(dataCacheConfig.getDataCacheTtl(), dataCacheConfig.getJitterMs()));
             if (!setCacheResult.success) {
                 log.error("cache set failed, ref_id: {}, txn_id: {}, txn: {}, result: {}", refId, txn.getTxnId(), txn, setCacheResult);
             } else if (!setCacheResult.value) {
@@ -95,11 +106,8 @@ public class LedgerTxnStore {
             log.debug("update metadata failed, txn_id: {}, txn: {}", txn.getTxnId(), txn);
             return 0;
         }
-        versionedCacheRedisClient.setTombstone(
-                CacheScope.ledgerTxnIdKey(txn.getTxnId()),
-                txn.getVersion(),
-                dataCacheConfig.getTombstoneTtl()
-        );
+        versionedCacheRedisClient.setTombstone(CacheScope.ledgerTxnIdKey(txn.getTxnId()), txn.getVersion(),
+                JitterHelper.jitter(dataCacheConfig.getTombstoneTtl(), dataCacheConfig.getJitterMs()));
 
         return affected;
     }

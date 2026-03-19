@@ -1,5 +1,6 @@
 package com.exchange.app.wallet.processor.transaction;
 
+import com.exchange.app.wallet.dao.repository.WalletReservationRepository;
 import com.exchange.app.wallet.po.enums.transaction.TransactionType;
 import com.exchange.app.wallet.po.transaction.WalletReservation;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
@@ -31,6 +32,7 @@ import java.util.*;
 public class ReserveTransactionProcessor {
     final private BeforePostLedgerProcessor beforePostLedgerProcessor;
     private final IdempPrecheckProcessor idempPrecheckProcessor;
+    private final WalletReservationRepository walletReservationRepository;
 
     public ReserveTransactionReplyPb reserve(ReserveTransactionRequestPb request) {
         Result<Void> validateResult = validate(request);
@@ -65,9 +67,21 @@ public class ReserveTransactionProcessor {
     }
 
     private ReserveTransactionReplyPb replySuccess(String txnId, String detail) {
+        List<WalletReservation> reservations = walletReservationRepository.selectByTxnId(txnId);
+        List<ReservationInfoPb> infos = new ArrayList<>();
+        for (WalletReservation reservation : reservations) {
+            ReservationInfoPb infoPb = ReservationInfoPb.newBuilder()
+                    .setReservationRef(reservation.getReferenceId())
+                    .setWalletRef(reservation.getWalletReferenceId())
+                    .setAssetCode(reservation.getAssetId())
+                    .setAmount(reservation.getRemaining()).build();
+            infos.add(infoPb);
+        }
+
         detail = Objects.requireNonNullElse(detail, "");
         return ReserveTransactionReplyPb.newBuilder()
                 .setTransactionId(txnId)
+                .addAllInfos(infos)
                 .setError(PbErrorBuilder.build(ErrorCode.SUCCESS, detail))
                 .build();
     }

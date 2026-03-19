@@ -23,7 +23,6 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class GetLedgerTxnProcessor {
-    private final LedgerTxnRepository ledgerTxnRepository;
     private final LedgerEntryRepository ledgerEntryRepository;
     private final LedgerTxnStore ledgerTxnStore;
 

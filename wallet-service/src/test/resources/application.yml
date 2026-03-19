@@ -63,5 +63,6 @@ app:
     page-limit: 2
 
   cache.idemp:
-    pending-ttl: 60s
+    pending-ttl: 240s
     done-ttl: 5m
+    jitter-ms: 100

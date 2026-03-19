@@ -50,7 +50,7 @@ public class PostLedgerProcessorTest {
         String accountRef = "5367025801-1";
         createAccount(accountRef);
 
-        String refId = "txn-a-16";
+        String refId = "txn-a-18";
         PostTransactionRequestPb request = PostTransactionRequestPb.newBuilder().setReferenceId(refId).setDescription("description").addAllEntries(List.of(
                 LedgerEntryPb.newBuilder().setAccountRef("5367025801-1").setDirection(LedgerDirectionPb.LedgerDirection_Debit).setAmount(100).setAssetId("asset-1").build(),
                 LedgerEntryPb.newBuilder().setAccountRef("5367025801-1").setDirection(LedgerDirectionPb.LedgerDirection_Credit).setAmount(100).setAssetId("asset-1").build()

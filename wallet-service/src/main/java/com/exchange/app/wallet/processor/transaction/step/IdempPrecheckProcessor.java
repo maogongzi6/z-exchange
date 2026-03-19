@@ -2,10 +2,7 @@ package com.exchange.app.wallet.processor.transaction.step;
 
 import com.exchange.app.wallet.config.CustomCacheConfig;
 import com.exchange.app.wallet.dao.repository.*;
-import com.exchange.app.wallet.kafka.producer.DefaultPublisher;
-import com.exchange.app.wallet.po.enums.BusinessType;
 import com.exchange.app.wallet.po.enums.ServiceId;
-import com.exchange.app.wallet.po.enums.transaction.TransactionType;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
 import com.exchange.app.wallet.processor.transaction.model.RequestInfo;
 import com.exchange.app.wallet.processor.transaction.util.Constant;
@@ -17,16 +14,13 @@ import com.exchange.common.cache.client.IdempRedisClient;
 import com.exchange.common.cache.utils.CommonIdempHelper;
 import com.exchange.common.cache.utils.IdempValue;
 import com.exchange.common.constant.GlobalServiceId;
-import com.exchange.common.outbox.dao.repository.OutboxRepository;
+import com.exchange.common.utils.JitterHelper;
 import com.exchange.common.utils.result.Result;
-import com.exchange.proto.wallet.common.OperationTypePb;
 import com.exchange.proto.wallet.common.ServiceIdPb;
-import com.exchange.proto.wallet.wallet.TransactionLinePb;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.Objects;
 
@@ -34,7 +28,6 @@ import java.util.Objects;
 @Component
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class IdempPrecheckProcessor {
-    private final TransactionTemplate transactionTemplate;
     private final IdempRedisClient idempRedisClient;
 
     private final CustomCacheConfig.Idemp idempConfig;
@@ -77,7 +70,8 @@ public class IdempPrecheckProcessor {
         if (walletTxn != null) {
             // set idemp to DONE when found wallet txn
             idempRedisClient.markIdempDone(GlobalServiceId.WALLET.code, Constant.SCOPE, requestInfo.idempotenceKey,
-                    String.valueOf(requestInfo.getStableHash()), requestInfo.token, walletTxn.getTxnId(), idempConfig.getDoneTtl());
+                    String.valueOf(requestInfo.getStableHash()), requestInfo.token, walletTxn.getTxnId(),
+                    JitterHelper.jitter(idempConfig.getDoneTtl(), idempConfig.getJitterMs()));
 
             log.info("wallet txn already exists: {}", walletTxn);
             return Results.success(walletTxn.getTxnId(), "wallet txn already exists");
@@ -94,7 +88,8 @@ public class IdempPrecheckProcessor {
         String globalCode = GlobalServiceId.WALLET.code;
         String reqHash = requestInfo.getStableHash();
         String key = CommonIdempHelper.idempKey(globalCode, Constant.SCOPE, requestInfo.idempotenceKey);
-        Boolean success = idempRedisClient.claimIdempIfAbsent(globalCode, Constant.SCOPE, requestInfo.idempotenceKey, reqHash, requestInfo.token, idempConfig.getPendingTtl());
+        Boolean success = idempRedisClient.claimIdempIfAbsent(globalCode, Constant.SCOPE, requestInfo.idempotenceKey,
+                reqHash, requestInfo.token, JitterHelper.jitter(idempConfig.getPendingTtl(), idempConfig.getJitterMs()));
         if (success) {
             return Results.success();
         }

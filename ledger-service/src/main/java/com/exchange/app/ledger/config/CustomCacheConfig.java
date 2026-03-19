@@ -4,6 +4,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.validation.annotation.Validated;
 
+import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.time.Duration;
@@ -21,6 +22,9 @@ public class CustomCacheConfig {
         private Duration pendingTtl;
         @NotNull
         private Duration doneTtl;
+        @Min(1)
+        @NotNull
+        private Integer jitterMs;
     }
 
     @lombok.Data
@@ -34,5 +38,8 @@ public class CustomCacheConfig {
         private Duration dataCacheTtl;
         @NotNull
         private Duration tombstoneTtl;
+        @Min(1)
+        @NotNull
+        private Integer jitterMs;
     }
 }

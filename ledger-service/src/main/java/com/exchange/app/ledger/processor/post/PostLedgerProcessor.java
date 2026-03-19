@@ -16,6 +16,7 @@ import com.exchange.common.cache.utils.CommonIdempHelper;
 import com.exchange.common.cache.utils.IdempValue;
 import com.exchange.common.constant.GlobalServiceId;
 import com.exchange.common.db.utils.DbTransactionHelper;
+import com.exchange.common.utils.JitterHelper;
 import com.exchange.common.utils.StableHashHelper;
 import com.exchange.common.utils.TokenHelper;
 import com.exchange.common.utils.result.Result;
@@ -94,7 +95,8 @@ public class PostLedgerProcessor {
             return onError(req, token, Results.getErrorCode(result), result.errorDetail);
         }
         // set idemp to DONE when found ledger txn
-        idempRedisClient.markIdempDone(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(), getReqStableHash(req), token, txnId, idempConfig.getDoneTtl());
+        idempRedisClient.markIdempDone(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(), getReqStableHash(req),
+                token, txnId, JitterHelper.jitter(idempConfig.getDoneTtl(), idempConfig.getJitterMs()));
 
         return onSuccess(req.getReferenceId(), txnId, "success");
     }
@@ -129,7 +131,8 @@ public class PostLedgerProcessor {
         LedgerTxn txn = ledgerTxnManager.getByRefId(req.getReferenceId());
         if (txn != null) {
             // set idemp to DONE when found ledger txn
-            idempRedisClient.markIdempDone(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(), getReqStableHash(req), token, txn.getTxnId(), idempConfig.getDoneTtl());
+            idempRedisClient.markIdempDone(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(), getReqStableHash(req),
+                    token, txn.getTxnId(), JitterHelper.jitter(idempConfig.getDoneTtl(), idempConfig.getJitterMs()));
             log.info("ledger txn already exists, {}", txn);
             return Results.success(txn.getTxnId());
         }
@@ -138,7 +141,8 @@ public class PostLedgerProcessor {
 
     private Result<IdempValue> claimIdempCacheIfAbsent(PostTransactionRequestPb req, String token) {
         String reqHash = getReqStableHash(req);
-        if (idempRedisClient.claimIdempIfAbsent(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(), reqHash, token, idempConfig.getPendingTtl())) {
+        if (idempRedisClient.claimIdempIfAbsent(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(),
+                reqHash, token, JitterHelper.jitter(idempConfig.getPendingTtl(), idempConfig.getJitterMs()))) {
             return Results.success();
         }
 

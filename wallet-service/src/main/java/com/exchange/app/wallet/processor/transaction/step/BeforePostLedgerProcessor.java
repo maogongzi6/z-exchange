@@ -141,6 +141,7 @@ public class BeforePostLedgerProcessor {
 
         Result<Outbox> outboxResult = createOutboxIfNeeded(walletTxn, actions, requestInfo, needPostLedger);
         if (!outboxResult.success) {
+            releaseIdempBeforeReturnError(requestInfo.idempotenceKey, requestInfo.getStableHash(), requestInfo.token);
             return Results.fail(outboxResult);
         }
         Outbox outbox = outboxResult.value;
@@ -290,8 +291,10 @@ public class BeforePostLedgerProcessor {
     private Result<Outbox> createOutboxIfNeeded(WalletTransaction walletTxn, List<WalletAction> actions, RequestInfo requestInfo, boolean needPostLedger) {
         Outbox outbox = null;
         if (needPostLedger) {
+            List<WalletAction> transferActions = actions.stream()
+                    .filter((action) -> action.getActionType() == ActionType.TRANSFER_IN || action.getActionType() == ActionType.TRANSFER_OUT).collect(Collectors.toList());
+
             List<String> walletIds = actions.stream()
-                    .filter((action) -> action.getActionType() == ActionType.TRANSFER_IN || action.getActionType() == ActionType.TRANSFER_OUT)
                     .map(WalletAction::getWalletId)
                     .distinct()
                     .collect(Collectors.toList());

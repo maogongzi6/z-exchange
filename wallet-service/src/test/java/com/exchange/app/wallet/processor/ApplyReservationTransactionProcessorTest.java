@@ -87,27 +87,18 @@ public class ApplyReservationTransactionProcessorTest {
             throw new RuntimeException();
         }
 
-        String ref = "test-apply-success-" + RandomString.make();
-
-        BalanceSnapshot cnyReserve = balanceSnapshotManager.selectByRefs(ServiceId.USER, List.of(cnyReserveWalletRef)).get(0);
-        TransactionLinePb line;
-        Long cnyEarmark;
-        if (cnyReserve.getReserved() == 20) {
-            line = TransactionLinePb.newBuilder().setWalletRef(cnyReserveWalletRef).setAssetCode(cnyAssetId).setOperationType(OperationTypePb.OperationTypePb_Release).setAmount(20).setReservationRef(reserveCnyRef).build();
-            cnyEarmark = 0L;
-        } else {
-            line = TransactionLinePb.newBuilder().setWalletRef(cnyReserveWalletRef).setAssetCode(cnyAssetId).setOperationType(OperationTypePb.OperationTypePb_Earmark).setAmount(10).setReservationRef(reserveCnyRef).build();
-            cnyEarmark = 10L;
-        }
+        // String ref = "test-apply-success-" + RandomString.make();
+        String ref = "test-apply-success-10";
 
         String finalReserveUsdRef = reserveUsdRef;
+        String finalReserveCnyRef = reserveCnyRef;
         List<TransactionLinePb> lines = new ArrayList<>() {{
             add(TransactionLinePb.newBuilder().setWalletRef(usdReserveWalletRef).setAssetCode(usdAssetId).setOperationType(OperationTypePb.OperationTypePb_Earmark).setAmount(5).setReservationRef(finalReserveUsdRef).build());
-            add(line);
+            add(TransactionLinePb.newBuilder().setWalletRef(cnyReserveWalletRef).setAssetCode(cnyAssetId).setOperationType(OperationTypePb.OperationTypePb_Release).setAmount(20).setReservationRef(finalReserveCnyRef).build());
             add(TransactionLinePb.newBuilder().setWalletRef(usdOutWalletRef).setAssetCode(usdAssetId).setOperationType(OperationTypePb.OperationTypePb_Debit).setAmount(10).build());
             add(TransactionLinePb.newBuilder().setWalletRef(usdInWalletRef).setAssetCode(usdAssetId).setOperationType(OperationTypePb.OperationTypePb_Credit).setAmount(15).build());
             add(TransactionLinePb.newBuilder().setWalletRef(cnyOutWalletRef).setAssetCode(cnyAssetId).setOperationType(OperationTypePb.OperationTypePb_Debit).setAmount(10).build());
-            add(TransactionLinePb.newBuilder().setWalletRef(cnyInWalletRef).setAssetCode(cnyAssetId).setOperationType(OperationTypePb.OperationTypePb_Credit).setAmount(10+cnyEarmark).build());
+            add(TransactionLinePb.newBuilder().setWalletRef(cnyInWalletRef).setAssetCode(cnyAssetId).setOperationType(OperationTypePb.OperationTypePb_Credit).setAmount(10).build());
 
         }};
         ApplyReservationTransactionRequestPb requestPb = ApplyReservationTransactionRequestPb.newBuilder()
@@ -117,8 +108,8 @@ public class ApplyReservationTransactionProcessorTest {
     }
 
     private ReserveTransactionReplyPb reserve() {
-        String ref = "test-reserve-success-" + RandomString.make();
-
+        //String ref = "test-reserve-success-" + RandomString.make();
+        String ref = "test-reserve-success-10";
         List<TransactionLinePb> lines = new ArrayList<>() {{
             add(TransactionLinePb.newBuilder().setWalletRef(usdReserveWalletRef).setAssetCode(usdAssetId).setOperationType(OperationTypePb.OperationTypePb_Reserve).setAmount(20).build());
             add(TransactionLinePb.newBuilder().setWalletRef(cnyReserveWalletRef).setAssetCode(cnyAssetId).setOperationType(OperationTypePb.OperationTypePb_Reserve).setAmount(40).build());
