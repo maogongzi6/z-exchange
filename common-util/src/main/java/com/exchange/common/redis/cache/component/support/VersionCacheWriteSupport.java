@@ -1,6 +1,8 @@
 package com.exchange.common.redis.cache.component.support;
 
 import com.exchange.common.exception.CacheParseException;
+import com.exchange.common.redis.BaseRedisSupport;
+import com.exchange.common.redis.cache.component.parser.VersionParser;
 import com.exchange.common.redis.cache.constant.CacheType;
 import com.exchange.common.redis.cache.impl.VersionCacheEncoder;
 import com.exchange.common.utils.result.CommonErrorCode;
@@ -22,13 +24,19 @@ import java.time.Duration;
 import java.util.Collections;
 
 @Slf4j
-@RequiredArgsConstructor
-public class VersionCacheWriteSupport {
+public class VersionCacheWriteSupport extends CacheReadSupport {
     private final VersionCacheEncoder cacheEncoder;
     private final ResourceLoader resourceLoader;
     private final RedissonClient redissonClient;
 
     private String setIfAbsentOrNewScript;
+
+    public VersionCacheWriteSupport(BaseRedisSupport<String> baseRedisSupport, VersionParser versionParser, ResourceLoader resourceLoader, RedissonClient redissonClient) {
+        super(versionParser, baseRedisSupport);
+        this.cacheEncoder = versionParser;
+        this.resourceLoader = resourceLoader;
+        this.redissonClient = redissonClient;
+    }
 
     @PostConstruct
     private void loadScript() {

@@ -4,8 +4,7 @@ import com.exchange.common.redis.BaseRedisSupport;
 import com.exchange.common.redis.cache.client.*;
 import com.exchange.common.redis.cache.component.parser.ValueParser;
 import com.exchange.common.redis.cache.component.parser.VersionParser;
-import com.exchange.common.redis.cache.component.support.CacheReadSupport;
-import com.exchange.common.redis.cache.component.support.CacheWriteSupport;
+import com.exchange.common.redis.cache.component.support.SimpleCacheSupport;
 import com.exchange.common.redis.cache.component.support.VersionCacheWriteSupport;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -22,41 +21,27 @@ public class RedisCacheRegister {
     }
 
     @Bean
+    public SimpleCacheSupport simpleCacheSupport(BaseRedisSupport<String> baseRedisSupport, ValueParser valueParseHelper) {
+        return new SimpleCacheSupport(valueParseHelper, baseRedisSupport);
+    }
+
+    @Bean
     public StringRedisClient cacheRedisClient(
             BaseRedisSupport<String> baseRedisSupport,
-            @Qualifier("simpleCacheReadSupport") CacheReadSupport cacheReadSupport,
-            CacheWriteSupport cacheWriteSupport
-            ) {
-        return new StringRedisClient(baseRedisSupport, cacheReadSupport, cacheWriteSupport);
+            SimpleCacheSupport simpleCacheSupport) {
+        return new StringRedisClient(baseRedisSupport, simpleCacheSupport);
     }
 
     @Bean
-    public VersionCacheWriteSupport versionCacheWriteSupport(VersionParser versionHelper, RedissonClient redissonClient, ResourceLoader resourceLoader) {
-        return new VersionCacheWriteSupport(versionHelper, resourceLoader, redissonClient);
+    public VersionCacheWriteSupport versionCacheWriteSupport(BaseRedisSupport<String> baseRedisSupport, VersionParser versionHelper, RedissonClient redissonClient, ResourceLoader resourceLoader) {
+        return new VersionCacheWriteSupport(baseRedisSupport, versionHelper, resourceLoader, redissonClient);
     }
-
-    @Bean(name = "versionCacheReadSupport")
-    public CacheReadSupport versionCacheReadSupport(BaseRedisSupport<String> baseRedisSupport, VersionParser versionHelper) {
-        return new CacheReadSupport(versionHelper, baseRedisSupport);
-    }
-
-    @Bean
-    public CacheWriteSupport simpleCacheWriteSupport(BaseRedisSupport<String> baseRedisSupport, ValueParser valueParseHelper) {
-        return new CacheWriteSupport(valueParseHelper, baseRedisSupport);
-    }
-
-    @Bean(name = "simpleCacheReadSupport")
-    public CacheReadSupport simpleCacheReadSupport(BaseRedisSupport<String> baseRedisSupport, ValueParser valueParseHelper) {
-        return new CacheReadSupport(valueParseHelper, baseRedisSupport);
-    }
-
 
     @Bean
     public VersionJsonRedisClient versionJsonRedisClient(
             BaseRedisSupport<String> baseRedisSupport,
-            @Qualifier("versionCacheReadSupport") CacheReadSupport cacheReadSupport,
             VersionCacheWriteSupport versionCacheWriteSupport) {
-        return new VersionJsonRedisClient(baseRedisSupport, cacheReadSupport, versionCacheWriteSupport);
+        return new VersionJsonRedisClient(baseRedisSupport, versionCacheWriteSupport);
     }
 }
 

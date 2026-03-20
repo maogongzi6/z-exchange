@@ -13,9 +13,9 @@ import lombok.extern.slf4j.Slf4j;
 // TODO self-recover config
 @Slf4j
 @RequiredArgsConstructor
-public class CacheReadSupport {
+abstract class CacheReadSupport {
     private final CacheDecoder cacheDecoder;
-    private final BaseRedisSupport<String> baseRedisSupport;
+    protected final BaseRedisSupport<String> baseRedisSupport;
 
     public <T> Result<CacheValueInfo<T>> get(String key, Class<T> clazz) {
         String value = baseRedisSupport.get(key);

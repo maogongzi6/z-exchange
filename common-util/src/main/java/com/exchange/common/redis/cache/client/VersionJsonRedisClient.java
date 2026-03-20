@@ -1,7 +1,6 @@
 package com.exchange.common.redis.cache.client;
 
 import com.exchange.common.redis.BaseRedisSupport;
-import com.exchange.common.redis.cache.component.support.CacheReadSupport;
 import com.exchange.common.redis.cache.component.support.VersionCacheWriteSupport;
 import com.exchange.common.redis.cache.model.CacheValueInfo;
 import com.exchange.common.utils.result.Result;
@@ -14,11 +13,10 @@ import java.time.Duration;
 @RequiredArgsConstructor
 public class VersionJsonRedisClient {
     private final BaseRedisSupport<String> baseRedisSupport;
-    private final CacheReadSupport cacheReadSupport;
     private final VersionCacheWriteSupport versionCacheWriteSupport;
 
     public <T> Result<CacheValueInfo<T>> get(String key, Class<T> clazz) {
-        return cacheReadSupport.get(key, clazz);
+        return versionCacheWriteSupport.get(key, clazz);
     }
 
     public <T> Result<Boolean> setIfAbsentOrNewer(String key, T value, long newVersion, Duration ttl) {
