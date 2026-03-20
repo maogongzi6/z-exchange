@@ -1,6 +1,7 @@
 package com.exchange.common.cache.client;
 
-import com.exchange.common.cache.utils.CommonIdempHelper;
+import com.exchange.common.redis.idemp.IdempRedisClient;
+import com.exchange.common.redis.idemp.utils.CommonIdempHelper;
 import com.exchange.common.utils.result.Result;
 import org.junit.jupiter.api.*;
 import org.redisson.api.RedissonClient;

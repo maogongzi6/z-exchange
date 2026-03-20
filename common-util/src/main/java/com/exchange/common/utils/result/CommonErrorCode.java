@@ -5,10 +5,12 @@ import com.exchange.proto.common.error.ErrorCodePb;
 public enum CommonErrorCode implements PbMappableErrorCode{
     SUCCESS(0,ErrorCodePb.ERROR_OK, "success"),
     // common-util always return ErrorCodePb.ERROR_INTERNAL, service should convert it to specific code
-    INVALID_IDEMP_KEY(-1, ErrorCodePb.ERROR_INTERNAL, "invalid_idemp_key"),
-    INVALID_IDEMP_VALUE(-2, ErrorCodePb.ERROR_INTERNAL, "invalid_idemp_value"),
+    LUA_SCRIPT_EXECUTE_ERROR(-100, ErrorCodePb.ERROR_INTERNAL, "lua_script_execute_error"),
+    INVALID_IDEMP_KEY(-1000, ErrorCodePb.ERROR_INTERNAL, "invalid_idemp_key"),
+    INVALID_IDEMP_VALUE(-1001, ErrorCodePb.ERROR_INTERNAL, "invalid_idemp_value"),
+    PARSE_CACHE_ERROR(-1100, ErrorCodePb.ERROR_INTERNAL, "parse_cache_error"),
+
     INVALID_VERSIONED_CACHE_VALUE(-3, ErrorCodePb.ERROR_INTERNAL, "invalid_versioned_cache_value"),
-    LUA_SCRIPT_EXECUTE_ERROR(-10, ErrorCodePb.ERROR_INTERNAL, "lua_script_execute_error"),
 
     ;
 

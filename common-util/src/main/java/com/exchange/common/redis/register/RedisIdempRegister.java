@@ -1,7 +1,7 @@
-package com.exchange.common.cache.register;
+package com.exchange.common.redis.register;
 
-import com.exchange.common.cache.client.BaseRedisSupport;
-import com.exchange.common.cache.client.IdempRedisClient;
+import com.exchange.common.redis.BaseRedisSupport;
+import com.exchange.common.redis.idemp.IdempRedisClient;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;

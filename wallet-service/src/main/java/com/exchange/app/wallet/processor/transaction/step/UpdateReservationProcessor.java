@@ -1,20 +1,15 @@
 package com.exchange.app.wallet.processor.transaction.step;
 
-import com.exchange.app.wallet.config.CustomCacheConfig;
 import com.exchange.app.wallet.dao.repository.*;
-import com.exchange.app.wallet.kafka.producer.DefaultPublisher;
 import com.exchange.app.wallet.po.transaction.WalletReservation;
 import com.exchange.app.wallet.result.ErrorCode;
 import com.exchange.app.wallet.result.Results;
-import com.exchange.common.cache.client.IdempRedisClient;
-import com.exchange.common.outbox.dao.repository.OutboxRepository;
 import com.exchange.common.utils.result.Result;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 import java.util.Objects;

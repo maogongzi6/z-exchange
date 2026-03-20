@@ -15,7 +15,7 @@ import com.exchange.app.wallet.processor.transaction.model.TransactionInfo;
 import com.exchange.app.wallet.processor.transaction.util.ValidateHelper;
 import com.exchange.app.wallet.result.ErrorCode;
 import com.exchange.app.wallet.result.Results;
-import com.exchange.common.cache.client.IdempRedisClient;
+import com.exchange.common.redis.idemp.IdempRedisClient;
 import com.exchange.common.db.utils.DbTransactionHelper;
 import com.exchange.common.outbox.dao.repository.OutboxRepository;
 import com.exchange.common.utils.result.Result;

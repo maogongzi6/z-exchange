@@ -1,8 +1,7 @@
 package com.exchange.app.wallet;
 
-import com.exchange.common.cache.register.RedisCacheRegister;
-import com.exchange.common.cache.register.RedisIdempRegister;
-import com.exchange.common.db.handler.AutofillMetaObjectHandler;
+import com.exchange.common.redis.register.RedisCacheRegister;
+import com.exchange.common.redis.register.RedisIdempRegister;
 import com.exchange.common.db.register.CommonDbComponentRegister;
 import org.mybatis.spring.annotation.MapperScan;
 import org.mybatis.spring.annotation.MapperScans;

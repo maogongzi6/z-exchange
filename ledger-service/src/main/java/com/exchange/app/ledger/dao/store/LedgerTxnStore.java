@@ -5,14 +5,14 @@ import com.exchange.app.ledger.constant.cache.CacheScope;
 import com.exchange.app.ledger.dao.repository.LedgerTxnRepository;
 import com.exchange.app.ledger.po.ledger.LedgerTxn;
 import com.exchange.app.ledger.result.Results;
-import com.exchange.common.cache.client.CacheRedisClient;
-import com.exchange.common.cache.client.JsonVersionedCacheRedisClient;
+import com.exchange.common.redis.cache.client.StringRedisClient;
+import com.exchange.common.redis.cache.client.VersionJsonRedisClient;
+import com.exchange.common.redis.cache.helper.CacheValueInfo;
 import com.exchange.common.utils.JitterHelper;
 import com.exchange.common.utils.result.CommonErrorCode;
 import com.exchange.common.utils.result.Result;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -20,10 +20,10 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class LedgerTxnStore {
-    private final JsonVersionedCacheRedisClient versionedCacheRedisClient;
+    private final VersionJsonRedisClient versionedCacheRedisClient;
     private final LedgerTxnRepository ledgerTxnRepository;
     private final CustomCacheConfig.Data dataCacheConfig;
-    private final CacheRedisClient<String> cacheRedisClient;
+    private final StringRedisClient cacheRedisClient;
 
     // ledger txn is rarely modified, using a version CAS cache here is like overkill
     // in fact, I'm testing version CAS cache in the ledger txn query,
@@ -35,18 +35,20 @@ public class LedgerTxnStore {
         // txn id is usually got from our service and used internally,
         // which means it is low risky to be attacked, and querying non-existed txn is also rare
         // Therefore, do not set negative value (NULL) when cache misses.
-        Result<LedgerTxn> cacheResult = versionedCacheRedisClient.get(cacheKey, LedgerTxn.class);
+        Result<CacheValueInfo<LedgerTxn>> cacheResult = versionedCacheRedisClient.get(cacheKey, LedgerTxn.class);
         if (!cacheResult.success) {
             // cache error should not block the main flow
             log.error("cache get failed, txn_id: {}, result: {}", txnId, cacheResult);
-            if (Results.is(cacheResult, CommonErrorCode.INVALID_VERSIONED_CACHE_VALUE)) {
+            if (Results.is(cacheResult, CommonErrorCode.PARSE_CACHE_ERROR)) {
                 // delete the abnormal value to fast recover
                 log.error("invalid cache value, delete to fast recover, txn_id: {}, result: {}", txnId, cacheResult);
                 versionedCacheRedisClient.delete(cacheKey);
             }
         }
-        if (cacheResult.success && cacheResult.value != null) {
-            return cacheResult;
+
+        LedgerTxn cachedLedger = CacheValueInfo.getValidValue(cacheResult.value);
+        if (cacheResult.success && cachedLedger != null) {
+            return Results.success(cachedLedger);
         }
 
         // cache miss, query db
@@ -73,9 +75,10 @@ public class LedgerTxnStore {
     // no race condition for ref_id -> txn_id cache, ref_id is stable in our system
     public Result<LedgerTxn> getByRefId(String refId) {
         String refKey = CacheScope.ledgerRefIdKey(refId);
-        String txnId = cacheRedisClient.get(refKey);
+        Result<CacheValueInfo<String>> refCacheResult = cacheRedisClient.get(refKey);
+        String txnId = CacheValueInfo.getValidValue(refCacheResult.value);
         LedgerTxn txn;
-        if (!Strings.isEmpty(txnId)) {
+        if (refCacheResult.success && txnId != null) {
             Result<LedgerTxn> txnResult = getByTxnId(txnId);
             if (!txnResult.success) {
                 log.error("load txn failed, ref_id: {}, txn_id: {}, result: {}", refId, txnId, txnResult);
@@ -87,8 +90,11 @@ public class LedgerTxnStore {
         txn = ledgerTxnRepository.getByRefId(refId);
         if (txn != null) {
             String txnIdKey = CacheScope.ledgerTxnIdKey(txn.getTxnId());
-            cacheRedisClient.set(refKey, txn.getTxnId(),
+            Result<Void> setRefCacheResult = cacheRedisClient.set(refKey, txn.getTxnId(),
                     JitterHelper.jitter(dataCacheConfig.getIndexCacheTtl(), dataCacheConfig.getJitterMs()));
+            if (!setRefCacheResult.success) {
+                log.error("set ref cache failed, ref_key: {}, txn_id: {}, txn: {}", refKey, txnId, setRefCacheResult);
+            }
             Result<Boolean> setCacheResult = versionedCacheRedisClient.setIfAbsentOrNewer(txnIdKey, txn, txn.getVersion(),
                     JitterHelper.jitter(dataCacheConfig.getDataCacheTtl(), dataCacheConfig.getJitterMs()));
             if (!setCacheResult.success) {

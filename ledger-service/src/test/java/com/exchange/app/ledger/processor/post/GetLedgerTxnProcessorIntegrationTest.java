@@ -32,14 +32,16 @@ public class GetLedgerTxnProcessorIntegrationTest {
     @Autowired
     private LedgerEntryMapper ledgerEntryMapper;
 
-    String id = "FIXED_ID_1";
+    String id = "FIXED_ID_11";
+    @Autowired
+    private LedgerTxnStore ledgerTxnStore;
 
     @Test
     void shouldReturnSuccessWhenLookupByTxnIdAndIncludeEntries() throws InterruptedException {
 
         // Arrange
-        String txnId = "TXN_TEST_" + System.currentTimeMillis() + "_" + Math.random();
-        //String txnId = id;
+        //String txnId = "TXN_TEST_" + System.currentTimeMillis() + "_" + Math.random();
+        String txnId = id;
         String refId = "REF_TEST_" + System.currentTimeMillis() + "_" + Math.random();
         ledgerTxnMapper.delete(Wrappers.<LedgerTxn>lambdaQuery().eq(LedgerTxn::getTxnId, txnId));
         LedgerTxn txn = LedgerTxn.create(txnId, refId, "{\"k\":\"v\"}");
@@ -64,6 +66,14 @@ public class GetLedgerTxnProcessorIntegrationTest {
 
         assertThat(info.entries).isNotNull();
         assertThat(info.entries).isNotEmpty();
+
+        // update to set tombstone
+        result.value.txn.setMetadata("{\"k\":\"updated\"}");
+        ledgerTxnStore.updateMetadataByPk(result.value.txn);
+
+        // get again, check and load cache
+        result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.TXN_ID, txnId, true);
+
     }
 
     @Test
@@ -71,8 +81,8 @@ public class GetLedgerTxnProcessorIntegrationTest {
         // Arrange
         //String refId = "REF_TEST_" + System.currentTimeMillis(); // unique reference ID
         //        String txnId = "TXN_TEST_" + System.currentTimeMillis(); // unique transaction ID
-        String refId = "FIXED_REF_TEST_2";
-        String txnId = "FIXED_TXN_TEST_2";
+        String refId = "FIXED_REF_TEST_12";
+        String txnId = "FIXED_TXN_TEST_12";
         ledgerTxnMapper.delete(Wrappers.<LedgerTxn>lambdaQuery().eq(LedgerTxn::getTxnId, txnId));
         LedgerTxn txn = LedgerTxn.create(txnId, refId, "{\"k\":\"v\"}");
         ledgerTxnRepository.insertIgnore(txn);
@@ -100,6 +110,13 @@ public class GetLedgerTxnProcessorIntegrationTest {
 
         assertThat(info.entries).isNotNull();
         assertThat(info.entries).hasSize(5);
+
+        // update to set tombstone
+        result.value.txn.setMetadata("{\"k\":\"updated\"}");
+        ledgerTxnStore.updateMetadataByPk(result.value.txn);
+
+        // Act
+        result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.REF_ID, refId, true);
     }
 
 }

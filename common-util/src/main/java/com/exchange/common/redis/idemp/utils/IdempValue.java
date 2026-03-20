@@ -1,6 +1,6 @@
-package com.exchange.common.cache.utils;
+package com.exchange.common.redis.idemp.utils;
 
-import com.exchange.common.cache.constant.CommonIdempStatus;
+import com.exchange.common.redis.idemp.constant.CommonIdempStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 

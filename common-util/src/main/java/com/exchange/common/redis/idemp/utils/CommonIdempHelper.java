@@ -1,10 +1,9 @@
-package com.exchange.common.cache.utils;
+package com.exchange.common.redis.idemp.utils;
 
-import com.exchange.common.cache.constant.CommonIdempStatus;
+import com.exchange.common.redis.idemp.constant.CommonIdempStatus;
 import com.exchange.common.utils.result.CommonErrorCode;
 import com.exchange.common.utils.result.Result;
 import com.exchange.common.utils.result.Results;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
 

@@ -1,7 +1,8 @@
-package com.exchange.common.cache.client;
+package com.exchange.common.redis.idemp;
 
-import com.exchange.common.cache.constant.CommonIdempStatus;
-import com.exchange.common.cache.utils.CommonIdempHelper;
+import com.exchange.common.redis.BaseRedisSupport;
+import com.exchange.common.redis.idemp.constant.CommonIdempStatus;
+import com.exchange.common.redis.idemp.utils.CommonIdempHelper;
 import com.exchange.common.utils.result.Result;
 import com.exchange.common.utils.result.Results;
 import lombok.RequiredArgsConstructor;

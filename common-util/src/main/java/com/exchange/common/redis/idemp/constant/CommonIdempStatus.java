@@ -1,4 +1,4 @@
-package com.exchange.common.cache.constant;
+package com.exchange.common.redis.idemp.constant;
 
 public enum CommonIdempStatus {
     UNKNOWN(0, "UNKNOWN"),
