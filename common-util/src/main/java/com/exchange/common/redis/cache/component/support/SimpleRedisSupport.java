@@ -4,7 +4,7 @@ import com.exchange.common.exception.CacheParseException;
 import com.exchange.common.redis.BaseRedisSupport;
 import com.exchange.common.redis.cache.component.parser.ValueParser;
 import com.exchange.common.redis.cache.constant.CacheType;
-import com.exchange.common.redis.cache.impl.CacheEncoder;
+import com.exchange.common.redis.cache.component.impl.CacheEncoder;
 import com.exchange.common.utils.result.CommonErrorCode;
 import com.exchange.common.utils.result.Result;
 import com.exchange.common.utils.result.Results;
@@ -13,10 +13,10 @@ import lombok.extern.slf4j.Slf4j;
 import java.time.Duration;
 
 @Slf4j
-public class SimpleCacheSupport extends CacheReadSupport {
+public class SimpleRedisSupport extends ReadRedisSupport {
     private final CacheEncoder cacheEncoder;
 
-    public SimpleCacheSupport(ValueParser valueParser, BaseRedisSupport<String> baseRedisSupport) {
+    public SimpleRedisSupport(ValueParser valueParser, BaseRedisSupport<String> baseRedisSupport) {
         super(valueParser, baseRedisSupport);
         this.cacheEncoder = valueParser;
     }

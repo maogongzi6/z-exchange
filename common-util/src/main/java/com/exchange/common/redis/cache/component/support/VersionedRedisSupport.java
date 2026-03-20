@@ -4,11 +4,10 @@ import com.exchange.common.exception.CacheParseException;
 import com.exchange.common.redis.BaseRedisSupport;
 import com.exchange.common.redis.cache.component.parser.VersionParser;
 import com.exchange.common.redis.cache.constant.CacheType;
-import com.exchange.common.redis.cache.impl.VersionCacheEncoder;
+import com.exchange.common.redis.cache.component.impl.VersionCacheEncoder;
 import com.exchange.common.utils.result.CommonErrorCode;
 import com.exchange.common.utils.result.Result;
 import com.exchange.common.utils.result.Results;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RScript;
 import org.redisson.api.RedissonClient;
@@ -24,14 +23,14 @@ import java.time.Duration;
 import java.util.Collections;
 
 @Slf4j
-public class VersionCacheWriteSupport extends CacheReadSupport {
+public class VersionedRedisSupport extends ReadRedisSupport {
     private final VersionCacheEncoder cacheEncoder;
     private final ResourceLoader resourceLoader;
     private final RedissonClient redissonClient;
 
     private String setIfAbsentOrNewScript;
 
-    public VersionCacheWriteSupport(BaseRedisSupport<String> baseRedisSupport, VersionParser versionParser, ResourceLoader resourceLoader, RedissonClient redissonClient) {
+    public VersionedRedisSupport(BaseRedisSupport<String> baseRedisSupport, VersionParser versionParser, ResourceLoader resourceLoader, RedissonClient redissonClient) {
         super(versionParser, baseRedisSupport);
         this.cacheEncoder = versionParser;
         this.resourceLoader = resourceLoader;
