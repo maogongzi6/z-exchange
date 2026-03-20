@@ -19,7 +19,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
                 "com.exchange.app.ledger",
                 "com.exchange.common.outbox",
                 "com.exchange.common.kafka",
-                "com.exchange.common.redis.cache.helper",
+                "com.exchange.common.redis.cache.component",
                 "com.exchange.common.component"
         },
         scanBasePackageClasses = {CommonDbComponentRegister.class, RedisCacheRegister.class, RedisIdempRegister.class})

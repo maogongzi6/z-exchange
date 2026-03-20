@@ -1,4 +1,4 @@
-package com.exchange.common.redis.cache.client;
+package com.exchange.common.redis.cache.component.support;
 
 import com.exchange.common.exception.CacheParseException;
 import com.exchange.common.redis.cache.constant.CacheType;
@@ -11,10 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RScript;
 import org.redisson.api.RedissonClient;
 import org.redisson.client.codec.StringCodec;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
-import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;

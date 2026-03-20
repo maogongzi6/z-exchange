@@ -1,6 +1,7 @@
-package com.exchange.common.redis.cache.helper;
+package com.exchange.common.redis.cache.component.parser;
 
 import com.exchange.common.exception.JsonParseException;
+import com.exchange.common.redis.cache.model.CacheValueInfo;
 import com.exchange.common.redis.cache.constant.CacheType;
 import com.exchange.common.component.JsonParser;
 import com.exchange.common.exception.CacheParseException;
@@ -19,7 +20,7 @@ import java.util.Objects;
 @Slf4j
 @Component
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
-public class ValueParseHelper implements CacheEncoder, CacheDecoder {
+public class ValueParser implements CacheEncoder, CacheDecoder {
     final private JsonParser jsonHelper;
 
     public <T> String encode(T value, CacheType cacheType) throws CacheParseException {

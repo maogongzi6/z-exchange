@@ -7,7 +7,7 @@ import com.exchange.app.ledger.po.ledger.LedgerTxn;
 import com.exchange.app.ledger.result.Results;
 import com.exchange.common.redis.cache.client.StringRedisClient;
 import com.exchange.common.redis.cache.client.VersionJsonRedisClient;
-import com.exchange.common.redis.cache.helper.CacheValueInfo;
+import com.exchange.common.redis.cache.model.CacheValueInfo;
 import com.exchange.common.utils.JitterHelper;
 import com.exchange.common.utils.result.CommonErrorCode;
 import com.exchange.common.utils.result.Result;

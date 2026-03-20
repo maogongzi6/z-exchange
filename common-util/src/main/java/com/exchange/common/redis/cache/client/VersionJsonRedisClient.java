@@ -1,21 +1,18 @@
 package com.exchange.common.redis.cache.client;
 
 import com.exchange.common.redis.BaseRedisSupport;
-import com.exchange.common.redis.cache.helper.CacheValueInfo;
+import com.exchange.common.redis.cache.component.support.CacheReadSupport;
+import com.exchange.common.redis.cache.component.support.VersionCacheWriteSupport;
+import com.exchange.common.redis.cache.model.CacheValueInfo;
 import com.exchange.common.utils.result.Result;
-import com.exchange.common.utils.result.Results;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.redisson.api.RScript;
-import org.redisson.client.codec.StringCodec;
 
 import java.time.Duration;
-import java.util.Collections;
 
 @Slf4j
 @RequiredArgsConstructor
 public class VersionJsonRedisClient {
-    // value should always be a string in the format of "{version|...}"
     private final BaseRedisSupport<String> baseRedisSupport;
     private final CacheReadSupport cacheReadSupport;
     private final VersionCacheWriteSupport versionCacheWriteSupport;

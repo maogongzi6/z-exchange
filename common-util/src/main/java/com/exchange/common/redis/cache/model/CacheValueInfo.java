@@ -1,4 +1,4 @@
-package com.exchange.common.redis.cache.helper;
+package com.exchange.common.redis.cache.model;
 
 import com.exchange.common.redis.cache.constant.CacheType;
 import lombok.AllArgsConstructor;

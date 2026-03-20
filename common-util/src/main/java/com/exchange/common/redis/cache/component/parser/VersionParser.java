@@ -1,7 +1,8 @@
-package com.exchange.common.redis.cache.helper;
+package com.exchange.common.redis.cache.component.parser;
 
 import com.exchange.common.exception.CacheParseException;
 import com.exchange.common.exception.VersionedCacheParseException;
+import com.exchange.common.redis.cache.model.CacheValueInfo;
 import com.exchange.common.redis.cache.constant.CacheType;
 import com.exchange.common.redis.cache.impl.CacheDecoder;
 import com.exchange.common.redis.cache.impl.VersionCacheEncoder;
@@ -16,8 +17,8 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
-public class VersionHelper implements VersionCacheEncoder, CacheDecoder {
-    private final ValueParseHelper valueParseHelper;
+public class VersionParser implements VersionCacheEncoder, CacheDecoder {
+    private final ValueParser valueParseHelper;
 
     public <T> String encode(T value, CacheType cacheType, long version) throws CacheParseException {
         if (ValidateHelper.isEmpty(value)) {

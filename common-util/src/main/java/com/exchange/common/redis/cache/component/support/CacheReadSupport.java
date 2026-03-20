@@ -1,20 +1,17 @@
-package com.exchange.common.redis.cache.client;
+package com.exchange.common.redis.cache.component.support;
 
 import com.exchange.common.exception.CacheParseException;
 import com.exchange.common.redis.BaseRedisSupport;
-import com.exchange.common.redis.cache.helper.CacheValueInfo;
+import com.exchange.common.redis.cache.model.CacheValueInfo;
 import com.exchange.common.redis.cache.impl.CacheDecoder;
 import com.exchange.common.utils.result.CommonErrorCode;
 import com.exchange.common.utils.result.Result;
 import com.exchange.common.utils.result.Results;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 // TODO self-recover config
 @Slf4j
-@Component
 @RequiredArgsConstructor
 public class CacheReadSupport {
     private final CacheDecoder cacheDecoder;

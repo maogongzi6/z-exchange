@@ -1,4 +1,4 @@
-package com.exchange.common.redis.cache.client;
+package com.exchange.common.redis.cache.component.support;
 
 import com.exchange.common.exception.CacheParseException;
 import com.exchange.common.redis.BaseRedisSupport;
@@ -9,13 +9,10 @@ import com.exchange.common.utils.result.Result;
 import com.exchange.common.utils.result.Results;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 
 @Slf4j
-@Component
 @RequiredArgsConstructor
 public class CacheWriteSupport {
     private final CacheEncoder cacheEncoder;
