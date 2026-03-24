@@ -2,7 +2,7 @@ package com.exchange.common.redis.cache.component.support;
 
 import com.exchange.common.exception.CacheParseException;
 import com.exchange.common.redis.BaseRedisSupport;
-import com.exchange.common.redis.cache.component.parser.VersionParser;
+import com.exchange.common.redis.cache.component.codec.VersionCodec;
 import com.exchange.common.redis.cache.constant.CacheType;
 import com.exchange.common.redis.cache.component.impl.VersionCacheEncoder;
 import com.exchange.common.utils.result.CommonErrorCode;
@@ -30,9 +30,9 @@ public class VersionedRedisSupport extends ReadRedisSupport {
 
     private String setIfAbsentOrNewScript;
 
-    public VersionedRedisSupport(BaseRedisSupport<String> baseRedisSupport, VersionParser versionParser, ResourceLoader resourceLoader, RedissonClient redissonClient) {
-        super(versionParser, baseRedisSupport);
-        this.cacheEncoder = versionParser;
+    public VersionedRedisSupport(BaseRedisSupport<String> baseRedisSupport, VersionCodec versionCodec, ResourceLoader resourceLoader, RedissonClient redissonClient) {
+        super(versionCodec, baseRedisSupport);
+        this.cacheEncoder = versionCodec;
         this.resourceLoader = resourceLoader;
         this.redissonClient = redissonClient;
     }
@@ -60,11 +60,11 @@ public class VersionedRedisSupport extends ReadRedisSupport {
     }
 
     public Result<Boolean> setTombstone(String key, long newVersion, Duration ttl) {
-        return doSetIfAbsentOrNewer(key, CacheType.PLACEHOLDER, CacheType.TOMBSTONE, newVersion, ttl);
+        return doSetIfAbsentOrNewer(key, "", CacheType.TOMBSTONE, newVersion, ttl);
     }
 
     public Result<Boolean> setNegative(String key, long newVersion, Duration ttl) {
-        return doSetIfAbsentOrNewer(key, CacheType.PLACEHOLDER, CacheType.NEGATIVE, newVersion, ttl);
+        return doSetIfAbsentOrNewer(key, "", CacheType.NEGATIVE, newVersion, ttl);
     }
 
     private <T> Result<Boolean> doSetIfAbsentOrNewer(String key, T value, CacheType cacheType, long newVersion, Duration ttl) {

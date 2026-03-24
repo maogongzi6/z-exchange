@@ -1,4 +1,4 @@
-package com.exchange.common.redis.cache.component.parser;
+package com.exchange.common.redis.cache.component.codec;
 
 import com.exchange.common.exception.CacheParseException;
 import com.exchange.common.exception.VersionedCacheParseException;
@@ -6,6 +6,7 @@ import com.exchange.common.redis.cache.model.CacheValueInfo;
 import com.exchange.common.redis.cache.constant.CacheType;
 import com.exchange.common.redis.cache.component.impl.CacheDecoder;
 import com.exchange.common.redis.cache.component.impl.VersionCacheEncoder;
+import com.exchange.common.redis.cache.util.CacheContentValidator;
 import com.exchange.common.utils.StringHelper;
 import com.exchange.common.utils.ValidateHelper;
 import lombok.RequiredArgsConstructor;
@@ -17,19 +18,19 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
-public class VersionParser implements VersionCacheEncoder, CacheDecoder {
-    private final ValueParser valueParseHelper;
+public class VersionCodec implements VersionCacheEncoder, CacheDecoder {
+    private final ValueCodec valueParseHelper;
 
-    public <T> String encode(T value, CacheType cacheType, long version) throws CacheParseException {
-        if (ValidateHelper.isEmpty(value)) {
-            log.error("encode exception, empty value");
-            throw new VersionedCacheParseException("Empty value");
+    public <T> String encode(T content, CacheType cacheType, long version) throws CacheParseException {
+        if (!CacheContentValidator.validateContent(content, cacheType)) {
+            log.error("encode exception, empty content");
+            throw new VersionedCacheParseException("Empty content");
         }
         if (version < 0) {
             log.error("encode exception, version is negative, version is {}", version);
             throw new VersionedCacheParseException("Negative version");
         }
-        String encoded = valueParseHelper.encode(value, cacheType);
+        String encoded = valueParseHelper.encode(content, cacheType);
         return String.format("%d|%s", version, encoded);
     }
 

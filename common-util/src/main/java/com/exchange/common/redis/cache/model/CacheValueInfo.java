@@ -3,6 +3,7 @@ package com.exchange.common.redis.cache.model;
 import com.exchange.common.redis.cache.constant.CacheType;
 import lombok.AllArgsConstructor;
 
+// TODO add a cache specific Result type CacheResult
 @AllArgsConstructor
 public class CacheValueInfo<T> {
     public final T value;
@@ -23,5 +24,18 @@ public class CacheValueInfo<T> {
             return null;
         }
         return info.value;
+    }
+
+    public static boolean isNegative(CacheValueInfo<?> info) {
+        return info != null && info.cacheType == CacheType.NEGATIVE;
+    }
+
+    // return true if hit a valid cache or a negative cache
+    // return false if info is null or hit a tombstone
+    public static boolean ifCacheHit(CacheValueInfo<?> info) {
+        if (info == null || info.cacheType == CacheType.TOMBSTONE) {
+            return false;
+        }
+        return info.cacheType == CacheType.NEGATIVE || info.value != null;
     }
 }

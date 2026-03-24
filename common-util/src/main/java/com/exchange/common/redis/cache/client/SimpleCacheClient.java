@@ -20,6 +20,10 @@ public class SimpleCacheClient implements CacheReader {
         return simpleRedisSupport.set(key, value, ttl.afterJitter());
     }
 
+    public Result<Void> setNegative(String key, TtlStrategy ttl) {
+        return simpleRedisSupport.setNegative(key, ttl.afterJitter());
+    }
+
     public Boolean delete(String key) {
         return baseRedisSupport.delete(key);
     }

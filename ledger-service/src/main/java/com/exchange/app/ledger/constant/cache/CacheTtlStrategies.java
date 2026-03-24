@@ -16,6 +16,7 @@ public class CacheTtlStrategies {
     private TtlStrategy ledgerTxnStrategy;
     private TtlStrategy ledgerRefStrategy;
     private TtlStrategy tombstoneStrategy;
+    private TtlStrategy negativeStrategy;
 
     CacheTtlStrategies(CustomCacheConfig.Data dataConfig) {
         this.dataConfig = dataConfig;
@@ -26,5 +27,6 @@ public class CacheTtlStrategies {
         ledgerTxnStrategy = new TtlStrategy(dataConfig.getDataCacheTtl(), dataConfig.getJitter());
         ledgerRefStrategy = new TtlStrategy(dataConfig.getIndexCacheTtl(), dataConfig.getJitter());
         tombstoneStrategy = new TtlStrategy(dataConfig.getTombstoneTtl(), dataConfig.getJitter());
+        negativeStrategy = new TtlStrategy(dataConfig.getNegativeTtl(), dataConfig.getJitter());
     }
 }

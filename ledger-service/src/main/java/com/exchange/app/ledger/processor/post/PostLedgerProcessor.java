@@ -3,6 +3,7 @@ package com.exchange.app.ledger.processor.post;
 import com.exchange.app.ledger.config.CustomCacheConfig;
 import com.exchange.app.ledger.dao.repository.AccountRepository;
 import com.exchange.app.ledger.dao.repository.LedgerTxnRepository;
+import com.exchange.app.ledger.dao.store.LedgerTxnStore;
 import com.exchange.app.ledger.result.ErrorCode;
 import com.exchange.app.ledger.dao.mapper.LedgerEntryMapper;
 import com.exchange.app.ledger.po.account.Account;
@@ -46,11 +47,12 @@ public class PostLedgerProcessor {
 
     final private LedgerEntryMapper ledgerEntryMapper;
     final private AccountRepository accountManager;
-    final private LedgerTxnRepository ledgerTxnManager;
+    final private LedgerTxnRepository ledgerTxnRepository;
 
     final private IdempRedisClient idempRedisClient;
 
     final private TransactionTemplate transactionTemplate;
+    private final LedgerTxnStore ledgerTxnStore;
 
     public PostTransactionReplyPb postTransaction(PostTransactionRequestPb req) {
         String token = TokenHelper.generateToken(GlobalServiceId.LEDGER.name());
@@ -79,7 +81,7 @@ public class PostLedgerProcessor {
             entries.add(createLedgerEntry(txnId, entryPb, accountRefToAccountId.get(entryPb.getAccountRef())));
         }
         Result<Void> result = DbTransactionHelper.executeWithResult(transactionTemplate, TransactionDefinition.PROPAGATION_REQUIRED, () -> {
-            if (ledgerTxnManager.insertIgnore(ledgerTxn) == 0) {
+            if (ledgerTxnRepository.insertIgnore(ledgerTxn) == 0) {
                 // TODO maybe get txn and return if info match
                 log.error("duplicated ledger txn: {}", ledgerTxn);
                 return Results.fail(ErrorCode.LEDGER_DUPLICATED, "duplicated ledger txn");
@@ -94,6 +96,8 @@ public class PostLedgerProcessor {
         if (result.isFailed()) {
             return onError(req, token, Results.getErrorCode(result), result.errorDetail);
         }
+        // clean negative cache (if exist) after inserting ledger txn
+        ledgerTxnStore.cleanNegativeCacheAfterInsert(ledgerTxn.getReferenceId());
         // set idemp to DONE when found ledger txn
         idempRedisClient.markIdempDone(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(), getReqStableHash(req),
                 token, txnId, JitterHelper.jitter(idempConfig.getDoneTtl(), idempConfig.getJitterMs()));
@@ -128,7 +132,7 @@ public class PostLedgerProcessor {
             }
         }
 
-        LedgerTxn txn = ledgerTxnManager.getByRefId(req.getReferenceId());
+        LedgerTxn txn = ledgerTxnRepository.getByRefId(req.getReferenceId());
         if (txn != null) {
             // set idemp to DONE when found ledger txn
             idempRedisClient.markIdempDone(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(), getReqStableHash(req),

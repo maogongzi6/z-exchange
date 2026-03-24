@@ -1,13 +1,14 @@
 package com.exchange.common.redis.cache.constant;
 
+import com.exchange.common.utils.enums.EnumMapper;
+
+import java.util.HashMap;
+
 public enum CacheType {
     STRING("S"), JSON("J"), TOMBSTONE("T"), NEGATIVE("N"),
     ;
 
     final public String marker;
-
-    // placeholder for tombstone and negative value, format like, T:PH, N:PH
-    static public final String PLACEHOLDER = "PH";
 
     CacheType(String marker) {
         this.marker = marker;
@@ -20,4 +21,13 @@ public enum CacheType {
             return CacheType.JSON;
         }
     }
+
+    public static final EnumMapper<CacheType, String> mapper = new EnumMapper<>(
+            new HashMap<>() {{
+                put(CacheType.STRING, "S");
+                put(CacheType.JSON, "J");
+                put(CacheType.TOMBSTONE, "T");
+                put(CacheType.NEGATIVE, "N");
+            }}
+    );
 }

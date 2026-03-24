@@ -9,6 +9,7 @@ import com.exchange.app.ledger.dao.store.LedgerTxnStore;
 import com.exchange.app.ledger.po.enums.Direction;
 import com.exchange.app.ledger.po.ledger.LedgerEntry;
 import com.exchange.app.ledger.po.ledger.LedgerTxn;
+import com.exchange.app.ledger.result.ErrorCode;
 import com.exchange.common.utils.result.Result;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -117,6 +118,20 @@ public class GetLedgerTxnProcessorIntegrationTest {
 
         // Act
         result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.REF_ID, refId, true);
+    }
+
+    @Test
+    void shouldSetNegativeWhenLookupByNotExistRefId() {
+        String refId = "FIXED_REF_TEST_NOT_EXIST";
+        Result<GetLedgerTxnProcessor.LedgerTxnInfo> result =
+                getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.REF_ID, refId, true);
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.success).isFalse();
+        assertThat(result.errorCode).isEqualTo(ErrorCode.LEDGER_NOT_FOUND);
+        assertThat(result.value).isNull();
+        result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.REF_ID, refId, true);
+
     }
 
 }

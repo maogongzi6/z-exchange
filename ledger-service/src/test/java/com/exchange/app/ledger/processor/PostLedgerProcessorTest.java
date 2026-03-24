@@ -2,6 +2,7 @@ package com.exchange.app.ledger.processor;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 //import com.example.config.com.exchange.app.ledger.processor.PostLedgerProcessorConfig;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.exchange.app.ledger.dao.mapper.AccountMapper;
 import com.exchange.app.ledger.dao.mapper.AssetMapper;
 import com.exchange.app.ledger.dao.mapper.LedgerEntryMapper;
@@ -10,8 +11,10 @@ import com.exchange.app.ledger.dao.repository.AccountRepository;
 import com.exchange.app.ledger.po.account.Account;
 import com.exchange.app.ledger.po.enums.*;
 import com.exchange.app.ledger.po.ledger.LedgerTxn;
+import com.exchange.app.ledger.processor.post.GetLedgerTxnProcessor;
 import com.exchange.app.ledger.processor.post.PostLedgerProcessor;
 import com.exchange.app.ledger.po.ledger.LedgerEntry;
+import com.exchange.app.ledger.result.ErrorCode;
 import com.exchange.proto.common.error.ErrorCodePb;
 import com.exchange.proto.ledger.common.LedgerDirectionPb;
 import com.exchange.proto.ledger.post.LedgerEntryPb;
@@ -26,6 +29,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 @Slf4j
 @RunWith(SpringJUnit4ClassRunner.class)
@@ -44,18 +49,30 @@ public class PostLedgerProcessorTest {
     private LedgerTxnMapper ledgerTxnMapper;
     @Autowired
     private AccountRepository accountRepository;
+    @Autowired
+    private GetLedgerTxnProcessor getLedgerTxnProcessor;
 
     @Test
     public void testPostTxnSuccess() {
         String accountRef = "5367025801-1";
         createAccount(accountRef);
+        String refId = "txn-a-100";
+        ledgerTxnMapper.delete(Wrappers.<LedgerTxn>lambdaQuery().eq(LedgerTxn::getReferenceId, refId));
+        var result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.REF_ID, refId, false);
+        // Assert not found
+        assertThat(result).isNotNull();
+        assertThat(result.success).isFalse();
+        assertThat(result.errorCode).isEqualTo(ErrorCode.LEDGER_NOT_FOUND);
+        assertThat(result.value).isNull();
 
-        String refId = "txn-a-18";
         PostTransactionRequestPb request = PostTransactionRequestPb.newBuilder().setReferenceId(refId).setDescription("description").addAllEntries(List.of(
-                LedgerEntryPb.newBuilder().setAccountRef("5367025801-1").setDirection(LedgerDirectionPb.LedgerDirection_Debit).setAmount(100).setAssetId("asset-1").build(),
-                LedgerEntryPb.newBuilder().setAccountRef("5367025801-1").setDirection(LedgerDirectionPb.LedgerDirection_Credit).setAmount(100).setAssetId("asset-1").build()
+                LedgerEntryPb.newBuilder().setAccountRef(accountRef).setDirection(LedgerDirectionPb.LedgerDirection_Debit).setAmount(100).setAssetId("asset-1").build(),
+                LedgerEntryPb.newBuilder().setAccountRef(accountRef).setDirection(LedgerDirectionPb.LedgerDirection_Credit).setAmount(100).setAssetId("asset-1").build()
         )).build();
         PostTransactionReplyPb reply = postLedgerProcessor.postTransaction(request);
+
+        result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.REF_ID, refId, false);
+
 
         log.info("reply: {}", reply);
         Assert.assertEquals(ErrorCodePb.ERROR_OK, reply.getError().getCode());
