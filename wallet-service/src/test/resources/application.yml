@@ -62,7 +62,8 @@ app:
     interval: "*/5 * * * * ?"
     page-limit: 2
 
-  cache.idemp:
-    pending-ttl: 240s
-    done-ttl: 5m
-    jitter-ms: 100
+  cache:
+    idemp:
+      pending-ttl: 120s
+      done-ttl: 24h
+      jitter-ms: 100
