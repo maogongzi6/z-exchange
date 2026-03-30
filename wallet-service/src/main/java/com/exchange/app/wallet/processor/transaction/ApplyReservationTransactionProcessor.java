@@ -13,8 +13,10 @@ import com.exchange.app.wallet.utils.EnumPbMappers;
 import com.exchange.common.constant.GlobalServiceId;
 import com.exchange.common.utils.TokenHelper;
 import com.exchange.common.utils.result.Result;
+import com.exchange.proto.wallet.common.OperationTypePb;
 import com.exchange.proto.wallet.wallet.ApplyReservationTransactionReplyPb;
 import com.exchange.proto.wallet.wallet.ApplyReservationTransactionRequestPb;
+import com.exchange.proto.wallet.wallet.TransactionLinePb;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
@@ -40,11 +42,24 @@ public class ApplyReservationTransactionProcessor {
             return replySuccess(idempResult.value, idempResult.errorDetail);
         }
 
-        Result<TransactionInfo> result = beforePostLedgerProcessor.beforePostingLedger(requestInfo, true);
+        Result<TransactionInfo> result = beforePostLedgerProcessor.beforePostingLedger(requestInfo, !isPureReleaseTransaction(request));
         if (result.isFailed()) {
             return replyError(result);
         }
         return replySuccess(result.value.walletTxn, result.errorDetail);
+    }
+
+    private boolean isPureReleaseTransaction(ApplyReservationTransactionRequestPb request) {
+        if (request.getLinesCount() == 0) {
+            return false;
+        }
+
+        for (TransactionLinePb line : request.getLinesList()) {
+            if (line.getOperationType() != OperationTypePb.OperationTypePb_Release) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private ApplyReservationTransactionReplyPb replySuccess(String txnId, String detail) {

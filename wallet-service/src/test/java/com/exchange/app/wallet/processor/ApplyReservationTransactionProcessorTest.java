@@ -71,6 +71,14 @@ public class ApplyReservationTransactionProcessorTest {
         }
     }
 
+    @Test
+    public void testPureRelease() {
+        createWallet();
+        var replyPb = pureRelease();
+        log.info(replyPb.toString());
+        Assert.assertEquals(ErrorCodePb.ERROR_OK, replyPb.getError().getCode());
+    }
+
     private ApplyReservationTransactionReplyPb applyReservation() {
         var reserveReply = reserve();
         var infoList = reserveReply.getInfosList();
@@ -99,6 +107,39 @@ public class ApplyReservationTransactionProcessorTest {
             add(TransactionLinePb.newBuilder().setWalletRef(usdInWalletRef).setAssetCode(usdAssetId).setOperationType(OperationTypePb.OperationTypePb_Credit).setAmount(15).build());
             add(TransactionLinePb.newBuilder().setWalletRef(cnyOutWalletRef).setAssetCode(cnyAssetId).setOperationType(OperationTypePb.OperationTypePb_Debit).setAmount(10).build());
             add(TransactionLinePb.newBuilder().setWalletRef(cnyInWalletRef).setAssetCode(cnyAssetId).setOperationType(OperationTypePb.OperationTypePb_Credit).setAmount(10).build());
+
+        }};
+        ApplyReservationTransactionRequestPb requestPb = ApplyReservationTransactionRequestPb.newBuilder()
+                .setReferenceId(ref).setInitiator(serviceId)
+                .setIdempotencyKey(ref).setBusinessType(businessType).addAllLines(lines).build();
+        return applyReservationTransactionProcessor.apply(requestPb);
+    }
+
+    private ApplyReservationTransactionReplyPb pureRelease() {
+        var reserveReply = reserve();
+        var infoList = reserveReply.getInfosList();
+        String reserveCnyRef = "", reserveUsdRef = "";
+        if (infoList.size() == 2) {
+            for (ReservationInfoPb info : infoList) {
+                if (info.getAssetCode().equals(cnyAssetId)) {
+                    reserveCnyRef = info.getReservationRef();
+                } else {
+                    reserveUsdRef = info.getReservationRef();
+                }
+            }
+        } else {
+            throw new RuntimeException();
+        }
+
+        String ref = "test-release-success-" + RandomString.make();
+        //String ref = "test-apply-success-10";
+
+        String finalReserveUsdRef = reserveUsdRef;
+        String finalReserveCnyRef = reserveCnyRef;
+        List<TransactionLinePb> lines = new ArrayList<>() {{
+            add(TransactionLinePb.newBuilder().setWalletRef(cnyReserveWalletRef).setAssetCode(cnyAssetId).setOperationType(OperationTypePb.OperationTypePb_Release).setAmount(20).setReservationRef(finalReserveCnyRef).build());
+            add(TransactionLinePb.newBuilder().setWalletRef(usdReserveWalletRef).setAssetCode(usdAssetId).setOperationType(OperationTypePb.OperationTypePb_Release).setAmount(5).setReservationRef(finalReserveUsdRef).build());
+
 
         }};
         ApplyReservationTransactionRequestPb requestPb = ApplyReservationTransactionRequestPb.newBuilder()
