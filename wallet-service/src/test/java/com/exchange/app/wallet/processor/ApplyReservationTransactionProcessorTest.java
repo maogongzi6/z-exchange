@@ -87,8 +87,8 @@ public class ApplyReservationTransactionProcessorTest {
             throw new RuntimeException();
         }
 
-        // String ref = "test-apply-success-" + RandomString.make();
-        String ref = "test-apply-success-10";
+         String ref = "test-apply-success-" + RandomString.make();
+        //String ref = "test-apply-success-10";
 
         String finalReserveUsdRef = reserveUsdRef;
         String finalReserveCnyRef = reserveCnyRef;
@@ -108,8 +108,8 @@ public class ApplyReservationTransactionProcessorTest {
     }
 
     private ReserveTransactionReplyPb reserve() {
-        //String ref = "test-reserve-success-" + RandomString.make();
-        String ref = "test-reserve-success-10";
+        String ref = "test-reserve-success-" + RandomString.make();
+        //String ref = "test-reserve-success-10";
         List<TransactionLinePb> lines = new ArrayList<>() {{
             add(TransactionLinePb.newBuilder().setWalletRef(usdReserveWalletRef).setAssetCode(usdAssetId).setOperationType(OperationTypePb.OperationTypePb_Reserve).setAmount(20).build());
             add(TransactionLinePb.newBuilder().setWalletRef(cnyReserveWalletRef).setAssetCode(cnyAssetId).setOperationType(OperationTypePb.OperationTypePb_Reserve).setAmount(40).build());
