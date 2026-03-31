@@ -23,7 +23,7 @@ import com.exchange.common.redis.idemp.IdempRedisClient;
 import com.exchange.app.wallet.config.CustomCacheConfig;
 import com.exchange.common.redis.idemp.utils.CommonIdempHelper;
 import com.exchange.common.constant.GlobalServiceId;
-import com.exchange.common.db.utils.DbTransactionHelper;
+import com.exchange.common.db.utils.DbTxnExecutor;
 import com.exchange.common.outbox.dao.repository.OutboxRepository;
 import com.exchange.common.outbox.po.Outbox;
 import com.exchange.common.outbox.po.enums.OutboxStatus;
@@ -45,7 +45,7 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class BeforePostLedgerProcessor {
-    private final TransactionTemplate transactionTemplate;
+    private final DbTxnExecutor dbTxnExecutor;
     private final IdempRedisClient idempRedisClient;
 
     private final CustomCacheConfig.Idemp idempConfig;
@@ -190,7 +190,7 @@ public class BeforePostLedgerProcessor {
         }
 
         // immediately claim the outbox and attempt to publish it right after update db
-        return DbTransactionHelper.executeWithResult(transactionTemplate, TransactionDefinition.PROPAGATION_REQUIRED, () -> {
+        return dbTxnExecutor.executeWithDefault(() -> {
             Result<Void> result = updateReservationProcessor.updateReservations(reservationsInRequest,
                     (reservation) -> updateReservationBeforePosting(reservation, walletIdToActions));
             if (result.isFailed()) {

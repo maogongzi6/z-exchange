@@ -4,6 +4,7 @@ import com.exchange.proto.common.error.ErrorCodePb;
 
 public enum CommonErrorCode implements PbMappableErrorCode{
     SUCCESS(0,ErrorCodePb.ERROR_OK, "success"),
+    UNEXPECTED_DB_ERROR(-1,ErrorCodePb.ERROR_INTERNAL, "unexpected db error"),
     // common-util always return ErrorCodePb.ERROR_INTERNAL, service should convert it to specific code
     LUA_SCRIPT_EXECUTE_ERROR(-100, ErrorCodePb.ERROR_INTERNAL, "lua_script_execute_error"),
     INVALID_IDEMP_KEY(-1000, ErrorCodePb.ERROR_INTERNAL, "invalid_idemp_key"),

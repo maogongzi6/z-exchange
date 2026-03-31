@@ -16,7 +16,7 @@ import com.exchange.common.redis.idemp.IdempRedisClient;
 import com.exchange.common.redis.idemp.utils.CommonIdempHelper;
 import com.exchange.common.redis.idemp.utils.IdempValue;
 import com.exchange.common.constant.GlobalServiceId;
-import com.exchange.common.db.utils.DbTransactionHelper;
+import com.exchange.common.db.utils.DbTxnExecutor;
 import com.exchange.common.utils.JitterHelper;
 import com.exchange.common.utils.StableHashHelper;
 import com.exchange.common.utils.TokenHelper;
@@ -51,7 +51,7 @@ public class PostLedgerProcessor {
 
     final private IdempRedisClient idempRedisClient;
 
-    final private TransactionTemplate transactionTemplate;
+    final private DbTxnExecutor dbTxnExecutor;
     private final LedgerTxnStore ledgerTxnStore;
 
     public PostTransactionReplyPb postTransaction(PostTransactionRequestPb req) {
@@ -80,7 +80,7 @@ public class PostLedgerProcessor {
         for (LedgerEntryPb entryPb : req.getEntriesList()) {
             entries.add(createLedgerEntry(txnId, entryPb, accountRefToAccountId.get(entryPb.getAccountRef())));
         }
-        Result<Void> result = DbTransactionHelper.executeWithResult(transactionTemplate, TransactionDefinition.PROPAGATION_REQUIRED, () -> {
+        Result<Void> result = dbTxnExecutor.executeWithDefault(() -> {
             if (ledgerTxnRepository.insertIgnore(ledgerTxn) == 0) {
                 // TODO maybe get txn and return if info match
                 log.error("duplicated ledger txn: {}", ledgerTxn);

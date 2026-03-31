@@ -1,12 +1,14 @@
 package com.exchange.common.outbox.retry;
 
-import com.exchange.common.db.utils.DbTransactionHelper;
+import com.exchange.common.db.utils.DbTxnExecutor;
 import com.exchange.common.kafka.producer.IPublisher;
 import com.exchange.common.outbox.config.OutboxConfig;
 import com.exchange.common.outbox.dao.repository.OutboxRepository;
 import com.exchange.common.outbox.po.Outbox;
 import com.exchange.common.outbox.po.enums.OutboxStatus;
+import com.exchange.common.utils.result.CommonErrorCode;
 import com.exchange.common.utils.result.Result;
+import com.exchange.common.utils.result.Results;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,8 +28,9 @@ import java.util.stream.Collectors;
 public class OutboxRetryHandler {
     private final OutboxConfig outboxConfig;
     private final OutboxRepository outboxManager;
-    private final TransactionTemplate transactionTemplate;
+    private DbTxnExecutor dbTxnExecutor;
     private final IPublisher publisher;
+
 
     // TODO maybe add a execute time limit
     public void retry() {
@@ -38,22 +41,22 @@ public class OutboxRetryHandler {
             final List<Outbox> outboxes = new ArrayList<>();
             List<Outbox> successOutboxes = new ArrayList<>(), failedOutboxes = new ArrayList<>();
             // select for update skip lock + update next_attempt_at to claim
-            Boolean ifSuccess = DbTransactionHelper.executeWithIfSuccess(transactionTemplate, TransactionDefinition.PROPAGATION_REQUIRED, () -> {
+            Result<Void> result = dbTxnExecutor.executeWithDefault(() -> {
                 List<Outbox> locked = outboxManager.selectForClaimSkipLock(now, outboxConfig.getMaxRetries(), lastId.get(), outboxConfig.getPageLimit());
                 outboxes.addAll(locked);
                 if (outboxes.isEmpty()) {
-                    return true;
+                    return Results.success();
                 }
                 lastId.set(locked.get(locked.size() - 1).getId());
                 int claimedCount = outboxManager.batchClaim(locked.stream().map(Outbox::getId).collect(Collectors.toList()), now.plusSeconds(outboxConfig.getAttemptIntervalSec()));
                 if (claimedCount != locked.size()) {
                     log.error("unexpected claim outbox failure, claimed: {}, locked: {}", claimedCount, locked);
                     // maybe use Result + CommonErrorCode
-                    return false;
+                    return Results.fail(CommonErrorCode.UNEXPECTED_DB_ERROR, "unexpected claim outbox failure");
                 }
-                return true;
+                return Results.success();
             });
-            if (!ifSuccess) {
+            if (!result.success) {
                 log.error("claim failed, outbox: {}", outboxes);
                 continue;
             }

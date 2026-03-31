@@ -15,7 +15,7 @@ import com.exchange.app.wallet.result.ErrorCode;
 import com.exchange.app.wallet.result.PbErrorBuilder;
 import com.exchange.app.wallet.result.Results;
 import com.exchange.app.wallet.utils.*;
-import com.exchange.common.db.utils.DbTransactionHelper;
+import com.exchange.common.db.utils.DbTxnExecutor;
 import com.exchange.common.utils.result.Result;
 import com.exchange.proto.common.error.ErrorCodePb;
 import com.exchange.proto.ledger.account.CreateAccountReplyPb;
@@ -36,8 +36,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Component
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class CreateWalletProcessor {
-    final private TransactionTemplate transactionTemplate;
-
+    final private DbTxnExecutor dbTxnExecutor;
     final private WalletMapper walletMapper;
     final private BalanceSnapshotRepository balanceSnapshotManager;
     final private WalletAccountMappingRepository walletAccountMappingManager;
@@ -117,7 +116,7 @@ public class CreateWalletProcessor {
 
     // return fail for duplicated error code, another thread could be operating the same wallet
     private Result<Void> enableWallet(Wallet wallet) {
-        return DbTransactionHelper.executeWithResult(transactionTemplate, TransactionDefinition.PROPAGATION_REQUIRED, () -> {
+        return dbTxnExecutor.executeWithDefault(() -> {
             if (walletMapper.updateWalletStatus(wallet.getWalletId(), WalletStatus.INIT, WalletStatus.OPEN) == 0) {
                 return Results.fail(ErrorCode.WALLET_UPDATE_FAILED, "unable_to_change_status: " + wallet);
             }

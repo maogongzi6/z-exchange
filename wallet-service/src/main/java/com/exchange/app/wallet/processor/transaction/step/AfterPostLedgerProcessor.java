@@ -1,9 +1,7 @@
 package com.exchange.app.wallet.processor.transaction.step;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.exchange.app.wallet.config.CustomCacheConfig;
 import com.exchange.app.wallet.dao.repository.*;
-import com.exchange.app.wallet.kafka.producer.DefaultPublisher;
 import com.exchange.app.wallet.po.enums.transaction.ActionType;
 import com.exchange.app.wallet.po.enums.transaction.ReservationStatus;
 import com.exchange.app.wallet.po.enums.transaction.TransactionStatus;
@@ -15,16 +13,12 @@ import com.exchange.app.wallet.processor.transaction.model.TransactionInfo;
 import com.exchange.app.wallet.processor.transaction.util.ValidateHelper;
 import com.exchange.app.wallet.result.ErrorCode;
 import com.exchange.app.wallet.result.Results;
-import com.exchange.common.redis.idemp.IdempRedisClient;
-import com.exchange.common.db.utils.DbTransactionHelper;
-import com.exchange.common.outbox.dao.repository.OutboxRepository;
+import com.exchange.common.db.utils.DbTxnExecutor;
 import com.exchange.common.utils.result.Result;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -33,18 +27,12 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class AfterPostLedgerProcessor {
-    private final TransactionTemplate transactionTemplate;
-    private final IdempRedisClient idempRedisClient;
-
-    private final CustomCacheConfig.Idemp idempConfig;
+    private final DbTxnExecutor dbTxnExecutor;
 
     private final BalanceSnapshotRepository balanceSnapshotManager;
     private final WalletReservationRepository walletReservationManager;
     private final WalletTransactionRepository walletTransactionManager;
     private final WalletActionRepository walletActionManager;
-    private final WalletAccountMappingRepository walletAccountMappingManager;
-    private final OutboxRepository outboxManager;
-    private final DefaultPublisher postLedgerPublisher;
     private final UpdateReservationProcessor updateReservationProcessor;
 
     public Result<WalletTransaction> afterPostLedger(String txnId) {
@@ -62,7 +50,7 @@ public class AfterPostLedgerProcessor {
         List<BalanceSnapshot> snapshotIdsInOrder = txnInfo.snapshots.stream()
                 .sorted(Comparator.comparing(BalanceSnapshot::getId)).collect(Collectors.toList());
 
-        Result<Void> outResult = DbTransactionHelper.executeWithResult(transactionTemplate, TransactionDefinition.PROPAGATION_REQUIRED, () -> {
+        Result<Void> outResult = dbTxnExecutor.executeWithDefault(() -> {
             // should update all reservations here
             Result<Void> result = updateReservationProcessor.updateReservations(txnInfo.reservations,
                     (reservation) -> updateReservationAfterPosting(reservation, txnInfo.walletIdToPostActions));
