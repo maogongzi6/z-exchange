@@ -5,8 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
 @Data
-@Configuration
 @ConfigurationProperties(prefix = "app.kafka")
-public class CustomKafkaConfig {
+public class CustomKafkaProperties {
     private Class<? extends Exception>[] notRetriableExceptions;
 }

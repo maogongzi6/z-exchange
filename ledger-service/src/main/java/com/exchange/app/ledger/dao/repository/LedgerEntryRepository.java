@@ -1,11 +1,12 @@
 package com.exchange.app.ledger.dao.repository;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.exchange.app.ledger.config.DbQueryConfig;
+import com.exchange.app.ledger.config.DbQueryProperties;
 import com.exchange.app.ledger.dao.mapper.LedgerEntryMapper;
 import com.exchange.app.ledger.po.ledger.LedgerEntry;
 import com.exchange.common.db.manager.DbBaseRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
@@ -13,10 +14,11 @@ import java.util.List;
 
 @Slf4j
 @Repository
+@EnableConfigurationProperties(DbQueryProperties.class)
 public class LedgerEntryRepository extends DbBaseRepository<LedgerEntry, LedgerEntryMapper> {
-    private final DbQueryConfig dbQueryConfig;
+    private final DbQueryProperties dbQueryConfig;
 
-    public LedgerEntryRepository(LedgerEntryMapper mapper, DbQueryConfig dbQueryConfig) {
+    public LedgerEntryRepository(LedgerEntryMapper mapper, DbQueryProperties dbQueryConfig) {
         super(mapper);
         this.dbQueryConfig = dbQueryConfig;
     }

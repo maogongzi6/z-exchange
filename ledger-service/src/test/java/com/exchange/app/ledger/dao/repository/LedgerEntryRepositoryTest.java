@@ -1,6 +1,6 @@
 package com.exchange.app.ledger.dao.repository;
 
-import com.exchange.app.ledger.config.DbQueryConfig;
+import com.exchange.app.ledger.config.DbQueryProperties;
 import com.exchange.app.ledger.po.ledger.LedgerEntry;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -23,7 +23,7 @@ public class LedgerEntryRepositoryTest {
     @SpyBean
     private LedgerEntryRepository repo;
     @MockBean
-    DbQueryConfig dbQueryConfig;
+    DbQueryProperties dbQueryConfig;
 
     @Test
     void getByTransactionId_shouldPaginateUntilBatchSmallerThanBatchSize() {

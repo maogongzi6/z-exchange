@@ -9,12 +9,9 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import java.time.Duration;
 
-@Data
-@Configuration
-public class CustomCacheConfig {
+public class CustomCacheProperties {
     @Data
     @Validated
-    @Configuration
     @ConfigurationProperties(prefix = "app.cache.idemp")
     static public class Idemp {
         @NotNull

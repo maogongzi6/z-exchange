@@ -1,9 +1,10 @@
 package com.exchange.common.kafka.retry;
 
-import com.exchange.common.kafka.config.CustomKafkaConfig;
+import com.exchange.common.kafka.config.CustomKafkaProperties;
 import com.exchange.common.kafka.utils.Topics;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.TopicPartition;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -12,6 +13,7 @@ import org.springframework.kafka.listener.DefaultErrorHandler;
 
 @Slf4j
 @Configuration
+@EnableConfigurationProperties(CustomKafkaProperties.class)
 public class KafkaErrorHandlingRegister {
     @Bean
     public DeadLetterPublishingRecoverer deadLetterPublishingRecoverer(KafkaTemplate<String, byte[]> kafkaTemplate) {
@@ -23,7 +25,7 @@ public class KafkaErrorHandlingRegister {
     }
 
     @Bean
-    public DefaultErrorHandler defaultErrorHandler(DeadLetterPublishingRecoverer deadLetterPublishingRecoverer, CustomKafkaConfig customKafkaConfig) {
+    public DefaultErrorHandler defaultErrorHandler(DeadLetterPublishingRecoverer deadLetterPublishingRecoverer, CustomKafkaProperties customKafkaConfig) {
         long[] delays = new long[] {
                 1_000, 1_000, 1_000,     // 3x 1s
         };

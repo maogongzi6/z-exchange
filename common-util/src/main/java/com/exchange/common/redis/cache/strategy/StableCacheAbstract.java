@@ -46,6 +46,10 @@ public abstract class StableCacheAbstract<T> implements StableCacheStrategy<T>, 
         return setResult;
     }
 
+    // if id is from our service and used internally,
+    // it means it is low risky to be attacked, and querying non-existed txn is also rare
+    // then, do not set negative value (NULL) when cache misses.
+    // if not, we need to set a negative value
     @Override
     public Result<Void> setNegative(String id, TtlStrategy ttl) {
         String cacheKey = getCacheKey(id);

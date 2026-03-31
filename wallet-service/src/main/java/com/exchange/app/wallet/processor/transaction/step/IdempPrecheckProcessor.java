@@ -1,6 +1,6 @@
 package com.exchange.app.wallet.processor.transaction.step;
 
-import com.exchange.app.wallet.config.CustomCacheConfig;
+import com.exchange.app.wallet.config.CustomCacheProperties;
 import com.exchange.app.wallet.dao.repository.*;
 import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
@@ -20,17 +20,19 @@ import com.exchange.proto.wallet.common.ServiceIdPb;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 import java.util.Objects;
 
 @Slf4j
 @Component
+@EnableConfigurationProperties(CustomCacheProperties.Idemp.class)
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class IdempPrecheckProcessor {
     private final IdempRedisClient idempRedisClient;
 
-    private final CustomCacheConfig.Idemp idempConfig;
+    private final CustomCacheProperties.Idemp idempConfig;
 
     private final WalletTransactionRepository walletTransactionManager;
 

@@ -1,6 +1,6 @@
 package com.exchange.app.ledger.processor.post;
 
-import com.exchange.app.ledger.config.CustomCacheConfig;
+import com.exchange.app.ledger.config.CustomCacheProperties;
 import com.exchange.app.ledger.dao.repository.AccountRepository;
 import com.exchange.app.ledger.dao.repository.LedgerTxnRepository;
 import com.exchange.app.ledger.dao.store.LedgerTxnStore;
@@ -30,20 +30,20 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Component
+@EnableConfigurationProperties(CustomCacheProperties.Idemp.class)
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class PostLedgerProcessor {
     static final private String SCOPE = "post_ledger";
 
-    final private CustomCacheConfig.Idemp idempConfig;
+    final private CustomCacheProperties.Idemp idempConfig;
 
     final private LedgerEntryMapper ledgerEntryMapper;
     final private AccountRepository accountManager;

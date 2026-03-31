@@ -6,13 +6,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.validation.annotation.Validated;
 
 import javax.validation.constraints.Min;
-import javax.validation.constraints.NotBlank;
 
 @Data
 @Validated
-@Configuration
 @ConfigurationProperties(prefix = "app.db.query")
-public class DbQueryConfig {
+public class DbQueryProperties {
     @Min(1)
     private int defaultBatchSize;
 }

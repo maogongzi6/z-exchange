@@ -74,3 +74,9 @@ app:
       tombstone-ttl: 120s # should be short to only cover request ttl
       negative-ttl: 30s
       jitter: 100ms
+
+  redisson:
+    normal-properties:
+      client-name: normal-client
+    client-side-cache-properties:
+      client-name: client-side-cache-client

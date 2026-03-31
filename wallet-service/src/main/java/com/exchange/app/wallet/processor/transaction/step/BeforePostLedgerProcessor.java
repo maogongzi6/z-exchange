@@ -20,7 +20,7 @@ import com.exchange.app.wallet.result.ErrorCode;
 import com.exchange.app.wallet.result.Results;
 import com.exchange.app.wallet.utils.*;
 import com.exchange.common.redis.idemp.IdempRedisClient;
-import com.exchange.app.wallet.config.CustomCacheConfig;
+import com.exchange.app.wallet.config.CustomCacheProperties;
 import com.exchange.common.redis.idemp.utils.CommonIdempHelper;
 import com.exchange.common.constant.GlobalServiceId;
 import com.exchange.common.db.utils.DbTxnExecutor;
@@ -34,21 +34,21 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Component
+@EnableConfigurationProperties(CustomCacheProperties.Idemp.class)
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class BeforePostLedgerProcessor {
     private final DbTxnExecutor dbTxnExecutor;
     private final IdempRedisClient idempRedisClient;
 
-    private final CustomCacheConfig.Idemp idempConfig;
+    private final CustomCacheProperties.Idemp idempConfig;
 
     private final BalanceSnapshotRepository balanceSnapshotManager;
     private final WalletReservationRepository walletReservationManager;

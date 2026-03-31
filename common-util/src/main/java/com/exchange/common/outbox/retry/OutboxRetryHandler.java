@@ -2,7 +2,7 @@ package com.exchange.common.outbox.retry;
 
 import com.exchange.common.db.utils.DbTxnExecutor;
 import com.exchange.common.kafka.producer.IPublisher;
-import com.exchange.common.outbox.config.OutboxConfig;
+import com.exchange.common.outbox.config.OutboxProperties;
 import com.exchange.common.outbox.dao.repository.OutboxRepository;
 import com.exchange.common.outbox.po.Outbox;
 import com.exchange.common.outbox.po.enums.OutboxStatus;
@@ -12,9 +12,8 @@ import com.exchange.common.utils.result.Results;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -24,9 +23,10 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Component
+@EnableConfigurationProperties(OutboxProperties.class)
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class OutboxRetryHandler {
-    private final OutboxConfig outboxConfig;
+    private final OutboxProperties outboxConfig;
     private final OutboxRepository outboxManager;
     private DbTxnExecutor dbTxnExecutor;
     private final IPublisher publisher;
