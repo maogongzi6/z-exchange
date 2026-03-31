@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 public class OutboxRetryHandler {
     private final OutboxProperties outboxConfig;
     private final OutboxRepository outboxManager;
-    private DbTxnExecutor dbTxnExecutor;
+    private final DbTxnExecutor dbTxnExecutor;
     private final IPublisher publisher;
 
 
