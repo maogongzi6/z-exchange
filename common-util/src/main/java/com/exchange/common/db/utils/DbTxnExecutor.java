@@ -3,8 +3,7 @@ package com.exchange.common.db.utils;
 import com.exchange.common.utils.result.Result;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.function.Supplier;
@@ -12,10 +11,11 @@ import java.util.function.Supplier;
 @Slf4j
 @AllArgsConstructor
 public class DbTxnExecutor {
-    TransactionTemplate template;
+    private final PlatformTransactionManager transactionManager;
 
     public <T extends Result<?>> T executeWithDefault(Supplier<T> supplier) {
-        return template.execute((transactionStatus) -> {
+        TransactionTemplate txnTemplate = new TransactionTemplate(transactionManager);
+        return txnTemplate.execute((transactionStatus) -> {
             try {
                 T result = supplier.get();
                 if (result.isFailed()) {

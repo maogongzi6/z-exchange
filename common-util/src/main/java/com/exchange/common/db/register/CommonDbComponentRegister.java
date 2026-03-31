@@ -6,7 +6,7 @@ import com.exchange.common.db.handler.AutofillMetaObjectHandler;
 import com.exchange.common.db.utils.DbTxnExecutor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
 public class CommonDbComponentRegister {
@@ -23,7 +23,7 @@ public class CommonDbComponentRegister {
     }
 
     @Bean
-    public DbTxnExecutor dbTxnExecutor(TransactionTemplate template) {
-        return new DbTxnExecutor(template);
+    public DbTxnExecutor dbTxnExecutor(PlatformTransactionManager transactionManager) {
+        return new DbTxnExecutor(transactionManager);
     }
 }
