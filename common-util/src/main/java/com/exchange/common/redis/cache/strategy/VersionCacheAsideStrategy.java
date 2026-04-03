@@ -1,6 +1,6 @@
 package com.exchange.common.redis.cache.strategy;
 
-import com.exchange.common.redis.cache.strategy.ops.ReadCacheOps;
+import com.exchange.common.redis.cache.ops.ReadCacheOps;
 import com.exchange.common.utils.TtlStrategy;
 import com.exchange.common.utils.result.Result;
 

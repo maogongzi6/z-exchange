@@ -64,4 +64,9 @@ public class SimpleRedisSupport {
         baseRedisSupport.set(key, encoded, ttl);
         return Results.success();
     }
+
+    public Result<Boolean> delete(String key) {
+        Boolean deleted = baseRedisSupport.delete(key);
+        return Results.success(deleted);
+    }
 }

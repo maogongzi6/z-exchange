@@ -24,9 +24,7 @@ public class VersionCacheRegister {
     }
 
     @Bean
-    public VersionCacheClient versionJsonRedisClient(
-            BaseRedisSupport<String> baseRedisSupport,
-            VersionedRedisSupport versionCacheWriteSupport) {
-        return new VersionCacheClient(baseRedisSupport, versionCacheWriteSupport);
+    public VersionCacheClient versionCacheClient(VersionedRedisSupport versionCacheWriteSupport) {
+        return new VersionCacheClient(versionCacheWriteSupport);
     }
 }

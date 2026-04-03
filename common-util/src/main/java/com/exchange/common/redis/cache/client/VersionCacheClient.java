@@ -11,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RequiredArgsConstructor
 public class VersionCacheClient implements CacheReader {
-    private final BaseRedisSupport<String> baseRedisSupport;
     private final VersionedRedisSupport versionRedisSupport;
 
     public <T> Result<CacheValueInfo<T>> get(String key, Class<T> clazz) {
@@ -30,7 +29,7 @@ public class VersionCacheClient implements CacheReader {
         return versionRedisSupport.setNegative(key, newVersion, ttl.afterJitter());
     }
 
-    public Boolean delete(String key) {
-        return baseRedisSupport.delete(key);
+    public Result<Boolean> delete(String key) {
+        return versionRedisSupport.delete(key);
     }
 }

@@ -29,6 +29,7 @@ import java.util.Collections;
 public class VersionedRedisSupport {
     private final VersionCacheEncoder cacheEncoder;
     private final CacheReadSupport versionRedisReadSupport;
+    private final BaseRedisSupport<String> baseRedisSupport;
     private final ResourceLoader resourceLoader;
     private final RedissonClient redissonClient;
 
@@ -42,6 +43,7 @@ public class VersionedRedisSupport {
             RedissonClient redissonClient) {
         this.versionRedisReadSupport = factory.create(versionCodec, baseRedisSupport);
         this.cacheEncoder = versionCodec;
+        this.baseRedisSupport = baseRedisSupport;
         this.resourceLoader = resourceLoader;
         this.redissonClient = redissonClient;
     }
@@ -96,5 +98,10 @@ public class VersionedRedisSupport {
         Boolean success = redissonClient.getScript(StringCodec.INSTANCE)
                 .eval(RScript.Mode.READ_WRITE, setIfAbsentOrNewScript, RScript.ReturnType.BOOLEAN, Collections.singletonList(key), encoded, newVersion, ttl.toMillis());
         return Results.success(success);
+    }
+
+    public Result<Boolean> delete(String key) {
+        Boolean deleted = baseRedisSupport.delete(key);
+        return Results.success(deleted);
     }
 }

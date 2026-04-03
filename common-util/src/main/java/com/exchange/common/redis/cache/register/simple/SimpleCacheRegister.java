@@ -20,9 +20,8 @@ public class SimpleCacheRegister {
 
     @Bean
     public SimpleCacheClient cacheRedisClient(
-            BaseRedisSupport<String> baseRedisSupport,
             SimpleRedisSupport simpleCacheSupport) {
-        return new SimpleCacheClient(baseRedisSupport, simpleCacheSupport);
+        return new SimpleCacheClient(simpleCacheSupport);
     }
 }
 

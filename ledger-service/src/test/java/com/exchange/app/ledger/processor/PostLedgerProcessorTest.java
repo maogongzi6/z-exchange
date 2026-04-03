@@ -56,7 +56,7 @@ public class PostLedgerProcessorTest {
     public void testPostTxnSuccess() {
         String accountRef = "5367025801-1";
         createAccount(accountRef);
-        String refId = "txn-a-104";
+        String refId = "txn-a-105";
         ledgerTxnMapper.delete(Wrappers.<LedgerTxn>lambdaQuery().eq(LedgerTxn::getReferenceId, refId));
         var result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.REF_ID, refId, false);
         // Assert not found

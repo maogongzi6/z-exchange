@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class SimpleCacheClient implements CacheReader {
-    final private BaseRedisSupport<String> baseRedisSupport;
     final private SimpleRedisSupport simpleRedisSupport;
 
     public <T> Result<CacheValueInfo<T>> get(String key, Class<T> clazz) {
@@ -24,7 +23,7 @@ public class SimpleCacheClient implements CacheReader {
         return simpleRedisSupport.setNegative(key, ttl.afterJitter());
     }
 
-    public Boolean delete(String key) {
-        return baseRedisSupport.delete(key);
+    public Result<Boolean> delete(String key) {
+        return simpleRedisSupport.delete(key);
     }
 }
