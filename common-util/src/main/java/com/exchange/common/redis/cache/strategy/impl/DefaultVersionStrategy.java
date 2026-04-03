@@ -2,7 +2,8 @@ package com.exchange.common.redis.cache.strategy.impl;
 
 import com.exchange.common.redis.cache.client.VersionCacheClient;
 import com.exchange.common.redis.cache.model.CacheValueInfo;
-import com.exchange.common.redis.cache.strategy.BaseStrategy;
+import com.exchange.common.redis.cache.strategy.VersionStrategy;
+import com.exchange.common.redis.cache.strategy.discriptor.CacheDescriptor;
 import com.exchange.common.utils.TtlStrategy;
 import com.exchange.common.utils.result.CommonErrorCode;
 import com.exchange.common.utils.result.Result;
@@ -11,12 +12,14 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RequiredArgsConstructor
-public abstract class VersionAbstract<T> implements BaseStrategy<T> {
+public class DefaultVersionStrategy<T> implements VersionStrategy<T> {
     private final VersionCacheClient versionedCacheRedisClient;
+    private final CacheDescriptor<T> cacheDescriptor;
 
+    @Override
     public Result<CacheValueInfo<T>> get(String id) {
-        String cacheKey = getCacheKey(id);
-        Result<CacheValueInfo<T>> cacheResult = versionedCacheRedisClient.get(cacheKey, getClazz());
+        String cacheKey = cacheDescriptor.buildCacheKey(id);
+        Result<CacheValueInfo<T>> cacheResult = versionedCacheRedisClient.get(cacheKey, cacheDescriptor.getClazz());
         if (!cacheResult.success) {
             // cache error should not block the main flow
             log.error("cache get failed, cache_key: {}, result: {}", cacheKey, cacheResult);
@@ -32,8 +35,9 @@ public abstract class VersionAbstract<T> implements BaseStrategy<T> {
         return cacheResult;
     }
 
+    @Override
     public Result<Boolean> set(String id, T value, long newVersion, TtlStrategy ttl) {
-        String cacheKey = getCacheKey(id);
+        String cacheKey = cacheDescriptor.buildCacheKey(id);
         Result<Boolean> setResult = versionedCacheRedisClient.setIfAbsentOrNewer(cacheKey, value, newVersion, ttl);
         if (!setResult.success) {
             // cache error should not block the main flow

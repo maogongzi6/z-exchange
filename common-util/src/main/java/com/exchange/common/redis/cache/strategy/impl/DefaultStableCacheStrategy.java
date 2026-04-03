@@ -2,8 +2,8 @@ package com.exchange.common.redis.cache.strategy.impl;
 
 import com.exchange.common.redis.cache.client.SimpleCacheClient;
 import com.exchange.common.redis.cache.model.CacheValueInfo;
-import com.exchange.common.redis.cache.strategy.NegativeCacheStrategy;
 import com.exchange.common.redis.cache.strategy.StableCacheStrategy;
+import com.exchange.common.redis.cache.strategy.discriptor.CacheDescriptor;
 import com.exchange.common.utils.TtlStrategy;
 import com.exchange.common.utils.result.CommonErrorCode;
 import com.exchange.common.utils.result.Result;
@@ -13,14 +13,14 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RequiredArgsConstructor
-public abstract class StableCacheAbstract<T> implements StableCacheStrategy<T>, NegativeCacheStrategy<T> {
+public class DefaultStableCacheStrategy<T> implements StableCacheStrategy<T> {
     private final SimpleCacheClient simpleCacheClient;
+    private final CacheDescriptor<T> cacheDescriptor;
 
-    // TODO maybe use BaseCacheAbstract
     @Override
     public Result<CacheValueInfo<T>> get(String id) {
-        String cacheKey = getCacheKey(id);
-        Result<CacheValueInfo<T>> refCacheResult = simpleCacheClient.get(cacheKey, getClazz());
+        String cacheKey = cacheDescriptor.buildCacheKey(id);
+        Result<CacheValueInfo<T>> refCacheResult = simpleCacheClient.get(cacheKey, cacheDescriptor.getClazz());
         if (!refCacheResult.success) {
             // TODO customized self-recover
             log.error("cache get failed, cache_key: {}, result: {}", cacheKey, refCacheResult);
@@ -38,7 +38,7 @@ public abstract class StableCacheAbstract<T> implements StableCacheStrategy<T>, 
 
     @Override
     public Result<Void> set(String id, T value, TtlStrategy ttl) {
-        String cacheKey = getCacheKey(id);
+        String cacheKey = cacheDescriptor.buildCacheKey(id);
         Result<Void> setResult = simpleCacheClient.set(cacheKey, value, ttl);
         if (!setResult.success) {
             log.error("cache set failed, cache_key: {}, value: {}, result: {}", cacheKey, value, setResult);
@@ -52,7 +52,7 @@ public abstract class StableCacheAbstract<T> implements StableCacheStrategy<T>, 
     // if not, we need to set a negative value
     @Override
     public Result<Void> setNegative(String id, TtlStrategy ttl) {
-        String cacheKey = getCacheKey(id);
+        String cacheKey = cacheDescriptor.buildCacheKey(id);
         Result<Void> setNegativeResult = simpleCacheClient.setNegative(cacheKey, ttl);
         if (!setNegativeResult.success) {
             log.error("negative cache set failed, cache_key: {}, result: {}", cacheKey, setNegativeResult);
@@ -62,7 +62,7 @@ public abstract class StableCacheAbstract<T> implements StableCacheStrategy<T>, 
 
     @Override
     public Result<Boolean> cleanNegative(String id) {
-        String cacheKey = getCacheKey(id);
+        String cacheKey = cacheDescriptor.buildCacheKey(id);
         Boolean deleted = simpleCacheClient.delete(cacheKey);
         return Results.success(deleted);
     }

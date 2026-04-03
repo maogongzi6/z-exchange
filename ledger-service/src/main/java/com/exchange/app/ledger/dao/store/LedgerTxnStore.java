@@ -1,27 +1,36 @@
 package com.exchange.app.ledger.dao.store;
 
 import com.exchange.app.ledger.constant.cache.CacheTtlStrategies;
-import com.exchange.app.ledger.dao.cache.LedgerRefCache;
-import com.exchange.app.ledger.dao.cache.LedgerTxnCache;
 import com.exchange.app.ledger.dao.repository.LedgerTxnRepository;
 import com.exchange.app.ledger.po.ledger.LedgerTxn;
 import com.exchange.app.ledger.result.Results;
 import com.exchange.common.redis.cache.model.CacheValueInfo;
+import com.exchange.common.redis.cache.strategy.StableCacheStrategy;
+import com.exchange.common.redis.cache.strategy.VersionCacheAsideStrategy;
 import com.exchange.common.utils.result.Result;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class LedgerTxnStore {
     private final LedgerTxnRepository ledgerTxnRepository;
-    private final LedgerTxnCache ledgerTxnCache;
-    private final LedgerRefCache ledgerRefCache;
+    private final VersionCacheAsideStrategy<LedgerTxn> ledgerTxnCache;
+    private final StableCacheStrategy<String> ledgerRefCache;
     private final CacheTtlStrategies cacheTtlStrategies;
+
+    public LedgerTxnStore(
+            LedgerTxnRepository ledgerTxnRepository,
+            @Qualifier("ledgerTxnCache") VersionCacheAsideStrategy<LedgerTxn> ledgerTxnCache,
+            @Qualifier("ledgerRefCache") StableCacheStrategy<String> ledgerRefCache,
+            CacheTtlStrategies cacheTtlStrategies) {
+        this.ledgerTxnRepository = ledgerTxnRepository;
+        this.ledgerTxnCache = ledgerTxnCache;
+        this.ledgerRefCache = ledgerRefCache;
+        this.cacheTtlStrategies = cacheTtlStrategies;
+    }
 
     public Result<Boolean> cleanNegativeCacheAfterInsert(String refId) {
         Result<Boolean> result = ledgerRefCache.cleanNegative(refId);

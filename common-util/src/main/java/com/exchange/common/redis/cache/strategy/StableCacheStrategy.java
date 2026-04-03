@@ -1,8 +1,7 @@
 package com.exchange.common.redis.cache.strategy;
 
-import com.exchange.common.utils.TtlStrategy;
-import com.exchange.common.utils.result.Result;
+import com.exchange.common.redis.cache.strategy.ops.NegativeCacheOps;
+import com.exchange.common.redis.cache.strategy.ops.WriteCacheOps;
 
-public interface StableCacheStrategy<T> extends BaseReadStrategy<T> {
-    Result<Void> set(String id, T value, TtlStrategy ttl);
+public interface StableCacheStrategy<T> extends WriteCacheOps<T>, NegativeCacheOps<T> {
 }
