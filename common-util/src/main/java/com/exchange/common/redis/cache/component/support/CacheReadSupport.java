@@ -1,9 +1,9 @@
 package com.exchange.common.redis.cache.component.support;
 
 import com.exchange.common.exception.CacheParseException;
-import com.exchange.common.redis.BaseRedisSupport;
+import com.exchange.common.redis.BaseCacheReadSupport;
 import com.exchange.common.redis.cache.model.CacheValueInfo;
-import com.exchange.common.redis.cache.component.impl.CacheDecoder;
+import com.exchange.common.redis.cache.component.codec.CacheDecoder;
 import com.exchange.common.utils.result.CommonErrorCode;
 import com.exchange.common.utils.result.Result;
 import com.exchange.common.utils.result.Results;
@@ -13,12 +13,12 @@ import lombok.extern.slf4j.Slf4j;
 // TODO self-recover config
 @Slf4j
 @RequiredArgsConstructor
-abstract class ReadRedisSupport {
+public class CacheReadSupport {
     private final CacheDecoder cacheDecoder;
-    protected final BaseRedisSupport<String> baseRedisSupport;
+    private final BaseCacheReadSupport<String> baseCacheReadSupport;
 
     public <T> Result<CacheValueInfo<T>> get(String key, Class<T> clazz) {
-        String value = baseRedisSupport.get(key);
+        String value = baseCacheReadSupport.get(key);
         if (value == null) {
             return Results.success();
         }

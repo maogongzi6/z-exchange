@@ -1,13 +1,12 @@
 package com.exchange.common.redis;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 
 import java.time.Duration;
 
-@RequiredArgsConstructor(onConstructor_ = @Autowired)
-public class BaseRedisSupport<T> {
+@RequiredArgsConstructor
+public class BaseRedisSupport<T> implements BaseCacheReadSupport<T> {
     final private RedisTemplate<String, T> redisTemplate;
 
     // package private

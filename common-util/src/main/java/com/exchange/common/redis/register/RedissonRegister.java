@@ -18,7 +18,7 @@ import org.springframework.context.annotation.Primary;
 
 @Configuration
 @EnableConfigurationProperties({RedissonProperties.class})
-public class NormalRedissonRegister {
+public class RedissonRegister {
 
     @Primary
     @Bean(name = "normalRedissonClient", destroyMethod = "shutdown")
@@ -34,8 +34,8 @@ public class NormalRedissonRegister {
     }
 
     @Lazy
-    @Bean(name = "clientCacheRedissonClient", destroyMethod = "shutdown")
-    public RedissonClient clientCacheRedissonClient(RedisProperties redisProperties, RedissonProperties redissonProperties) {
+    @Bean(name = "appSideCacheRedissonClient", destroyMethod = "shutdown")
+    public RedissonClient appSideCacheRedissonClient(RedisProperties redisProperties, RedissonProperties redissonProperties) {
         Config config = new Config();
         RedissonProperties.ClientProperties redissonClientProperties = redissonProperties.getClientSideCacheProperties();
 
@@ -49,9 +49,10 @@ public class NormalRedissonRegister {
         return Redisson.create(config);
     }
 
-    @Bean(name = "clientSideCaching", destroyMethod = "destroy")
-    public RClientSideCaching clientSideCaching(
-            @Qualifier("clientCacheRedissonClient") RedissonClient clientCacheRedissonClient) {
+    @Lazy
+    @Bean(name = "appSideCaching", destroyMethod = "destroy")
+    public RClientSideCaching appSideCaching(
+            @Qualifier("appSideCacheRedissonClient") RedissonClient clientCacheRedissonClient) {
 
         return clientCacheRedissonClient.getClientSideCaching(
                 ClientSideCachingOptions.defaults()

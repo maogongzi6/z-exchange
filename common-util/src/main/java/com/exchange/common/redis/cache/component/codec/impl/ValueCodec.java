@@ -1,12 +1,12 @@
-package com.exchange.common.redis.cache.component.codec;
+package com.exchange.common.redis.cache.component.codec.impl;
 
 import com.exchange.common.exception.JsonParseException;
+import com.exchange.common.redis.cache.component.codec.CacheDecoder;
+import com.exchange.common.redis.cache.component.codec.CacheEncoder;
 import com.exchange.common.redis.cache.model.CacheValueInfo;
 import com.exchange.common.redis.cache.constant.CacheType;
 import com.exchange.common.component.JsonParser;
 import com.exchange.common.exception.CacheParseException;
-import com.exchange.common.redis.cache.component.impl.CacheDecoder;
-import com.exchange.common.redis.cache.component.impl.CacheEncoder;
 import com.exchange.common.redis.cache.util.CacheContentValidator;
 import com.exchange.common.utils.StringHelper;
 import com.exchange.common.utils.ValidateHelper;

@@ -26,6 +26,10 @@ public class VersionCacheClient implements CacheReader {
         return versionRedisSupport.setTombstone(key, newVersion, ttl.afterJitter());
     }
 
+    public Result<Boolean> setNegative(String key, long newVersion, TtlStrategy ttl) {
+        return versionRedisSupport.setNegative(key, newVersion, ttl.afterJitter());
+    }
+
     public Boolean delete(String key) {
         return baseRedisSupport.delete(key);
     }

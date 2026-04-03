@@ -1,7 +1,7 @@
-package com.exchange.common.redis.cache.strategy;
+package com.exchange.common.redis.cache.strategy.impl;
 
 import com.exchange.common.redis.cache.client.VersionCacheClient;
-import com.exchange.common.redis.cache.strategy.impl.VersionCacheAsideStrategy;
+import com.exchange.common.redis.cache.strategy.VersionCacheAsideStrategy;
 import com.exchange.common.utils.TtlStrategy;
 import com.exchange.common.utils.result.Result;
 import lombok.extern.slf4j.Slf4j;

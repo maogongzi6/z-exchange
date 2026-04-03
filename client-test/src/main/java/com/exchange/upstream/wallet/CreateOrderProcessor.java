@@ -5,7 +5,6 @@ import com.exchange.proto.wallet.common.BusinessTypePb;
 import com.exchange.proto.wallet.common.OperationTypePb;
 import com.exchange.proto.wallet.common.ServiceIdPb;
 import com.exchange.proto.wallet.wallet.*;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
@@ -100,7 +99,7 @@ public class CreateOrderProcessor {
         }
     }
 
-    @AllArgsConstructor
+    @RequiredArgsConstructor
     static public class AssetFlow {
         final public String assetCode;
         final public String walletRef;

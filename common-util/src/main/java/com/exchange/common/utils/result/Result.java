@@ -1,13 +1,11 @@
 package com.exchange.common.utils.result;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import org.springframework.lang.NonNull;
 
-import java.util.Objects;
-
 @ToString
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class Result<T> {
     public final boolean success;
     public final T value;

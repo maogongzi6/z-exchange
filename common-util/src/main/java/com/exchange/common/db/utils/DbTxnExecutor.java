@@ -1,7 +1,7 @@
 package com.exchange.common.db.utils;
 
 import com.exchange.common.utils.result.Result;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -9,7 +9,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.util.function.Supplier;
 
 @Slf4j
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class DbTxnExecutor {
     private final PlatformTransactionManager transactionManager;
 

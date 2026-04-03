@@ -1,11 +1,11 @@
-package com.exchange.common.redis.cache.component.codec;
+package com.exchange.common.redis.cache.component.codec.impl;
 
 import com.exchange.common.exception.CacheParseException;
 import com.exchange.common.exception.VersionedCacheParseException;
+import com.exchange.common.redis.cache.component.codec.CacheDecoder;
+import com.exchange.common.redis.cache.component.codec.VersionCacheEncoder;
 import com.exchange.common.redis.cache.model.CacheValueInfo;
 import com.exchange.common.redis.cache.constant.CacheType;
-import com.exchange.common.redis.cache.component.impl.CacheDecoder;
-import com.exchange.common.redis.cache.component.impl.VersionCacheEncoder;
 import com.exchange.common.redis.cache.util.CacheContentValidator;
 import com.exchange.common.utils.StringHelper;
 import com.exchange.common.utils.ValidateHelper;

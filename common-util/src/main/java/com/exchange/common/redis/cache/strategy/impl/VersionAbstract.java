@@ -1,17 +1,16 @@
-package com.exchange.common.redis.cache.strategy;
+package com.exchange.common.redis.cache.strategy.impl;
 
 import com.exchange.common.redis.cache.client.VersionCacheClient;
 import com.exchange.common.redis.cache.model.CacheValueInfo;
-import com.exchange.common.redis.cache.strategy.impl.BaseReadStrategy;
-import com.exchange.common.redis.cache.strategy.impl.BaseStrategy;
+import com.exchange.common.redis.cache.strategy.BaseStrategy;
 import com.exchange.common.utils.TtlStrategy;
 import com.exchange.common.utils.result.CommonErrorCode;
 import com.exchange.common.utils.result.Result;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@AllArgsConstructor
+@RequiredArgsConstructor
 public abstract class VersionAbstract<T> implements BaseStrategy<T> {
     private final VersionCacheClient versionedCacheRedisClient;
 

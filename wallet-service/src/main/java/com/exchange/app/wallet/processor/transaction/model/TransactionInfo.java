@@ -5,7 +5,7 @@ import com.exchange.app.wallet.po.transaction.WalletAction;
 import com.exchange.app.wallet.po.transaction.WalletReservation;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
 import com.exchange.app.wallet.po.wallet.BalanceSnapshot;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 // memory cache, not real time data
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class TransactionInfo {
     public final WalletTransaction walletTxn;
     public final List<WalletAction> actions;

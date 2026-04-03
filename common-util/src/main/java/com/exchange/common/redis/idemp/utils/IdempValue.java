@@ -1,11 +1,11 @@
 package com.exchange.common.redis.idemp.utils;
 
 import com.exchange.common.redis.idemp.constant.CommonIdempStatus;
-import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 @Data
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class IdempValue {
     final public CommonIdempStatus status;
     final public String hash;

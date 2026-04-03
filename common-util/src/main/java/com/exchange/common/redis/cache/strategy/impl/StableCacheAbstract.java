@@ -1,18 +1,18 @@
-package com.exchange.common.redis.cache.strategy;
+package com.exchange.common.redis.cache.strategy.impl;
 
 import com.exchange.common.redis.cache.client.SimpleCacheClient;
 import com.exchange.common.redis.cache.model.CacheValueInfo;
-import com.exchange.common.redis.cache.strategy.impl.NegativeCacheStrategy;
-import com.exchange.common.redis.cache.strategy.impl.StableCacheStrategy;
+import com.exchange.common.redis.cache.strategy.NegativeCacheStrategy;
+import com.exchange.common.redis.cache.strategy.StableCacheStrategy;
 import com.exchange.common.utils.TtlStrategy;
 import com.exchange.common.utils.result.CommonErrorCode;
 import com.exchange.common.utils.result.Result;
 import com.exchange.common.utils.result.Results;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@AllArgsConstructor
+@RequiredArgsConstructor
 public abstract class StableCacheAbstract<T> implements StableCacheStrategy<T>, NegativeCacheStrategy<T> {
     private final SimpleCacheClient simpleCacheClient;
 
@@ -61,9 +61,9 @@ public abstract class StableCacheAbstract<T> implements StableCacheStrategy<T>, 
     }
 
     @Override
-    public Result<Void> cleanNegative(String id) {
+    public Result<Boolean> cleanNegative(String id) {
         String cacheKey = getCacheKey(id);
         Boolean deleted = simpleCacheClient.delete(cacheKey);
-        return Results.success();
+        return Results.success(deleted);
     }
 }

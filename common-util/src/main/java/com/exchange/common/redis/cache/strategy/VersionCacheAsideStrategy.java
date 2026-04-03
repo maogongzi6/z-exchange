@@ -1,4 +1,4 @@
-package com.exchange.common.redis.cache.strategy.impl;
+package com.exchange.common.redis.cache.strategy;
 
 import com.exchange.common.utils.TtlStrategy;
 import com.exchange.common.utils.result.Result;

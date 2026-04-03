@@ -2,9 +2,11 @@ package com.exchange.common.redis.cache.component.support;
 
 import com.exchange.common.exception.CacheParseException;
 import com.exchange.common.redis.BaseRedisSupport;
-import com.exchange.common.redis.cache.component.codec.VersionCodec;
+import com.exchange.common.redis.cache.component.codec.impl.VersionCodec;
+import com.exchange.common.redis.cache.component.factory.CacheReadSupportFactory;
 import com.exchange.common.redis.cache.constant.CacheType;
-import com.exchange.common.redis.cache.component.impl.VersionCacheEncoder;
+import com.exchange.common.redis.cache.component.codec.VersionCacheEncoder;
+import com.exchange.common.redis.cache.model.CacheValueInfo;
 import com.exchange.common.utils.result.CommonErrorCode;
 import com.exchange.common.utils.result.Result;
 import com.exchange.common.utils.result.Results;
@@ -22,16 +24,23 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collections;
 
+// VersionedRedisSupport does not support delete() natively
 @Slf4j
-public class VersionedRedisSupport extends ReadRedisSupport {
+public class VersionedRedisSupport {
     private final VersionCacheEncoder cacheEncoder;
+    private final CacheReadSupport versionRedisReadSupport;
     private final ResourceLoader resourceLoader;
     private final RedissonClient redissonClient;
 
     private String setIfAbsentOrNewScript;
 
-    public VersionedRedisSupport(BaseRedisSupport<String> baseRedisSupport, VersionCodec versionCodec, ResourceLoader resourceLoader, RedissonClient redissonClient) {
-        super(versionCodec, baseRedisSupport);
+    public VersionedRedisSupport(
+            BaseRedisSupport<String> baseRedisSupport,
+            VersionCodec versionCodec,
+            CacheReadSupportFactory factory,
+            ResourceLoader resourceLoader,
+            RedissonClient redissonClient) {
+        this.versionRedisReadSupport = factory.create(versionCodec, baseRedisSupport);
         this.cacheEncoder = versionCodec;
         this.resourceLoader = resourceLoader;
         this.redissonClient = redissonClient;
@@ -48,6 +57,14 @@ public class VersionedRedisSupport extends ReadRedisSupport {
             // Fail fast: without the script, setIfAbsentOrNewer can't work reliably.
             throw new IllegalStateException("Failed to load setIfAbsentOrNewer Lua script", e);
         }
+    }
+
+    public Result<CacheValueInfo<String>> get(String key) {
+        return versionRedisReadSupport.get(key);
+    }
+
+    public <T> Result<CacheValueInfo<T>> get(String key, Class<T> clazz) {
+        return versionRedisReadSupport.get(key, clazz);
     }
 
     public <T> Result<Boolean> setIfAbsentOrNewer(String key, T value, long newVersion, Duration ttl) {

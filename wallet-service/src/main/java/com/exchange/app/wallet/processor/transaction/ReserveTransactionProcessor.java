@@ -17,7 +17,6 @@ import com.exchange.common.utils.TokenHelper;
 import com.exchange.common.utils.result.Result;
 import com.exchange.proto.wallet.common.OperationTypePb;
 import com.exchange.proto.wallet.wallet.*;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
@@ -114,9 +113,9 @@ public class ReserveTransactionProcessor {
         return replyError(Results.getErrorCode(result), result.errorDetail);
     }
 
-    @AllArgsConstructor
-    static private class ReserveResult {
-        final WalletTransaction walletTransaction;
-        final List<WalletReservation> reservations;
-    }
+//    @AllArgsConstructor
+//    static private class ReserveResult {
+//        final WalletTransaction walletTransaction;
+//        final List<WalletReservation> reservations;
+//    }
 }

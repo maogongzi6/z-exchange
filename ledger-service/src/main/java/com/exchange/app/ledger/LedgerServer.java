@@ -1,9 +1,10 @@
 package com.exchange.app.ledger;
 
-import com.exchange.common.outbox.retry.OutboxRetryHandler;
+import com.exchange.common.redis.BaseRedisSupport;
+import com.exchange.common.redis.cache.register.appside.AppSideCacheRegister;
 import com.exchange.common.redis.cache.register.simple.SimpleCacheRegister;
 import com.exchange.common.redis.cache.register.version.VersionCacheRegister;
-import com.exchange.common.redis.register.NormalRedissonRegister;
+import com.exchange.common.redis.register.RedissonRegister;
 import com.exchange.common.redis.idemp.register.RedisIdempRegister;
 import com.exchange.common.db.register.CommonDbComponentRegister;
 import org.mybatis.spring.annotation.MapperScan;
@@ -28,9 +29,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         },
         scanBasePackageClasses = {
                 CommonDbComponentRegister.class,
-                NormalRedissonRegister.class,
+                RedissonRegister.class,
+                BaseRedisSupport.class,
                 SimpleCacheRegister.class,
                 VersionCacheRegister.class,
+                AppSideCacheRegister.class,
                 RedisIdempRegister.class,
         })
 public class LedgerServer {

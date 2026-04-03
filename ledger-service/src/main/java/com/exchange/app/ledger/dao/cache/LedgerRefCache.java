@@ -2,7 +2,7 @@ package com.exchange.app.ledger.dao.cache;
 
 import com.exchange.app.ledger.constant.cache.CacheScope;
 import com.exchange.common.redis.cache.client.SimpleCacheClient;
-import com.exchange.common.redis.cache.strategy.StableCacheAbstract;
+import com.exchange.common.redis.cache.strategy.impl.StableCacheAbstract;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

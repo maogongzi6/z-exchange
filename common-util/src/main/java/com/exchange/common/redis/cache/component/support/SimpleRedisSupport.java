@@ -2,9 +2,11 @@ package com.exchange.common.redis.cache.component.support;
 
 import com.exchange.common.exception.CacheParseException;
 import com.exchange.common.redis.BaseRedisSupport;
-import com.exchange.common.redis.cache.component.codec.ValueCodec;
+import com.exchange.common.redis.cache.component.codec.impl.ValueCodec;
+import com.exchange.common.redis.cache.component.factory.CacheReadSupportFactory;
 import com.exchange.common.redis.cache.constant.CacheType;
-import com.exchange.common.redis.cache.component.impl.CacheEncoder;
+import com.exchange.common.redis.cache.component.codec.CacheEncoder;
+import com.exchange.common.redis.cache.model.CacheValueInfo;
 import com.exchange.common.utils.result.CommonErrorCode;
 import com.exchange.common.utils.result.Result;
 import com.exchange.common.utils.result.Results;
@@ -12,13 +14,28 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
 
+// SimpleRedisSupport does not support delete() natively
 @Slf4j
-public class SimpleRedisSupport extends ReadRedisSupport {
+public class SimpleRedisSupport {
     private final CacheEncoder cacheEncoder;
+    private final BaseRedisSupport<String> baseRedisSupport;
+    private final CacheReadSupport simpleRedisReadSupport;
 
-    public SimpleRedisSupport(ValueCodec codec, BaseRedisSupport<String> baseRedisSupport) {
-        super(codec, baseRedisSupport);
+    public SimpleRedisSupport(
+            ValueCodec codec,
+            BaseRedisSupport<String> baseRedisSupport,
+            CacheReadSupportFactory factory) {
         this.cacheEncoder = codec;
+        this.baseRedisSupport = baseRedisSupport;
+        this.simpleRedisReadSupport = factory.create(codec, baseRedisSupport);
+    }
+
+    public Result<CacheValueInfo<String>> get(String key) {
+        return simpleRedisReadSupport.get(key);
+    }
+
+    public <T> Result<CacheValueInfo<T>> get(String key, Class<T> clazz) {
+        return simpleRedisReadSupport.get(key, clazz);
     }
 
     public <T> Result<Void> set(String key, T value, Duration ttl) {

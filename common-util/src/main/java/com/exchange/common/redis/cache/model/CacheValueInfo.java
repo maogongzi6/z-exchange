@@ -1,10 +1,10 @@
 package com.exchange.common.redis.cache.model;
 
 import com.exchange.common.redis.cache.constant.CacheType;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
 // TODO add a cache specific Result type CacheResult
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class CacheValueInfo<T> {
     public final T value;
     public final CacheType cacheType;

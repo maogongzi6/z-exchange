@@ -23,10 +23,12 @@ public class LedgerTxnStore {
     private final LedgerRefCache ledgerRefCache;
     private final CacheTtlStrategies cacheTtlStrategies;
 
-    public Result<Void> cleanNegativeCacheAfterInsert(String refId) {
-        Result<Void> result = ledgerRefCache.cleanNegative(refId);
+    public Result<Boolean> cleanNegativeCacheAfterInsert(String refId) {
+        Result<Boolean> result = ledgerRefCache.cleanNegative(refId);
         if (!result.success) {
-            log.error("clean negative result failed, ref_id: {}, result: {}", refId, result);
+            log.error("clean negative cache failed, ref_id: {}, result: {}", refId, result);
+        } else if (!result.value) {
+            log.error("negative cache not cleaned, ref_id: {}, result: {}", refId, result);
         }
         return result;
     }

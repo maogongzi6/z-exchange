@@ -1,4 +1,4 @@
-package com.exchange.common.redis.cache.component.impl;
+package com.exchange.common.redis.cache.component.codec;
 
 import com.exchange.common.exception.CacheParseException;
 import com.exchange.common.redis.cache.constant.CacheType;

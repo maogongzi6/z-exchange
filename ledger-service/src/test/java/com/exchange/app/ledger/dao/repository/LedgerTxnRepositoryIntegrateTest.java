@@ -1,6 +1,7 @@
 package com.exchange.app.ledger.dao.repository;
 
 import com.exchange.app.ledger.po.ledger.LedgerTxn;
+import com.exchange.common.redis.cache.client.VersionAppSideCacheReadClient;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +15,7 @@ import java.time.LocalDateTime;
 public class LedgerTxnRepositoryIntegrateTest {
     @Autowired
     LedgerTxnRepository ledgerTxnRepository;
-    
+
     @Test
     public void testUpdateVersionControl() {
         String id = LocalDateTime.now().toString();

@@ -6,7 +6,6 @@ import com.exchange.app.ledger.po.ledger.LedgerTxn;
 import com.exchange.app.ledger.result.ErrorCode;
 import com.exchange.app.ledger.result.Results;
 import com.exchange.common.utils.result.Result;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import com.exchange.app.ledger.dao.repository.LedgerEntryRepository;
@@ -29,7 +28,7 @@ public class GetLedgerTxnProcessor {
         TXN_ID, REF_ID
     }
 
-    @AllArgsConstructor
+    @RequiredArgsConstructor
     public static class LedgerTxnInfo {
         public final LedgerTxn txn;
         public final List<LedgerEntry> entries;

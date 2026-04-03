@@ -3,7 +3,7 @@ package com.exchange.app.ledger.dao.cache;
 import com.exchange.app.ledger.constant.cache.CacheScope;
 import com.exchange.app.ledger.po.ledger.LedgerTxn;
 import com.exchange.common.redis.cache.client.VersionCacheClient;
-import com.exchange.common.redis.cache.strategy.VersionCacheAsideAbstract;
+import com.exchange.common.redis.cache.strategy.impl.VersionCacheAsideAbstract;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
