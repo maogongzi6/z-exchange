@@ -3,7 +3,7 @@ package com.exchange.common.redis.cache.component.support;
 import com.exchange.common.exception.CacheParseException;
 import com.exchange.common.redis.BaseRedisSupport;
 import com.exchange.common.redis.cache.component.codec.impl.ValueCodec;
-import com.exchange.common.redis.cache.component.factory.CacheReadSupportFactory;
+import com.exchange.common.redis.cache.component.factory.ReadableCacheFactory;
 import com.exchange.common.redis.cache.constant.CacheType;
 import com.exchange.common.redis.cache.component.codec.CacheEncoder;
 import com.exchange.common.redis.cache.model.CacheValueInfo;
@@ -16,15 +16,15 @@ import lombok.extern.slf4j.Slf4j;
 import java.time.Duration;
 
 @Slf4j
-public class SimpleRedisSupport implements ReadableCache, RawDeletableCache {
+public class SimpleCache implements ReadableCache, RawDeletableCache {
     private final CacheEncoder cacheEncoder;
     private final BaseRedisSupport<String> baseRedisSupport;
-    private final CacheReadSupport simpleRedisReadSupport;
+    private final DefaultReadableCache simpleRedisReadSupport;
 
-    public SimpleRedisSupport(
+    public SimpleCache(
             ValueCodec codec,
             BaseRedisSupport<String> baseRedisSupport,
-            CacheReadSupportFactory factory) {
+            ReadableCacheFactory factory) {
         this.cacheEncoder = codec;
         this.baseRedisSupport = baseRedisSupport;
         this.simpleRedisReadSupport = factory.create(codec, baseRedisSupport);

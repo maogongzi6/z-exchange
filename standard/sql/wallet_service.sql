@@ -89,13 +89,16 @@ create table balance_snapshots (
     available bigint default 0 not null,
     reserved bigint default 0 not null,
 	last_txn_id varchar(64),
+    version bigint not null,
+    created_at timestamp(3) not null,
+    updated_at timestamp(3) not null,
     unique key(wallet_id),
 	unique key(service_id, wallet_reference_id, wallet_id),
 	key(owner_type, owner_id)
 );
 
 create table wallet_account_mappings (
-	id bigint auto_increment primary key, 
+	id bigint auto_increment primary key,
 	wallet_id varchar(64) not null,
     account_ref_id varchar(64) not null,
 	unique key(wallet_id, account_ref_id),

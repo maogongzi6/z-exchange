@@ -4,7 +4,7 @@ import com.exchange.common.component.PromotionClassifier;
 import com.exchange.common.redis.cache.ops.*;
 import com.exchange.common.redis.cache.ops.impl.L1L2ReadOpsImpl;
 import com.exchange.common.redis.cache.strategy.StableCacheStrategy;
-import com.exchange.common.redis.cache.strategy.VersionCacheAsideStrategy;
+import com.exchange.common.redis.cache.strategy.VersionCacheStrategy;
 import com.exchange.common.redis.cache.strategy.VersionPostRefreshStrategy;
 import org.springframework.stereotype.Component;
 
@@ -18,7 +18,7 @@ public class StrategyFactory {
         return new DefaultStableCacheStrategy<>(readOps, simpleBaseOps, negativeCacheOps, selfRecoverOps);
     }
     
-    public <T> VersionCacheAsideStrategy<T> buildVersionCacheAsideStrategy(
+    public <T> VersionCacheStrategy<T> buildVersionCacheAsideStrategy(
             ReadOps<T> readOps,
             VersionWriteOps<T> versionBaseOps,
             VersionTombstoneOps versionTombstoneOps,
@@ -35,7 +35,7 @@ public class StrategyFactory {
         return new DefaultVersionPostRefreshStrategy<>(readOps, versionBaseOps, versionNegativeCacheOps, selfRecoverOps);
     }
 
-    public <T> VersionCacheAsideStrategy<T> buildL1L2VersionCacheAsideStrategy(
+    public <T> VersionCacheStrategy<T> buildL1L2VersionCacheAsideStrategy(
             ReadOps<T> l1ReadOps,
             ReadOps<T> l2ReadOps,
             PromotionClassifier classifier,

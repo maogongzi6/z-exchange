@@ -1,6 +1,6 @@
 package com.exchange.common.redis.cache.ops.impl;
 
-import com.exchange.common.redis.cache.component.support.SimpleRedisSupport;
+import com.exchange.common.redis.cache.component.support.SimpleCache;
 import com.exchange.common.redis.cache.ops.NegativeCacheOps;
 import com.exchange.common.redis.cache.strategy.CacheDescriptor;
 import com.exchange.common.utils.TtlStrategy;
@@ -11,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RequiredArgsConstructor
 public class NegativeCacheOpsImpl implements NegativeCacheOps {
-    private final SimpleRedisSupport simpleRedisSupport;
+    private final SimpleCache simpleRedisSupport;
     private final CacheDescriptor<?> cacheDescriptor;
 
     // if id is from our service and used internally,

@@ -3,22 +3,29 @@ package com.exchange.app.wallet.po.wallet;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.Version;
 import com.exchange.app.wallet.po.enums.OwnerType;
 import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.enums.WalletStatus;
+import com.exchange.common.db.po.BaseEntity;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Data
+// do not compare create/update time
+@EqualsAndHashCode(callSuper = false)
 @AllArgsConstructor
 @NoArgsConstructor
 @TableName("balance_snapshots")
-public class BalanceSnapshot {
+public class BalanceSnapshot extends BaseEntity {
     @TableId(type = IdType.AUTO)
     private Long id;
+    // consistent with wallet.walletId
     private String walletId;
     private ServiceId serviceId;
+    // consistent with wallet.referenceId
     private String walletReferenceId;
     private String assetId;
     // consistent with wallet.status
@@ -27,6 +34,8 @@ public class BalanceSnapshot {
     private String ownerId;
     private Long available;
     private Long reserved;
+    @Version
+    private Long version;
 
     private BalanceSnapshot(String walletId, ServiceId serviceId, String walletReferenceId, String assetId, WalletStatus walletStatus, OwnerType ownerType, String ownerId, Long available, Long reserved) {
         this.walletId = walletId;

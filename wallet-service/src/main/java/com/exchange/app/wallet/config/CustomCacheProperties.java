@@ -27,6 +27,8 @@ public class CustomCacheProperties {
     @ConfigurationProperties(prefix = "app.cache.data")
     static public class Data {
         @NotNull
+        private Duration entityCacheTtl;
+        @NotNull
         private Duration indexCacheTtl;
         @NotNull
         private Duration negativeTtl;

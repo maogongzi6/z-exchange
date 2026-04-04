@@ -40,7 +40,7 @@ public class DefaultVersionPostRefreshStrategy<T> implements VersionPostRefreshS
     }
 
     @Override
-    public Result<Boolean> setAfterDbCommit(String id, T value, long newVersion, TtlStrategy ttl) {
+    public Result<Boolean> set(String id, T value, long newVersion, TtlStrategy ttl) {
         return versionBaseOps.set(id, value, newVersion, ttl);
     }
 

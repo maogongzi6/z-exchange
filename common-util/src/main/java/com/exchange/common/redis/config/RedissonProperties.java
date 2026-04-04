@@ -23,6 +23,7 @@ public class RedissonProperties {
         private int connectionMinimumIdleSize = 8;
         @Min(1)
         private int connectionPoolSize = 32;
+        private Duration clientSideLifetime = Duration.ofMillis(100);
         private Duration timeout = Duration.ofSeconds(3);
         private Duration connectionTimeout = Duration.ofSeconds(10);
     }

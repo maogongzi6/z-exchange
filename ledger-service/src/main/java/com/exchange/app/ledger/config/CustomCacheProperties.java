@@ -1,7 +1,6 @@
 package com.exchange.app.ledger.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.validation.annotation.Validated;
 
 import javax.validation.constraints.Min;
@@ -30,7 +29,7 @@ public class CustomCacheProperties {
         @NotNull
         private Duration indexCacheTtl;
         @NotNull
-        private Duration dataCacheTtl;
+        private Duration entityCacheTtl;
         @NotNull
         private Duration tombstoneTtl;
         @NotNull

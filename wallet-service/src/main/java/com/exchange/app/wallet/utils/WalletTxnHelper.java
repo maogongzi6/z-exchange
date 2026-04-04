@@ -1,6 +1,5 @@
 package com.exchange.app.wallet.utils;
 
-import com.exchange.app.wallet.po.enums.transaction.ActionType;
 import com.exchange.app.wallet.po.transaction.WalletAction;
 import com.exchange.app.wallet.po.transaction.WalletReservation;
 import com.exchange.app.wallet.po.wallet.BalanceSnapshot;

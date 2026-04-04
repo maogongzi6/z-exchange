@@ -6,7 +6,7 @@ import com.exchange.app.ledger.po.ledger.LedgerTxn;
 import com.exchange.app.ledger.result.Results;
 import com.exchange.common.redis.cache.model.CacheValueInfo;
 import com.exchange.common.redis.cache.strategy.StableCacheStrategy;
-import com.exchange.common.redis.cache.strategy.VersionCacheAsideStrategy;
+import com.exchange.common.redis.cache.strategy.VersionCacheStrategy;
 import com.exchange.common.utils.result.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
@@ -17,13 +17,13 @@ import org.springframework.stereotype.Component;
 @Component
 public class LedgerTxnStore {
     private final LedgerTxnRepository ledgerTxnRepository;
-    private final VersionCacheAsideStrategy<LedgerTxn> ledgerTxnCache;
+    private final VersionCacheStrategy<LedgerTxn> ledgerTxnCache;
     private final StableCacheStrategy<String> ledgerRefCache;
     private final CacheTtlStrategies cacheTtlStrategies;
 
     public LedgerTxnStore(
             LedgerTxnRepository ledgerTxnRepository,
-            @Qualifier("ledgerTxnCache") VersionCacheAsideStrategy<LedgerTxn> ledgerTxnCache,
+            @Qualifier("ledgerTxnCache") VersionCacheStrategy<LedgerTxn> ledgerTxnCache,
             @Qualifier("ledgerRefCache") StableCacheStrategy<String> ledgerRefCache,
             CacheTtlStrategies cacheTtlStrategies) {
         this.ledgerTxnRepository = ledgerTxnRepository;
@@ -32,14 +32,13 @@ public class LedgerTxnStore {
         this.cacheTtlStrategies = cacheTtlStrategies;
     }
 
-    public Result<Boolean> cleanNegativeCacheAfterInsert(String refId) {
+    public void postInsert(String refId) {
         Result<Boolean> result = ledgerRefCache.cleanNegative(refId);
         if (!result.success()) {
             log.error("clean negative cache failed, ref_id: {}, result: {}", refId, result);
         } else if (!result.value()) {
             log.error("negative cache not cleaned, ref_id: {}, result: {}", refId, result);
         }
-        return result;
     }
 
     // 1. ledger txn is rarely modified, using a version CAS cache here is like overkill
@@ -68,7 +67,7 @@ public class LedgerTxnStore {
 
         // update cache
         if (ledgerTxn != null) {
-            Result<Boolean> setResult = ledgerTxnCache.setCacheAside(txnId, ledgerTxn, ledgerTxn.getVersion(), cacheTtlStrategies.getLedgerTxnStrategy());
+            Result<Boolean> setResult = ledgerTxnCache.afterQueryHit(txnId, ledgerTxn, ledgerTxn.getVersion(), cacheTtlStrategies.getLedgerTxnStrategy());
             if (!setResult.success()) {
                 // cache error should not block the main flow
                 log.error("cache set failed, txn_id: {}, txn: {}, result: {}", txnId, ledgerTxn, setResult);
@@ -127,7 +126,7 @@ public class LedgerTxnStore {
             if (!setRefCacheResult.success()) {
                 log.error("set ref cache failed, ref_id: {}, result: {}", refId, setRefCacheResult);
             }
-            Result<Boolean> setCacheResult = ledgerTxnCache.setCacheAside(txn.getTxnId(), txn, txn.getVersion(), cacheTtlStrategies.getLedgerTxnStrategy());
+            Result<Boolean> setCacheResult = ledgerTxnCache.afterQueryHit(txn.getTxnId(), txn, txn.getVersion(), cacheTtlStrategies.getLedgerTxnStrategy());
             if (!setCacheResult.success()) {
                 log.error("cache set failed, ref_id: {}, txn_id: {}, txn: {}, result: {}", refId, txn.getTxnId(), txn, setCacheResult);
             } else if (!setCacheResult.value()) {
@@ -143,7 +142,7 @@ public class LedgerTxnStore {
             log.debug("update metadata failed, txn_id: {}, txn: {}", txn.getTxnId(), txn);
             return 0;
         }
-        ledgerTxnCache.setTombstoneAfterWrite(txn.getTxnId(), txn.getVersion(), cacheTtlStrategies.getTombstoneStrategy());
+        ledgerTxnCache.afterUpdate(txn.getTxnId(), txn.getVersion(), cacheTtlStrategies.getTombstoneStrategy());
 
         return affected;
     }

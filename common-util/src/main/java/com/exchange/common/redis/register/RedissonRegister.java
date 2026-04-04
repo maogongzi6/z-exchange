@@ -52,10 +52,11 @@ public class RedissonRegister {
     @Lazy
     @Bean(name = "appSideCaching", destroyMethod = "destroy")
     public RClientSideCaching appSideCaching(
-            @Qualifier("appSideCacheRedissonClient") RedissonClient clientCacheRedissonClient) {
+            @Qualifier("appSideCacheRedissonClient") RedissonClient clientCacheRedissonClient,
+            RedissonProperties redissonProperties) {
 
         return clientCacheRedissonClient.getClientSideCaching(
-                ClientSideCachingOptions.defaults()
+                ClientSideCachingOptions.defaults().timeToLive(redissonProperties.getClientSideCacheProperties().getClientSideLifetime())
         );
     }
 

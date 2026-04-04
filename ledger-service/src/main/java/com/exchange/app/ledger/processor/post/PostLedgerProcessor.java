@@ -97,7 +97,7 @@ public class PostLedgerProcessor {
             return onError(req, token, Results.getErrorCode(result), result.errorDetail());
         }
         // clean negative cache (if exist) after inserting ledger txn
-        ledgerTxnStore.cleanNegativeCacheAfterInsert(ledgerTxn.getReferenceId());
+        ledgerTxnStore.postInsert(ledgerTxn.getReferenceId());
         // set idemp to DONE when found ledger txn
         idempRedisClient.markIdempDone(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(), getReqStableHash(req),
                 token, txnId, JitterHelper.jitter(idempConfig.getDoneTtl(), idempConfig.getJitterMs()));

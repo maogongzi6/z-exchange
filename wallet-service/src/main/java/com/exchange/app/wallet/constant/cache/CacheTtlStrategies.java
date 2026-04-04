@@ -14,6 +14,7 @@ import javax.annotation.PostConstruct;
 public class CacheTtlStrategies {
     final private CustomCacheProperties.Data dataConfig;
 
+    private TtlStrategy balanceSnapshotStrategy;
     private TtlStrategy balanceSnapshotRefStrategy;
     private TtlStrategy negativeStrategy;
 
@@ -23,6 +24,7 @@ public class CacheTtlStrategies {
 
     @PostConstruct
     public void init() {
+        balanceSnapshotStrategy = new TtlStrategy(dataConfig.getEntityCacheTtl(), dataConfig.getJitter());
         balanceSnapshotRefStrategy = new TtlStrategy(dataConfig.getIndexCacheTtl(), dataConfig.getJitter());
         negativeStrategy = new TtlStrategy(dataConfig.getNegativeTtl(), dataConfig.getJitter());
     }

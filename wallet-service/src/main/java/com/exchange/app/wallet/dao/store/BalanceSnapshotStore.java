@@ -2,10 +2,13 @@ package com.exchange.app.wallet.dao.store;
 
 import com.exchange.app.wallet.constant.cache.CacheTtlStrategies;
 import com.exchange.app.wallet.dao.repository.BalanceSnapshotRepository;
+import com.exchange.app.wallet.po.enums.OwnerType;
 import com.exchange.app.wallet.po.wallet.BalanceSnapshot;
 import com.exchange.app.wallet.result.Results;
+import com.exchange.common.component.PromotionClassifier;
 import com.exchange.common.redis.cache.model.CacheValueInfo;
 import com.exchange.common.redis.cache.strategy.StableCacheStrategy;
+import com.exchange.common.redis.cache.strategy.VersionPostRefreshStrategy;
 import com.exchange.common.utils.result.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
@@ -17,29 +20,60 @@ import org.springframework.stereotype.Component;
 public class BalanceSnapshotStore {
     private final BalanceSnapshotRepository balanceSnapshotRepository;
     private final StableCacheStrategy<String> balanceSnapshotRefCache;
+    private final VersionPostRefreshStrategy<BalanceSnapshot> balanceSnapshotCache;
     private final CacheTtlStrategies cacheTtlStrategies;
+    private final PromotionClassifier promotionClassifier;
 
     public BalanceSnapshotStore(
             BalanceSnapshotRepository balanceSnapshotRepository,
             @Qualifier("balanceSnapshotRefCache") StableCacheStrategy<String> balanceSnapshotRefCache,
-            CacheTtlStrategies cacheTtlStrategies) {
+            @Qualifier("hotSnapshotCache") VersionPostRefreshStrategy<BalanceSnapshot> balanceSnapshotCache,
+            CacheTtlStrategies cacheTtlStrategies,
+            @Qualifier("hotBalanceSnapshotClassifier") PromotionClassifier promotionClassifier) {
         this.balanceSnapshotRepository = balanceSnapshotRepository;
         this.balanceSnapshotRefCache = balanceSnapshotRefCache;
+        this.balanceSnapshotCache = balanceSnapshotCache;
         this.cacheTtlStrategies = cacheTtlStrategies;
+        this.promotionClassifier = promotionClassifier;
     }
 
-    public Result<Boolean> cleanNegativeCacheAfterInsert(String refId) {
-        Result<Boolean> result = balanceSnapshotRefCache.cleanNegative(refId);
-        if (!result.success()) {
-            log.error("clean negative cache failed, ref_id: {}, result: {}", refId, result);
-        } else if (!result.value()) {
-            log.debug("negative cache not cleaned, ref_id: {}, result: {}", refId, result);
+    public void postInsert(BalanceSnapshot balanceSnapshot) {
+        postInsert(balanceSnapshot.getWalletId(), balanceSnapshot.getWalletReferenceId(), balanceSnapshot.getOwnerType());
+        if (promotionClassifier.isPromoted(balanceSnapshot.getWalletId())) {
+            Result<Boolean> result = balanceSnapshotCache.set(balanceSnapshot.getWalletId(), balanceSnapshot, balanceSnapshot.getVersion(), cacheTtlStrategies.getBalanceSnapshotStrategy());
+            if (!result.success()) {
+                log.error("set balance snapshot cache failed: {}, snapshot: {}", result, balanceSnapshot);
+            }
         }
-        return result;
+    }
+
+    public void postInsert(String walletId, String refId, OwnerType ownerType) {
+        promoteHotSnapshot(walletId, ownerType);
+
+        // clean negative ref cache
+        Result<Boolean> refResult = balanceSnapshotRefCache.cleanNegative(refId);
+        if (!refResult.success()) {
+            log.error("clean negative cache failed, ref_id: {}, refResult: {}", refId, refResult);
+        } else if (!refResult.value()) {
+            log.debug("negative cache not cleaned, ref_id: {}, refResult: {}", refId, refResult);
+        }
     }
 
     public Result<BalanceSnapshot> getByWalletId(String walletId) {
-        return Results.success(balanceSnapshotRepository.getByWalletId(walletId));
+        Result<CacheValueInfo<BalanceSnapshot>> cacheResult = balanceSnapshotCache.get(walletId);
+        if (!cacheResult.success()) {
+            log.error("getByWalletId cache failed, walletId: {}, result: {}", walletId, cacheResult);
+        } else {
+            CacheValueInfo<BalanceSnapshot> valueInfo = cacheResult.value();
+            if (CacheValueInfo.ifCacheHit(valueInfo)) {
+                return Results.success(valueInfo.value);
+            }
+        }
+
+        BalanceSnapshot balanceSnapshot = balanceSnapshotRepository.getByWalletId(walletId);
+        if (balanceSnapshot != null) {
+            Result<Boolean> setResult = balanceSnapshotCache.set()
+        }
     }
 
     // negative value for cache miss, key -> NULL
@@ -81,5 +115,11 @@ public class BalanceSnapshotStore {
             }
         }
         return Results.success(snapshot);
+    }
+
+    private void promoteHotSnapshot(String id, OwnerType ownerType) {
+        if (ownerType == OwnerType.SYSTEM) {
+            promotionClassifier.promote(id);
+        }
     }
 }

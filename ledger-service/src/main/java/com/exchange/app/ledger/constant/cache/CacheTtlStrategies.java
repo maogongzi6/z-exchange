@@ -25,7 +25,7 @@ public class CacheTtlStrategies {
 
     @PostConstruct
     public void init() {
-        ledgerTxnStrategy = new TtlStrategy(dataConfig.getDataCacheTtl(), dataConfig.getJitter());
+        ledgerTxnStrategy = new TtlStrategy(dataConfig.getEntityCacheTtl(), dataConfig.getJitter());
         ledgerRefStrategy = new TtlStrategy(dataConfig.getIndexCacheTtl(), dataConfig.getJitter());
         tombstoneStrategy = new TtlStrategy(dataConfig.getTombstoneTtl(), dataConfig.getJitter());
         negativeStrategy = new TtlStrategy(dataConfig.getNegativeTtl(), dataConfig.getJitter());

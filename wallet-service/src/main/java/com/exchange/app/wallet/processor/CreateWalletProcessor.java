@@ -55,7 +55,7 @@ public class CreateWalletProcessor {
 
         Wallet walletInDb = walletMapper.selectByReferenceId(serviceId, req.getReferenceId());
         if (walletInDb != null && walletInDb.getWalletStatus().hasInitiated()) {
-            balanceSnapshotStore.cleanNegativeCacheAfterInsert(walletInDb.getReferenceId());
+            balanceSnapshotStore.postInsert(walletInDb.getWalletId(), walletInDb.getReferenceId(), walletInDb.getOwnerType());
             return replySuccess("wallet has been created");
         } else if (walletInDb == null) {
             Result<Wallet> walletResult = createWalletInDb(req, serviceId, ownerType);
@@ -69,12 +69,12 @@ public class CreateWalletProcessor {
         if (!result.success()) {
            return replyError(result);
         }
-        balanceSnapshotStore.cleanNegativeCacheAfterInsert(walletInDb.getReferenceId());
-
-        result = enableWallet(walletInDb);
-        if (!result.success()) {
-            return replyError(result);
+        Result<BalanceSnapshot> enableWalletResult = enableWallet(walletInDb);
+        if (!enableWalletResult.success()) {
+            return replyError(enableWalletResult);
         }
+        BalanceSnapshot snapshot = enableWalletResult.value();
+        balanceSnapshotStore.postInsert(snapshot);
 
         return replySuccess("success");
     }
@@ -117,21 +117,26 @@ public class CreateWalletProcessor {
     }
 
     // return fail for duplicated error code, another thread could be operating the same wallet
-    private Result<Void> enableWallet(Wallet wallet) {
-        return dbTxnExecutor.executeWithDefault(() -> {
+    private Result<BalanceSnapshot> enableWallet(Wallet wallet) {
+        WalletAccountMapping mapping = WalletAccountMapping.create(wallet.getWalletId(), wallet.getWalletId());
+        BalanceSnapshot snapshot = BalanceSnapshot.create(wallet.getWalletId(), wallet.getServiceId(), wallet.getReferenceId(), wallet.getAssetId(), WalletStatus.OPEN, wallet.getOwnerType(), wallet.getOwnerId(), 0L, 0L);
+
+        Result<Void> result = dbTxnExecutor.executeWithDefault(() -> {
             if (walletMapper.updateWalletStatus(wallet.getWalletId(), WalletStatus.INIT, WalletStatus.OPEN) == 0) {
                 return Results.fail(ErrorCode.WALLET_UPDATE_FAILED, "unable_to_change_status: " + wallet);
             }
-            WalletAccountMapping mapping = WalletAccountMapping.create(wallet.getWalletId(), wallet.getWalletId());
             if (walletAccountMappingManager.insertIgnore(mapping) == 0) {
                 return Results.fail(ErrorCode.WALLET_ACCOUNT_MAPPING_DUPLICATED, "unexpected duplicate: " + mapping);
             }
-            BalanceSnapshot snapshot = BalanceSnapshot.create(wallet.getWalletId(), wallet.getServiceId(), wallet.getReferenceId(), wallet.getAssetId(), WalletStatus.OPEN, wallet.getOwnerType(), wallet.getOwnerId(), 0L, 0L);
             if (balanceSnapshotManager.insertIgnore(snapshot) == 0) {
                 return Results.fail(ErrorCode.BALANCE_SNAPSHOT_DUPLICATED, "unexpected duplicate: " + snapshot);
             }
             return Results.success();
         });
+        if (!result.success()) {
+            return Results.fail(result);
+        }
+        return Results.success(snapshot);
     }
 
     private CreateWalletReplyPb replySuccess(String detail) {

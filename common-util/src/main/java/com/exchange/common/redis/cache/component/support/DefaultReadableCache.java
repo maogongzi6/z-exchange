@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RequiredArgsConstructor
-public class CacheReadSupport implements ReadableCache {
+public class DefaultReadableCache implements ReadableCache {
     private final CacheDecoder cacheDecoder;
     private final BaseCacheReadSupport<String> baseCacheReadSupport;
 

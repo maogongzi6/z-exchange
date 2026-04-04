@@ -3,7 +3,7 @@ package com.exchange.common.redis.cache.component.support;
 import com.exchange.common.exception.CacheParseException;
 import com.exchange.common.redis.BaseRedisSupport;
 import com.exchange.common.redis.cache.component.codec.impl.VersionCodec;
-import com.exchange.common.redis.cache.component.factory.CacheReadSupportFactory;
+import com.exchange.common.redis.cache.component.factory.ReadableCacheFactory;
 import com.exchange.common.redis.cache.constant.CacheType;
 import com.exchange.common.redis.cache.component.codec.VersionCacheEncoder;
 import com.exchange.common.redis.cache.model.CacheValueInfo;
@@ -26,19 +26,19 @@ import java.time.Duration;
 import java.util.Collections;
 
 @Slf4j
-public class VersionedRedisSupport implements ReadableCache, RawDeletableCache {
+public class VersionCache implements ReadableCache, RawDeletableCache {
     private final VersionCacheEncoder cacheEncoder;
-    private final CacheReadSupport versionRedisReadSupport;
+    private final DefaultReadableCache versionRedisReadSupport;
     private final BaseRedisSupport<String> baseRedisSupport;
     private final ResourceLoader resourceLoader;
     private final RedissonClient redissonClient;
 
     private String setIfAbsentOrNewScript;
 
-    public VersionedRedisSupport(
+    public VersionCache(
             BaseRedisSupport<String> baseRedisSupport,
             VersionCodec versionCodec,
-            CacheReadSupportFactory factory,
+            ReadableCacheFactory factory,
             ResourceLoader resourceLoader,
             RedissonClient redissonClient) {
         this.versionRedisReadSupport = factory.create(versionCodec, baseRedisSupport);

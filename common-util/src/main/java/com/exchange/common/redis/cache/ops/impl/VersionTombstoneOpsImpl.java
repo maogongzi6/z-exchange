@@ -1,6 +1,6 @@
 package com.exchange.common.redis.cache.ops.impl;
 
-import com.exchange.common.redis.cache.component.support.VersionedRedisSupport;
+import com.exchange.common.redis.cache.component.support.VersionCache;
 import com.exchange.common.redis.cache.ops.VersionTombstoneOps;
 import com.exchange.common.redis.cache.strategy.CacheDescriptor;
 import com.exchange.common.utils.TtlStrategy;
@@ -11,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RequiredArgsConstructor
 public class VersionTombstoneOpsImpl implements VersionTombstoneOps {
-    private final VersionedRedisSupport versionedRedisSupport;
+    private final VersionCache versionedRedisSupport;
     private final CacheDescriptor<?> cacheDescriptor;
 
     @Override

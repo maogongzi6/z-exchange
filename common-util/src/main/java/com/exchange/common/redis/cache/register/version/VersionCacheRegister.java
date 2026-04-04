@@ -2,8 +2,8 @@ package com.exchange.common.redis.cache.register.version;
 
 import com.exchange.common.redis.BaseRedisSupport;
 import com.exchange.common.redis.cache.component.codec.impl.VersionCodec;
-import com.exchange.common.redis.cache.component.factory.CacheReadSupportFactory;
-import com.exchange.common.redis.cache.component.support.VersionedRedisSupport;
+import com.exchange.common.redis.cache.component.factory.ReadableCacheFactory;
+import com.exchange.common.redis.cache.component.support.VersionCache;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
@@ -13,12 +13,12 @@ import org.springframework.core.io.ResourceLoader;
 @Configuration
 public class VersionCacheRegister {
     @Bean
-    public VersionedRedisSupport versionCacheWriteSupport(
+    public VersionCache versionCacheWriteSupport(
             BaseRedisSupport<String> baseRedisSupport,
             VersionCodec versionCodec,
-            CacheReadSupportFactory factory,
+            ReadableCacheFactory factory,
             @Qualifier("normalRedissonClient") RedissonClient redissonClient,
             ResourceLoader resourceLoader) {
-        return new VersionedRedisSupport(baseRedisSupport, versionCodec, factory, resourceLoader, redissonClient);
+        return new VersionCache(baseRedisSupport, versionCodec, factory, resourceLoader, redissonClient);
     }
 }

@@ -16,8 +16,8 @@ public class BaseRegister {
         return new BaseRedisSupport<>(redisTemplate);
     }
 
-    @Bean
     @Lazy
+    @Bean
     BaseClientSideCacheSupport<String> baseAppSideCacheSupport(RClientSideCaching clientSideCaching) {
         return new BaseClientSideCacheSupport<>(clientSideCaching, StringCodec.INSTANCE);
     }
