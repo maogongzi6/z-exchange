@@ -8,3 +8,27 @@ option java_package = "com.exchange.proto.wallet.wallet";
 import "wallet/wallet_enum.proto";
 import "com/exchange/proto/common/error.proto";
 
+message GetSnapshotByIdRequestPb {
+  string walletId = 1;     // maps to ledger_transactions.txn_id
+}
+
+message GetSnapshotByRefIdRequestPb {
+  string referenceId = 1;     // maps to ledger_transactions.reference_id
+}
+
+message GetTxnReplyPb {
+  BalanceSnapshotPb transaction = 1;
+  common.ErrorPb error = 2;
+}
+
+message BalanceSnapshotPb {
+  string walletId = 1;
+  ServiceIdPb serviceId = 2;
+  string walletReferenceId = 3;
+  string assetId = 4;
+  WalletStatusPb walletStatus = 5;
+  OwnerTypePb ownerType = 6;
+  string ownerId = 7;
+  int64 available = 8;
+  int64 reserved = 9;
+}

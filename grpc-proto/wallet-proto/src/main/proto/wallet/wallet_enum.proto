@@ -43,10 +43,18 @@ enum ActionTypePb {
 }
 
 enum OperationTypePb {
-    OperationTypePb_Unknown = 0;
-    OperationTypePb_Reserve = 1;
-    OperationTypePb_Earmark = 2; // confirm and transfer out in 2-step txn
-    OperationTypePb_Release = 3;
-    OperationTypePb_Debit = 4;   // transfer out in atomic txn
-    OperationTypePb_Credit = 5;
+  OperationTypePb_Unknown = 0;
+  OperationTypePb_Reserve = 1;
+  OperationTypePb_Earmark = 2; // confirm and transfer out in 2-step txn
+  OperationTypePb_Release = 3;
+  OperationTypePb_Debit = 4;   // transfer out in atomic txn
+  OperationTypePb_Credit = 5;
+}
+
+enum WalletStatusPb {
+  WalletStatusPb_Unknown = 0;
+  WalletStatusPb_Init = 1;
+  WalletStatusPb_Open = 2;
+  WalletStatusPb_Frozen = 3;
+  WalletStatusPb_Close = 4;
 }
