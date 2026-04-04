@@ -32,18 +32,18 @@ public class GetLedgerTxnProcessorTest {
     void shouldReturnInvalidParameterErrorWhenLookupValueIsEmpty() {
         Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.TXN_ID, null, false);
 
-        assertFalse(result.success);
-        assertEquals(ErrorCode.INVALID_REQUEST_PARAMETER, result.errorCode);
-        assertEquals("lookup_value is required", result.errorDetail);
+        assertFalse(result.success());
+        assertEquals(ErrorCode.INVALID_REQUEST_PARAMETER, result.errorCode());
+        assertEquals("lookup_value is required", result.errorDetail());
     }
 
     @Test
     void shouldReturnInvalidParameterErrorWhenLookupTypeIsNull() {
         Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = getLedgerTxnProcessor.getLedgerTxn(null, "testValue", false);
 
-        assertFalse(result.success);
-        assertEquals(ErrorCode.INVALID_REQUEST_PARAMETER, result.errorCode);
-        assertEquals("lookup_type is required", result.errorDetail);
+        assertFalse(result.success());
+        assertEquals(ErrorCode.INVALID_REQUEST_PARAMETER, result.errorCode());
+        assertEquals("lookup_type is required", result.errorDetail());
     }
 
     @Test
@@ -52,9 +52,9 @@ public class GetLedgerTxnProcessorTest {
 
         Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.TXN_ID, "testTxnId", false);
 
-        assertFalse(result.success);
-        assertEquals(ErrorCode.LEDGER_NOT_FOUND, result.errorCode);
-        assertEquals("ledger not found", result.errorDetail);
+        assertFalse(result.success());
+        assertEquals(ErrorCode.LEDGER_NOT_FOUND, result.errorCode());
+        assertEquals("ledger not found", result.errorDetail());
     }
 
     @Test
@@ -63,9 +63,9 @@ public class GetLedgerTxnProcessorTest {
 
         Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.REF_ID, "testRefId", false);
 
-        assertFalse(result.success);
-        assertEquals(ErrorCode.LEDGER_NOT_FOUND, result.errorCode);
-        assertEquals("ledger not found", result.errorDetail);
+        assertFalse(result.success());
+        assertEquals(ErrorCode.LEDGER_NOT_FOUND, result.errorCode());
+        assertEquals("ledger not found", result.errorDetail());
     }
 
     @Test
@@ -77,9 +77,9 @@ public class GetLedgerTxnProcessorTest {
 
         Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.TXN_ID, id, false);
 
-        assertTrue(result.success);
-        assertEquals(mockTxn, result.value.txn);
-        assertNull(result.value.entries);
+        assertTrue(result.success());
+        assertEquals(mockTxn, result.value().txn);
+        assertNull(result.value().entries);
     }
 
     @Test
@@ -90,9 +90,9 @@ public class GetLedgerTxnProcessorTest {
 
         Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.REF_ID, "testRefId", false);
 
-        assertTrue(result.success);
-        assertEquals(mockTxn, result.value.txn);
-        assertNull(result.value.entries);
+        assertTrue(result.success());
+        assertEquals(mockTxn, result.value().txn);
+        assertNull(result.value().entries);
     }
 
     @Test
@@ -106,10 +106,10 @@ public class GetLedgerTxnProcessorTest {
 
         Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.TXN_ID, id, true);
 
-        assertTrue(result.success);
-        assertEquals(mockTxn, result.value.txn);
-        assertEquals(1, result.value.entries.size());
-        assertEquals(mockEntry, result.value.entries.get(0));
+        assertTrue(result.success());
+        assertEquals(mockTxn, result.value().txn);
+        assertEquals(1, result.value().entries.size());
+        assertEquals(mockEntry, result.value().entries.get(0));
     }
 
     @Test
@@ -121,8 +121,8 @@ public class GetLedgerTxnProcessorTest {
 
         Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.TXN_ID, "testTxnId", true);
 
-        assertFalse(result.success);
-        assertEquals(ErrorCode.INTERNAL_ERROR, result.errorCode);
-        assertEquals("internal error", result.errorDetail);
+        assertFalse(result.success());
+        assertEquals(ErrorCode.INTERNAL_ERROR, result.errorCode());
+        assertEquals("internal error", result.errorDetail());
     }
 }

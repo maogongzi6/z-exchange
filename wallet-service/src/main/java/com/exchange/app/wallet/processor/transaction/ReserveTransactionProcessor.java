@@ -44,8 +44,8 @@ public class ReserveTransactionProcessor {
         Result<String> idempResult = idempPrecheckProcessor.idempAndValidatePrecheck(requestInfo);
         if (idempResult.isFailed()) {
             return replyError(idempResult);
-        } else if (!Strings.isEmpty(idempResult.value)) {
-            return replySuccess(idempResult.value, idempResult.errorDetail);
+        } else if (!Strings.isEmpty(idempResult.value())) {
+            return replySuccess(idempResult.value(), idempResult.errorDetail());
         }
 
         Result<TransactionInfo> result = beforePostLedgerProcessor.beforePostingLedger(requestInfo, false);
@@ -53,7 +53,7 @@ public class ReserveTransactionProcessor {
             return replyError(result);
         }
 
-        return replySuccess(result.value, result.errorDetail);
+        return replySuccess(result.value(), result.errorDetail());
     }
 
     private Result<Void> validate(ReserveTransactionRequestPb request) {
@@ -110,7 +110,7 @@ public class ReserveTransactionProcessor {
     }
 
     private ReserveTransactionReplyPb replyError(Result<?> result) {
-        return replyError(Results.getErrorCode(result), result.errorDetail);
+        return replyError(Results.getErrorCode(result), result.errorDetail());
     }
 
 //    @AllArgsConstructor

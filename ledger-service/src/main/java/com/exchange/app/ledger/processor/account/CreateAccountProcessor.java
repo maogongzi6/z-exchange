@@ -38,7 +38,7 @@ public class CreateAccountProcessor {
         OwnerType ownerType = EnumMappers.ownerTypePbMapper.to(req.getOwnerType());
 
         Result<Void> result = validateReq(req, serviceId, category, normalSide, ownerType);
-        if (!result.success) {
+        if (!result.success()) {
             return replyError(result);
         }
 
@@ -91,6 +91,6 @@ public class CreateAccountProcessor {
 
     private CreateAccountReplyPb replyError(Result<?> result) {
         Objects.requireNonNull(result);
-        return replyError(Results.getErrorCode(result), result.errorDetail);
+        return replyError(Results.getErrorCode(result), result.errorDetail());
     }
 }

@@ -140,11 +140,11 @@ public class BeforePostLedgerProcessor {
         }
 
         Result<Outbox> outboxResult = createOutboxIfNeeded(walletTxn, actions, requestInfo, needPostLedger);
-        if (!outboxResult.success) {
+        if (!outboxResult.success()) {
             releaseIdempBeforeReturnError(requestInfo.idempotenceKey, requestInfo.getStableHash(), requestInfo.token);
             return Results.fail(outboxResult);
         }
-        Outbox outbox = outboxResult.value;
+        Outbox outbox = outboxResult.value();
 
 
         result = updateDbToCreateTxn(walletTxn, actions, balanceSnapshots, reservationsInRequest, createdReservations, outbox);
@@ -309,14 +309,14 @@ public class BeforePostLedgerProcessor {
                 releaseIdempBeforeReturnError(requestInfo.idempotenceKey, requestInfo.getStableHash(), requestInfo.token);
                 return Results.fail(outboxResult);
             }
-            outbox = outboxResult.value;
+            outbox = outboxResult.value();
         }
         return Results.success(outbox);
     }
 
     private void postLedger(Outbox outbox) {
         Result<Void> publishResult = postLedgerPublisher.publish(outbox);
-        if (publishResult.success) {
+        if (publishResult.success()) {
             if (outboxManager.updateStatusToFinalize(outbox, OutboxStatus.SENT, outbox.getLastAttemptAt())
                     == 1) {
                 outbox.setOutboxStatus(OutboxStatus.SENT);

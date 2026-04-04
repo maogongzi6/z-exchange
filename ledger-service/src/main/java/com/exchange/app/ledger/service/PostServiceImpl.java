@@ -38,8 +38,8 @@ public class PostServiceImpl extends PostServiceGrpc.PostServiceImplBase {
                                           boolean includeEntries, StreamObserver<GetTxnReplyPb> responseObserver) {
         try {
             Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = getLedgerTxnProcessor.getLedgerTxn(lookupType, lookupValue, includeEntries);
-            if (result.success) {
-                GetLedgerTxnProcessor.LedgerTxnInfo info = result.value;
+            if (result.success()) {
+                GetLedgerTxnProcessor.LedgerTxnInfo info = result.value();
                 GetTxnReplyPb.Builder replyBuilder = GetTxnReplyPb.newBuilder()
                         .setTransaction(PbConverter.convertToLedgerTransactionPb(info.txn));
                 if (includeEntries) {
@@ -48,7 +48,7 @@ public class PostServiceImpl extends PostServiceGrpc.PostServiceImplBase {
                 responseObserver.onNext(replyBuilder.build());
             } else {
                 responseObserver.onNext(GetTxnReplyPb.newBuilder()
-                        .setError(PbErrorBuilder.build(Results.getErrorCode(result), result.errorDetail))
+                        .setError(PbErrorBuilder.build(Results.getErrorCode(result), result.errorDetail()))
                         .build());
             }
         } catch (Exception e) {

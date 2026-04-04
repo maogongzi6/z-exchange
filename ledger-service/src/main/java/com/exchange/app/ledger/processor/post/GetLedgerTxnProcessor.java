@@ -59,11 +59,11 @@ public class GetLedgerTxnProcessor {
                 log.error("Invalid lookup type: {}", type);
                 return Results.fail(ErrorCode.INVALID_ENUM_ERROR, "invalid lookup type: " + type);
         }
-        if (!ledgerResult.success) {
+        if (!ledgerResult.success()) {
             log.error("load ledger txn failed, {}: {}", type.name(), lookupValue);
             return Results.fail(ErrorCode.INTERNAL_ERROR, "load ledger txn failed");
         }
-        ledgerTxn = ledgerResult.value;
+        ledgerTxn = ledgerResult.value();
 
         if (ledgerTxn == null) {
             log.error("Ledger not found for {}: {}", type, lookupValue);

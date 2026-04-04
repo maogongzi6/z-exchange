@@ -56,14 +56,14 @@ public class OutboxRetryHandler {
                 }
                 return Results.success();
             });
-            if (!result.success) {
+            if (!result.success()) {
                 log.error("claim failed, outbox: {}", outboxes);
                 continue;
             }
             // retry publish
             for (Outbox outbox : outboxes) {
                 Result<Void> publishResult = publisher.publish(outbox);
-                if (publishResult.success) {
+                if (publishResult.success()) {
                     successOutboxes.add(outbox);
                 } else {
                     failedOutboxes.add(outbox);

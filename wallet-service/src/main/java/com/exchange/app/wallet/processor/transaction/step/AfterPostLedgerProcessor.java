@@ -41,7 +41,7 @@ public class AfterPostLedgerProcessor {
             log.error("failed to find transaction info, txnId: {}, result: {}", txnId, txnInfoResult);
             return Results.fail(txnInfoResult);
         }
-        TransactionInfo txnInfo = txnInfoResult.value;
+        TransactionInfo txnInfo = txnInfoResult.value();
         if (txnInfo.walletTxn.hasFinalized()) {
             log.info("wallet txn has finalized, txnId: {}", txnId);
             return Results.success(txnInfo.walletTxn);

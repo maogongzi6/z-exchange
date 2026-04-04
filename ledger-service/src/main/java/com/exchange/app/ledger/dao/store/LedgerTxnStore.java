@@ -34,9 +34,9 @@ public class LedgerTxnStore {
 
     public Result<Boolean> cleanNegativeCacheAfterInsert(String refId) {
         Result<Boolean> result = ledgerRefCache.cleanNegative(refId);
-        if (!result.success) {
+        if (!result.success()) {
             log.error("clean negative cache failed, ref_id: {}, result: {}", refId, result);
-        } else if (!result.value) {
+        } else if (!result.value()) {
             log.error("negative cache not cleaned, ref_id: {}, result: {}", refId, result);
         }
         return result;
@@ -51,11 +51,11 @@ public class LedgerTxnStore {
         // check cache
         Result<CacheValueInfo<LedgerTxn>> cacheResult = ledgerTxnCache.get(txnId);
 
-        if (!cacheResult.success) {
+        if (!cacheResult.success()) {
             // cache error does not block the main flow
             log.error("cache get failed, txn_id: {}, result: {}", txnId, cacheResult);
         } else {
-            CacheValueInfo<LedgerTxn> cacheInfo = cacheResult.value;
+            CacheValueInfo<LedgerTxn> cacheInfo = cacheResult.value();
             if (CacheValueInfo.ifCacheHit(cacheInfo)) {
                 // return target ledger txn if hit a cache
                 // return null to end the query fast if hit a negative cache
@@ -69,7 +69,7 @@ public class LedgerTxnStore {
         // update cache
         if (ledgerTxn != null) {
             Result<Boolean> setResult = ledgerTxnCache.setCacheAside(txnId, ledgerTxn, ledgerTxn.getVersion(), cacheTtlStrategies.getLedgerTxnStrategy());
-            if (!setResult.success) {
+            if (!setResult.success()) {
                 // cache error should not block the main flow
                 log.error("cache set failed, txn_id: {}, txn: {}, result: {}", txnId, ledgerTxn, setResult);
             }
@@ -83,9 +83,9 @@ public class LedgerTxnStore {
     // need to protect external api from random query attack and massive query miss
     public Result<LedgerTxn> getByRefId(String refId) {
         Result<LedgerTxn> txnResult = doGetByRefId(refId);
-        if (txnResult.success && txnResult.value == null) {
+        if (txnResult.success() && txnResult.value() == null) {
             Result<Void> result = ledgerRefCache.setNegative(refId, cacheTtlStrategies.getNegativeStrategy());
-            if (!result.success) {
+            if (!result.success()) {
                 log.error("set negative result failed, ref_id: {}, result: {}", refId, result);
             } else {
                 log.debug("set negative result, ref_id: {}, result: {}", refId, result);
@@ -98,11 +98,11 @@ public class LedgerTxnStore {
     private Result<LedgerTxn> doGetByRefId(String refId) {
         Result<CacheValueInfo<String>> refCacheResult = ledgerRefCache.get(refId);
 
-        if (!refCacheResult.success) {
+        if (!refCacheResult.success()) {
             // cache error does not block the main flow
             log.error("get cache failed, ref_id: {}, result: {}", refId, refCacheResult);
         } else {
-            CacheValueInfo<String> cacheInfo = refCacheResult.value;
+            CacheValueInfo<String> cacheInfo = refCacheResult.value();
             // return result if cache hit
             if (CacheValueInfo.ifCacheHit(cacheInfo)) {
                 String txnId = cacheInfo.value;
@@ -112,11 +112,11 @@ public class LedgerTxnStore {
                 } else {
                     // query target ledger txn if hit a cache
                     Result<LedgerTxn> txnResult = getByTxnId(txnId);
-                    if (!txnResult.success) {
+                    if (!txnResult.success()) {
                         log.error("load txn failed, ref_id: {}, txn_id: {}, result: {}", refId, txnId, txnResult);
                         return txnResult;
                     }
-                    return Results.success(txnResult.value);
+                    return Results.success(txnResult.value());
                 }
             }
         }
@@ -124,13 +124,13 @@ public class LedgerTxnStore {
         LedgerTxn txn = ledgerTxnRepository.getByRefId(refId);
         if (txn != null) {
             Result<Void> setRefCacheResult = ledgerRefCache.set(refId, txn.getTxnId(), cacheTtlStrategies.getLedgerRefStrategy());
-            if (!setRefCacheResult.success) {
+            if (!setRefCacheResult.success()) {
                 log.error("set ref cache failed, ref_id: {}, result: {}", refId, setRefCacheResult);
             }
             Result<Boolean> setCacheResult = ledgerTxnCache.setCacheAside(txn.getTxnId(), txn, txn.getVersion(), cacheTtlStrategies.getLedgerTxnStrategy());
-            if (!setCacheResult.success) {
+            if (!setCacheResult.success()) {
                 log.error("cache set failed, ref_id: {}, txn_id: {}, txn: {}, result: {}", refId, txn.getTxnId(), txn, setCacheResult);
-            } else if (!setCacheResult.value) {
+            } else if (!setCacheResult.value()) {
                 log.debug("cache not set, ref_id: {}, txn_id: {}, txn: {}", refId, txn.getTxnId(), txn);
             }
         }

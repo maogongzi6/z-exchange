@@ -1,7 +1,6 @@
 package com.exchange.app.ledger;
 
 import com.exchange.common.redis.BaseRedisSupport;
-import com.exchange.common.redis.cache.register.appside.AppSideCacheRegister;
 import com.exchange.common.redis.cache.register.simple.SimpleCacheRegister;
 import com.exchange.common.redis.cache.register.version.VersionCacheRegister;
 import com.exchange.common.redis.register.RedissonRegister;
@@ -33,7 +32,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
                 BaseRedisSupport.class,
                 SimpleCacheRegister.class,
                 VersionCacheRegister.class,
-                AppSideCacheRegister.class,
                 RedisIdempRegister.class,
         })
 public class LedgerServer {

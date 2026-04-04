@@ -7,6 +7,7 @@ import com.exchange.common.redis.cache.component.factory.CacheReadSupportFactory
 import com.exchange.common.redis.cache.constant.CacheType;
 import com.exchange.common.redis.cache.component.codec.VersionCacheEncoder;
 import com.exchange.common.redis.cache.model.CacheValueInfo;
+import com.exchange.common.utils.TtlStrategy;
 import com.exchange.common.utils.result.CommonErrorCode;
 import com.exchange.common.utils.result.Result;
 import com.exchange.common.utils.result.Results;
@@ -24,9 +25,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collections;
 
-// VersionedRedisSupport does not support delete() natively
 @Slf4j
-public class VersionedRedisSupport {
+public class VersionedRedisSupport implements ReadableCache, RawDeletableCache {
     private final VersionCacheEncoder cacheEncoder;
     private final CacheReadSupport versionRedisReadSupport;
     private final BaseRedisSupport<String> baseRedisSupport;
@@ -61,29 +61,29 @@ public class VersionedRedisSupport {
         }
     }
 
-    public Result<CacheValueInfo<String>> get(String key) {
-        return versionRedisReadSupport.get(key);
-    }
+//    public Result<CacheValueInfo<String>> get(String key) {
+//        return versionRedisReadSupport.get(key);
+//    }
 
     public <T> Result<CacheValueInfo<T>> get(String key, Class<T> clazz) {
         return versionRedisReadSupport.get(key, clazz);
     }
 
-    public <T> Result<Boolean> setIfAbsentOrNewer(String key, T value, long newVersion, Duration ttl) {
+    public <T> Result<Boolean> setIfAbsentOrNewer(String key, T value, long newVersion, TtlStrategy ttl) {
         if (value == null) {
             log.error("setIfAbsentOrNewer value is null, key: {}", key);
             return Results.fail(CommonErrorCode.PARSE_CACHE_ERROR, "setIfAbsentOrNewer value is null");
         }
         CacheType cacheType = CacheType.fromSource(value);
-        return doSetIfAbsentOrNewer(key, value, cacheType, newVersion, ttl);
+        return doSetIfAbsentOrNewer(key, value, cacheType, newVersion, ttl.afterJitter());
     }
 
-    public Result<Boolean> setTombstone(String key, long newVersion, Duration ttl) {
-        return doSetIfAbsentOrNewer(key, "", CacheType.TOMBSTONE, newVersion, ttl);
+    public Result<Boolean> setTombstone(String key, long newVersion, TtlStrategy ttl) {
+        return doSetIfAbsentOrNewer(key, "", CacheType.TOMBSTONE, newVersion, ttl.afterJitter());
     }
 
-    public Result<Boolean> setNegative(String key, long newVersion, Duration ttl) {
-        return doSetIfAbsentOrNewer(key, "", CacheType.NEGATIVE, newVersion, ttl);
+    public Result<Boolean> setNegative(String key, long newVersion, TtlStrategy ttl) {
+        return doSetIfAbsentOrNewer(key, "", CacheType.NEGATIVE, newVersion, ttl.afterJitter());
     }
 
     private <T> Result<Boolean> doSetIfAbsentOrNewer(String key, T value, CacheType cacheType, long newVersion, Duration ttl) {

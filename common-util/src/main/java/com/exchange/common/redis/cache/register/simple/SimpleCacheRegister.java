@@ -1,7 +1,6 @@
 package com.exchange.common.redis.cache.register.simple;
 
 import com.exchange.common.redis.BaseRedisSupport;
-import com.exchange.common.redis.cache.client.*;
 import com.exchange.common.redis.cache.component.codec.impl.ValueCodec;
 import com.exchange.common.redis.cache.component.factory.CacheReadSupportFactory;
 import com.exchange.common.redis.cache.component.support.SimpleRedisSupport;
@@ -16,12 +15,6 @@ public class SimpleCacheRegister {
             ValueCodec codec,
             CacheReadSupportFactory factory) {
         return new SimpleRedisSupport(codec, baseRedisSupport, factory);
-    }
-
-    @Bean
-    public SimpleCacheClient cacheRedisClient(
-            SimpleRedisSupport simpleCacheSupport) {
-        return new SimpleCacheClient(simpleCacheSupport);
     }
 }
 

@@ -1,4 +1,4 @@
-package com.exchange.common.redis.cache.strategy.discriptor;
+package com.exchange.common.redis.cache.strategy;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

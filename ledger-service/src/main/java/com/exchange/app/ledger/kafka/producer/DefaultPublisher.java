@@ -23,14 +23,14 @@ public class DefaultPublisher implements IPublisher {
 
     public Result<Void> publish(Outbox outbox) {
         Result<EventEnvelopePb> result = OutboxHelper.toEventEnvelope(outbox);
-        if (!result.success) {
+        if (!result.success()) {
             log.error("outbox to event envelope failed: {}", outbox);
             return Results.fail(result);
         }
         try {
-            kafkaTemplate.send(outbox.getDestination(), outbox.getPartitionKey(), result.value.toByteArray()).get(3, TimeUnit.SECONDS);
+            kafkaTemplate.send(outbox.getDestination(), outbox.getPartitionKey(), result.value().toByteArray()).get(3, TimeUnit.SECONDS);
         } catch (Exception e) {
-            log.error("publish event failed, outbox: {}, event: {}, exception: {}", outbox, result.value, e.toString());
+            log.error("publish event failed, outbox: {}, event: {}, exception: {}", outbox, result.value(), e.toString());
             return Results.fail(ErrorCode.PUBLISH_KAFKA_ERROR, outbox.getCommandId());
         }
         return Results.success();

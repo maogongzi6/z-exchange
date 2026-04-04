@@ -1,7 +1,6 @@
 package com.exchange.common.redis.cache.register.version;
 
 import com.exchange.common.redis.BaseRedisSupport;
-import com.exchange.common.redis.cache.client.VersionCacheClient;
 import com.exchange.common.redis.cache.component.codec.impl.VersionCodec;
 import com.exchange.common.redis.cache.component.factory.CacheReadSupportFactory;
 import com.exchange.common.redis.cache.component.support.VersionedRedisSupport;
@@ -18,13 +17,8 @@ public class VersionCacheRegister {
             BaseRedisSupport<String> baseRedisSupport,
             VersionCodec versionCodec,
             CacheReadSupportFactory factory,
-        @Qualifier("normalRedissonClient") RedissonClient redissonClient,
+            @Qualifier("normalRedissonClient") RedissonClient redissonClient,
             ResourceLoader resourceLoader) {
         return new VersionedRedisSupport(baseRedisSupport, versionCodec, factory, resourceLoader, redissonClient);
-    }
-
-    @Bean
-    public VersionCacheClient versionCacheClient(VersionedRedisSupport versionCacheWriteSupport) {
-        return new VersionCacheClient(versionCacheWriteSupport);
     }
 }

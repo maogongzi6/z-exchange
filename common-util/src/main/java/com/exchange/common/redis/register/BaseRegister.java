@@ -1,9 +1,8 @@
 package com.exchange.common.redis.register;
 
-import com.exchange.common.redis.BaseAppSideCacheSupport;
+import com.exchange.common.redis.BaseClientSideCacheSupport;
 import com.exchange.common.redis.BaseRedisSupport;
 import org.redisson.api.RClientSideCaching;
-import org.redisson.client.codec.Codec;
 import org.redisson.client.codec.StringCodec;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,7 +18,7 @@ public class BaseRegister {
 
     @Bean
     @Lazy
-    BaseAppSideCacheSupport<String> baseAppSideCacheSupport(RClientSideCaching clientSideCaching) {
-        return new BaseAppSideCacheSupport<>(clientSideCaching, StringCodec.INSTANCE);
+    BaseClientSideCacheSupport<String> baseAppSideCacheSupport(RClientSideCaching clientSideCaching) {
+        return new BaseClientSideCacheSupport<>(clientSideCaching, StringCodec.INSTANCE);
     }
 }

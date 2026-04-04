@@ -27,9 +27,9 @@ public class DefaultPublisher implements IPublisher {
             return Results.fail(result);
         }
         try {
-            kafkaTemplate.send(outbox.getDestination(), outbox.getPartitionKey(), result.value.toByteArray()).get(3, TimeUnit.SECONDS);
+            kafkaTemplate.send(outbox.getDestination(), outbox.getPartitionKey(), result.value().toByteArray()).get(3, TimeUnit.SECONDS);
         } catch (Exception e) {
-            log.error("publish event failed, outbox: {}, event: {}, exception: {}", outbox, result.value, e.toString());
+            log.error("publish event failed, outbox: {}, event: {}, exception: {}", outbox, result.value(), e.toString());
             return Results.fail(ErrorCode.PUBLISH_KAFKA_ERROR, outbox.getCommandId());
         }
         return Results.success();

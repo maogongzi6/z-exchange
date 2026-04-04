@@ -29,8 +29,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.support.TransactionTemplate;
 
 @Slf4j
 @Component
@@ -49,7 +47,7 @@ public class CreateWalletProcessor {
         ServiceId serviceId = EnumPbMappers.serviceIdPbMapper.to(req.getServiceId());
         OwnerType ownerType = EnumPbMappers.ownerTypePbMapper.to(req.getOwnerType());
         Result<Void> result = validateReq(req, serviceId, ownerType);
-        if (!result.success) {
+        if (!result.success()) {
             return replyError(result);
         }
 
@@ -58,19 +56,19 @@ public class CreateWalletProcessor {
             return replySuccess("wallet has been created");
         } else if (walletInDb == null) {
             Result<Wallet> walletResult = createWalletInDb(req, serviceId, ownerType);
-            if (!walletResult.success) {
+            if (!walletResult.success()) {
                 return replyError(walletResult);
             }
-            walletInDb = walletResult.value;
+            walletInDb = walletResult.value();
         }
 
         result = createAccount(walletInDb);
-        if (!result.success) {
+        if (!result.success()) {
            return replyError(result);
         }
 
         result = enableWallet(walletInDb);
-        if (!result.success) {
+        if (!result.success()) {
             return replyError(result);
         }
 
@@ -142,6 +140,6 @@ public class CreateWalletProcessor {
     }
 
     private CreateWalletReplyPb replyError(Result<?> result) {
-        return replyError(Results.getErrorCode(result), result.errorDetail);
+        return replyError(Results.getErrorCode(result), result.errorDetail());
     }
 }

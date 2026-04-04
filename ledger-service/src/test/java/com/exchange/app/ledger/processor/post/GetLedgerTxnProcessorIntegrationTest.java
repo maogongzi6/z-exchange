@@ -58,9 +58,9 @@ public class GetLedgerTxnProcessorIntegrationTest {
 
         // Assert
         assertThat(result).isNotNull();
-        assertThat(result.success).isTrue();
+        assertThat(result.success()).isTrue();
 
-        GetLedgerTxnProcessor.LedgerTxnInfo info = result.value;
+        GetLedgerTxnProcessor.LedgerTxnInfo info = result.value();
         assertThat(info).isNotNull();
         assertThat(info.txn).isNotNull();
         assertThat(info.txn.getTxnId()).isEqualTo(txnId);
@@ -69,8 +69,8 @@ public class GetLedgerTxnProcessorIntegrationTest {
         assertThat(info.entries).isNotEmpty();
 
         // update to set tombstone
-        result.value.txn.setMetadata("{\"k\":\"updated\"}");
-        ledgerTxnStore.updateMetadataByPk(result.value.txn);
+        result.value().txn.setMetadata("{\"k\":\"updated\"}");
+        ledgerTxnStore.updateMetadataByPk(result.value().txn);
 
         // get again, check and load cache
         result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.TXN_ID, txnId, true);
@@ -102,9 +102,9 @@ public class GetLedgerTxnProcessorIntegrationTest {
 
         // Assert
         assertThat(result).isNotNull();
-        assertThat(result.success).isTrue();
+        assertThat(result.success()).isTrue();
 
-        GetLedgerTxnProcessor.LedgerTxnInfo info = result.value;
+        GetLedgerTxnProcessor.LedgerTxnInfo info = result.value();
         assertThat(info).isNotNull();
         assertThat(info.txn).isNotNull();
         assertThat(info.txn.getReferenceId()).isEqualTo(refId);
@@ -113,8 +113,8 @@ public class GetLedgerTxnProcessorIntegrationTest {
         assertThat(info.entries).hasSize(5);
 
         // update to set tombstone
-        result.value.txn.setMetadata("{\"k\":\"updated\"}");
-        ledgerTxnStore.updateMetadataByPk(result.value.txn);
+        result.value().txn.setMetadata("{\"k\":\"updated\"}");
+        ledgerTxnStore.updateMetadataByPk(result.value().txn);
 
         // Act
         result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.REF_ID, refId, true);
@@ -127,9 +127,9 @@ public class GetLedgerTxnProcessorIntegrationTest {
                 getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.REF_ID, refId, true);
         // Assert
         assertThat(result).isNotNull();
-        assertThat(result.success).isFalse();
-        assertThat(result.errorCode).isEqualTo(ErrorCode.LEDGER_NOT_FOUND);
-        assertThat(result.value).isNull();
+        assertThat(result.success()).isFalse();
+        assertThat(result.errorCode()).isEqualTo(ErrorCode.LEDGER_NOT_FOUND);
+        assertThat(result.value()).isNull();
         result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.REF_ID, refId, true);
 
     }

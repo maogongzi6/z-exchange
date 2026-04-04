@@ -2,39 +2,39 @@ package com.exchange.app.ledger.dao.cache;
 
 import com.exchange.app.ledger.constant.cache.CacheScope;
 import com.exchange.app.ledger.po.ledger.LedgerTxn;
-import com.exchange.common.redis.cache.client.SimpleCacheClient;
-import com.exchange.common.redis.cache.client.VersionCacheClient;
-import com.exchange.common.redis.cache.ops.NegativeCacheOps;
-import com.exchange.common.redis.cache.ops.SimpleBaseOps;
-import com.exchange.common.redis.cache.ops.VersionBaseOps;
-import com.exchange.common.redis.cache.ops.VersionTombstoneOps;
-import com.exchange.common.redis.cache.ops.impl.NegativeCacheOpsImpl;
-import com.exchange.common.redis.cache.ops.impl.SimpleBaseOpsImpl;
-import com.exchange.common.redis.cache.ops.impl.VersionBaseOpsImpl;
-import com.exchange.common.redis.cache.ops.impl.VersionTombstoneOpsImpl;
+import com.exchange.common.redis.cache.component.support.SimpleRedisSupport;
+import com.exchange.common.redis.cache.component.support.VersionedRedisSupport;
+import com.exchange.common.redis.cache.ops.*;
+import com.exchange.common.redis.cache.ops.impl.*;
 import com.exchange.common.redis.cache.strategy.StableCacheStrategy;
 import com.exchange.common.redis.cache.strategy.VersionCacheAsideStrategy;
-import com.exchange.common.redis.cache.strategy.discriptor.CacheDescriptor;
+import com.exchange.common.redis.cache.strategy.CacheDescriptor;
 import com.exchange.common.redis.cache.strategy.impl.DefaultStableCacheStrategy;
 import com.exchange.common.redis.cache.strategy.impl.DefaultVersionCacheAsideStrategy;
+import com.exchange.common.redis.cache.strategy.impl.StrategyFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class LedgerRegister {
     @Bean(name = "ledgerRefCache")
-    public StableCacheStrategy<String> ledgerRefCache(SimpleCacheClient simpleCacheClient) {
+    public StableCacheStrategy<String> ledgerRefCache(SimpleRedisSupport simpleRedisSupport, StrategyFactory factory) {
         CacheDescriptor<String> descriptor = new CacheDescriptor<>(String.class, CacheScope::ledgerRefIdKey);
-        SimpleBaseOps<String> simpleBaseOps = new SimpleBaseOpsImpl<>(simpleCacheClient, descriptor);
-        NegativeCacheOps negativeCacheOps = new NegativeCacheOpsImpl(simpleCacheClient, descriptor);
-        return new DefaultStableCacheStrategy<>(simpleBaseOps, negativeCacheOps);
+        ReadOps<String> readOps = new ReadOpsImpl<>(simpleRedisSupport, descriptor);
+        SimpleWriteOps<String> simpleWriteOps = new WriteOpsImpl<>(simpleRedisSupport, descriptor);
+        NegativeCacheOps negativeCacheOps = new NegativeCacheOpsImpl(simpleRedisSupport, descriptor);
+        SelfRecoverOps selfRecoverOps = new RawDeleteRecoverOpsImpl(simpleRedisSupport, descriptor);
+        return factory.buildStableCacheStrategy(readOps, simpleWriteOps, negativeCacheOps, selfRecoverOps);
     }
 
     @Bean(name = "ledgerTxnCache")
-    public VersionCacheAsideStrategy<LedgerTxn> ledgerTxnCache(VersionCacheClient versionCacheClient) {
+    public VersionCacheAsideStrategy<LedgerTxn> ledgerTxnCache(VersionedRedisSupport versionedRedisSupport, StrategyFactory factory) {
         CacheDescriptor<LedgerTxn> descriptor = new CacheDescriptor<>(LedgerTxn.class, CacheScope::ledgerTxnIdKey);
-        VersionBaseOps<LedgerTxn> versionBaseOps = new VersionBaseOpsImpl<>(versionCacheClient, descriptor);
-        VersionTombstoneOps versionTombstoneOps = new VersionTombstoneOpsImpl(versionCacheClient, descriptor);
-        return new DefaultVersionCacheAsideStrategy<>(versionBaseOps, versionTombstoneOps);
+        ReadOps<LedgerTxn> readOps = new ReadOpsImpl<>(versionedRedisSupport, descriptor);
+        VersionWriteOps<LedgerTxn> versionWriteOps = new VersionWriteOpsImpl<>(versionedRedisSupport, descriptor);
+        VersionTombstoneOps versionTombstoneOps = new VersionTombstoneOpsImpl(versionedRedisSupport, descriptor);
+        VersionNegativeCacheOps versionNegativeCacheOps = new VersionNegativeCacheOpsImpl(versionedRedisSupport, descriptor);
+        SelfRecoverOps selfRecoverOps = new RawDeleteRecoverOpsImpl(versionedRedisSupport, descriptor);
+        return factory.buildVersionCacheAsideStrategy(readOps, versionWriteOps, versionTombstoneOps, versionNegativeCacheOps, selfRecoverOps);
     }
 }

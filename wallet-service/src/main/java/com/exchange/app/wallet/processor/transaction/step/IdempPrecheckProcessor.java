@@ -51,7 +51,7 @@ public class IdempPrecheckProcessor {
             return Results.fail(valueResult);
         }
 
-        IdempValue value = valueResult.value;
+        IdempValue value = valueResult.value();
         // when value is not null, it means claim idemp fails because it has been claimed, no need to release here
         if (value != null) {
             switch (value.status) {
@@ -107,7 +107,7 @@ public class IdempPrecheckProcessor {
             return Results.success();
         }
 
-        IdempValue idempValue = parseResult.value;
+        IdempValue idempValue = parseResult.value();
         if (!Objects.equals(idempValue.hash, reqHash)) {
             log.error("idemp value hashcode conflict, key:{}, value:{}, hash:{}, reqInfo: {}", key, idempValue, reqHash, requestInfo);
             return Results.fail(ErrorCode.REQUEST_HASH_CONFLICT, "idemp value hashcode conflict");

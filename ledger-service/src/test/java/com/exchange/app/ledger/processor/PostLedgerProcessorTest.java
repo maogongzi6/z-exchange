@@ -56,14 +56,14 @@ public class PostLedgerProcessorTest {
     public void testPostTxnSuccess() {
         String accountRef = "5367025801-1";
         createAccount(accountRef);
-        String refId = "txn-a-105";
+        String refId = "txn-a-107";
         ledgerTxnMapper.delete(Wrappers.<LedgerTxn>lambdaQuery().eq(LedgerTxn::getReferenceId, refId));
         var result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.REF_ID, refId, false);
         // Assert not found
         assertThat(result).isNotNull();
-        assertThat(result.success).isFalse();
-        assertThat(result.errorCode).isEqualTo(ErrorCode.LEDGER_NOT_FOUND);
-        assertThat(result.value).isNull();
+        assertThat(result.success()).isFalse();
+        assertThat(result.errorCode()).isEqualTo(ErrorCode.LEDGER_NOT_FOUND);
+        assertThat(result.value()).isNull();
 
         PostTransactionRequestPb request = PostTransactionRequestPb.newBuilder().setReferenceId(refId).setDescription("description").addAllEntries(List.of(
                 LedgerEntryPb.newBuilder().setAccountRef(accountRef).setDirection(LedgerDirectionPb.LedgerDirection_Debit).setAmount(100).setAssetId("asset-1").build(),

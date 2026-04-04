@@ -40,7 +40,7 @@ public class UpdateReservationProcessor {
             if (result.isFailed()) {
                 return Results.fail(result);
             }
-            reservation = result.value;
+            reservation = result.value();
 
             if (!Objects.equals(reservation, copy)) {
                 if (walletReservationManager.updateWithOptimisticLock(reservation, copy) != 1) {

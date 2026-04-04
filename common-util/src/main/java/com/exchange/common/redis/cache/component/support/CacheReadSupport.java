@@ -10,10 +10,9 @@ import com.exchange.common.utils.result.Results;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-// TODO self-recover config
 @Slf4j
 @RequiredArgsConstructor
-public class CacheReadSupport {
+public class CacheReadSupport implements ReadableCache {
     private final CacheDecoder cacheDecoder;
     private final BaseCacheReadSupport<String> baseCacheReadSupport;
 
@@ -31,7 +30,7 @@ public class CacheReadSupport {
         }
     }
 
-    public Result<CacheValueInfo<String>> get(String key) {
-        return get(key, String.class);
-    }
+//    public Result<CacheValueInfo<String>> get(String key) {
+//        return get(key, String.class);
+//    }
 }

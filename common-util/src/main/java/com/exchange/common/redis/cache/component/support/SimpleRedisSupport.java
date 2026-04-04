@@ -7,6 +7,7 @@ import com.exchange.common.redis.cache.component.factory.CacheReadSupportFactory
 import com.exchange.common.redis.cache.constant.CacheType;
 import com.exchange.common.redis.cache.component.codec.CacheEncoder;
 import com.exchange.common.redis.cache.model.CacheValueInfo;
+import com.exchange.common.utils.TtlStrategy;
 import com.exchange.common.utils.result.CommonErrorCode;
 import com.exchange.common.utils.result.Result;
 import com.exchange.common.utils.result.Results;
@@ -14,9 +15,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
 
-// SimpleRedisSupport does not support delete() natively
 @Slf4j
-public class SimpleRedisSupport {
+public class SimpleRedisSupport implements ReadableCache, RawDeletableCache {
     private final CacheEncoder cacheEncoder;
     private final BaseRedisSupport<String> baseRedisSupport;
     private final CacheReadSupport simpleRedisReadSupport;
@@ -30,30 +30,30 @@ public class SimpleRedisSupport {
         this.simpleRedisReadSupport = factory.create(codec, baseRedisSupport);
     }
 
-    public Result<CacheValueInfo<String>> get(String key) {
-        return simpleRedisReadSupport.get(key);
-    }
+//    public Result<CacheValueInfo<String>> get(String key) {
+//        return simpleRedisReadSupport.get(key);
+//    }
 
     public <T> Result<CacheValueInfo<T>> get(String key, Class<T> clazz) {
         return simpleRedisReadSupport.get(key, clazz);
     }
 
-    public <T> Result<Void> set(String key, T value, Duration ttl) {
+    public <T> Result<Void> set(String key, T value, TtlStrategy ttl) {
         if (value == null) {
             log.error("setIfAbsentOrNewer value is null, key: {}", key);
             return Results.fail(CommonErrorCode.PARSE_CACHE_ERROR, "setIfAbsentOrNewer value is null");
         }
 
         CacheType cacheType = CacheType.fromSource(value);
-        return doSet(key, value, cacheType, ttl);
+        return doSet(key, value, cacheType, ttl.afterJitter());
     }
 
     // conflict risk without version check
-    public Result<Void> setNegative(String key, Duration ttl) {
-        return doSet(key, "", CacheType.NEGATIVE, ttl);
+    public Result<Void> setNegative(String key, TtlStrategy ttl) {
+        return doSet(key, "", CacheType.NEGATIVE, ttl.afterJitter());
     }
 
-    public Result<Void> doSet(String key, Object value, CacheType cacheType, Duration ttl) {
+    private Result<Void> doSet(String key, Object value, CacheType cacheType, Duration ttl) {
         String encoded;
         try {
             encoded = cacheEncoder.encode(value, cacheType);

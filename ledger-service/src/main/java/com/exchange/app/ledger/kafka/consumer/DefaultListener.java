@@ -90,7 +90,7 @@ public class DefaultListener {
 
     private void tryToPublishReply(Outbox replyOutbox) {
         Result<Void> result = replyWalletPublisher.publish(replyOutbox);
-        if (result.success) {
+        if (result.success()) {
             if (outboxManager.updateStatusToFinalize(replyOutbox, OutboxStatus.SENT, replyOutbox.getLastAttemptAt()) != 1) {
                 // do not fail, ack as normal, wait cronjob to retry outbox
                 log.error("finalize outbox failed, {}", replyOutbox);

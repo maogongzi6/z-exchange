@@ -60,9 +60,9 @@ public class PostLedgerProcessor {
         Result<String> txnIdResult = idempClaimAndReqValidate(req, token);
         if (txnIdResult.isFailed()) {
             // TODO no need to release claimed key here, since there should not be a key in cache with given token
-            return onError(req, token, Results.getErrorCode(txnIdResult), txnIdResult.errorDetail);
-        } else if (!Strings.isEmpty(txnIdResult.value)) {
-            return onSuccess(req.getReferenceId(), txnIdResult.value, "already exists");
+            return onError(req, token, Results.getErrorCode(txnIdResult), txnIdResult.errorDetail());
+        } else if (!Strings.isEmpty(txnIdResult.value())) {
+            return onSuccess(req.getReferenceId(), txnIdResult.value(), "already exists");
         }
 
         String txnId = IdGenerator.generateLedgerTxnId();
@@ -94,7 +94,7 @@ public class PostLedgerProcessor {
             return Results.success();
         });
         if (result.isFailed()) {
-            return onError(req, token, Results.getErrorCode(result), result.errorDetail);
+            return onError(req, token, Results.getErrorCode(result), result.errorDetail());
         }
         // clean negative cache (if exist) after inserting ledger txn
         ledgerTxnStore.cleanNegativeCacheAfterInsert(ledgerTxn.getReferenceId());
@@ -116,7 +116,7 @@ public class PostLedgerProcessor {
             return Results.fail(idempValueResult);
         }
 
-        IdempValue idempValue = idempValueResult.value;
+        IdempValue idempValue = idempValueResult.value();
         if (idempValue != null) {
             switch (idempValue.status) {
                 case PENDING:
@@ -162,7 +162,7 @@ public class PostLedgerProcessor {
             // return null, then access db to check if exists
             return Results.success();
         }
-        IdempValue idempValue = valueResult.value;
+        IdempValue idempValue = valueResult.value();
         if (!Objects.equals(idempValue.hash, reqHash)) {
             log.error("req hash does not match, reqHash={}, idemp: {}", reqHash, idempValue);
             return Results.fail(ErrorCode.REQUEST_HASH_CONFLICT, "req_hash_conflict");

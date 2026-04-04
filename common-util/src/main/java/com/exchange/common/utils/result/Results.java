@@ -17,6 +17,10 @@ public class Results {
 
     public static <T> Result<T> result(T newValue, Result<T> result) {
         Objects.requireNonNull(result);
-        return new Result<>(result.success, newValue, result.errorCode, result.errorDetail);
+        return new Result<>(result.success(), newValue, result.errorCode(), result.errorDetail());
+    }
+
+    public static boolean is(Result<?> result, PbMappableErrorCode code) {
+        return result != null && code != null && result.errorCode().getClass() == code.getClass() && result.errorCode() == code;
     }
 }

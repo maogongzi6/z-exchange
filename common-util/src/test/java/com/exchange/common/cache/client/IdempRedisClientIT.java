@@ -77,8 +77,8 @@ class IdempRedisClientIT {
         Result<String> res = idempRedisClient.releaseIdempIfOwned(service, scope, idempId, CommonIdempHelper.idempPendingValue(hash, token));
 
         assertThat(res).isNotNull();
-        assertThat(res.success).isTrue();
-        assertThat(res.value).isIn("", null);
+        assertThat(res.success()).isTrue();
+        assertThat(res.value()).isIn("", null);
         assertThat(redisTemplate.hasKey(key)).isFalse();
     }
 
@@ -105,7 +105,7 @@ class IdempRedisClientIT {
         Result<String> res = idempRedisClient.releaseIdempIfOwned(service, scope, idempId, CommonIdempHelper.idempPendingValue(hash, wrongToken));
 
         assertThat(res).isNotNull();
-        assertThat(res.success).isTrue();
+        assertThat(res.success()).isTrue();
 
         // Expect no deletion when not owned
         assertThat(redisTemplate.hasKey(key)).isTrue();
@@ -132,7 +132,7 @@ class IdempRedisClientIT {
         Result<String> res = idempRedisClient.releaseIdempIfOwned(service, scope, idempId, CommonIdempHelper.idempPendingValue(hash, token));
 
         assertThat(res).isNotNull();
-        assertThat(res.success).isTrue();
+        assertThat(res.success()).isTrue();
         assertThat(redisTemplate.hasKey(key)).isFalse();
     }
 

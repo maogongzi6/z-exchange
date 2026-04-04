@@ -40,8 +40,8 @@ public class AtomicTransactionProcessor {
         Result<String> idempResult = idempPrecheckProcessor.idempAndValidatePrecheck(requestInfo);
         if (idempResult.isFailed()) {
             return replyError(idempResult);
-        } else if (!Strings.isEmpty(idempResult.value)) {
-            return replySuccess(idempResult.value, idempResult.errorDetail);
+        } else if (!Strings.isEmpty(idempResult.value())) {
+            return replySuccess(idempResult.value(), idempResult.errorDetail());
         }
 
         Result<TransactionInfo> result = beforePostLedgerProcessor.beforePostingLedger(requestInfo, true);
@@ -49,7 +49,7 @@ public class AtomicTransactionProcessor {
         if (result.isFailed()) {
             return replyError(result);
         }
-        return replySuccess(result.value.walletTxn, result.errorDetail);
+        return replySuccess(result.value().walletTxn, result.errorDetail());
     }
 
     private AtomicTransactionReplyPb replySuccess(String txnId, String detail) {
@@ -75,6 +75,6 @@ public class AtomicTransactionProcessor {
     }
 
     private AtomicTransactionReplyPb replyError(Result<?> result) {
-        return replyError(Results.getErrorCode(result), result.errorDetail);
+        return replyError(Results.getErrorCode(result), result.errorDetail());
     }
 }
