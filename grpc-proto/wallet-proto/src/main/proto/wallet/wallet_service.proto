@@ -7,12 +7,16 @@ option java_package = "com.exchange.proto.wallet.wallet";
 
 import "wallet/create_wallet.proto";
 import "wallet/wallet_transaction.proto";
+import "wallet/balance_snapshot.proto";
 
 service WalletService {
   rpc createWallet(CreateWalletRequestPb) returns (CreateWalletReplyPb) {}
   rpc atomicTransaction(AtomicTransactionRequestPb) returns (AtomicTransactionReplyPb);
   rpc reserveTransaction(ReserveTransactionRequestPb) returns (ReserveTransactionReplyPb);
   rpc applyReserveTransaction(ApplyReservationTransactionRequestPb) returns (ApplyReservationTransactionReplyPb);
+
+  rpc getSnapshotByWalletId(GetSnapshotByIdRequestPb) returns (GetSnapshotReplyPb);
+  rpc getSnapshotByRefId(GetSnapshotByRefIdRequestPb) returns (GetSnapshotReplyPb);
 }
 
 

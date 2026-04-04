@@ -16,7 +16,7 @@ message GetSnapshotByRefIdRequestPb {
   string referenceId = 1;     // maps to ledger_transactions.reference_id
 }
 
-message GetTxnReplyPb {
+message GetSnapshotReplyPb {
   BalanceSnapshotPb transaction = 1;
   common.ErrorPb error = 2;
 }
