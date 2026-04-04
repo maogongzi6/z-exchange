@@ -1,9 +1,9 @@
 package com.exchange.common.redis.cache.strategy.impl;
 
 import com.exchange.common.redis.cache.model.CacheValueInfo;
+import com.exchange.common.redis.cache.model.StrategyOption;
 import com.exchange.common.redis.cache.ops.*;
 import com.exchange.common.redis.cache.strategy.VersionCacheStrategy;
-import com.exchange.common.utils.TtlStrategy;
 import com.exchange.common.utils.result.CommonErrorCode;
 import com.exchange.common.utils.result.Result;
 import com.exchange.common.utils.result.Results;
@@ -12,17 +12,20 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class DefaultVersionCacheAsideStrategy<T> implements VersionCacheStrategy<T> {
     private final ReadOps<T> readOps;
-    private final VersionWriteOps<T> versionBaseOps;
+    private final VersionWriteOps<T> versionWriteOps;
     private final VersionTombstoneOps versionTombstoneOps;
     private final VersionNegativeCacheOps versionNegativeCacheOps;
     private final SelfRecoverOps selfRecoverOps;
+    private final StrategyOption option;
 
-    DefaultVersionCacheAsideStrategy(ReadOps<T> readOps, VersionWriteOps<T> versionBaseOps, VersionTombstoneOps versionTombstoneOps, VersionNegativeCacheOps versionNegativeCacheOps, SelfRecoverOps selfRecoverOps) {
+    // package private constructor. expose factory method for external user
+    DefaultVersionCacheAsideStrategy(ReadOps<T> readOps, VersionWriteOps<T> versionWriteOps, VersionTombstoneOps versionTombstoneOps, VersionNegativeCacheOps versionNegativeCacheOps, SelfRecoverOps selfRecoverOps, StrategyOption option) {
         this.readOps = readOps;
-        this.versionBaseOps = versionBaseOps;
+        this.versionWriteOps = versionWriteOps;
         this.versionTombstoneOps = versionTombstoneOps;
         this.versionNegativeCacheOps = versionNegativeCacheOps;
         this.selfRecoverOps = selfRecoverOps;
+        this.option = option;
     }
 
     @Override
@@ -36,22 +39,31 @@ public class DefaultVersionCacheAsideStrategy<T> implements VersionCacheStrategy
     }
 
     @Override
-    public Result<Boolean> afterQueryHit(String id, T value, long newVersion, TtlStrategy ttl) {
-        return versionBaseOps.set(id, value, newVersion, ttl);
+    public Result<Boolean> afterDbHit(String id, T value, long newVersion) {
+        return versionWriteOps.set(id, value, newVersion, option.ttlOption().entityTtl());
     }
 
     @Override
-    public Result<Boolean> afterUpdate(String id, long newVersion, TtlStrategy ttl) {
-        return versionTombstoneOps.setTombstone(id, newVersion, ttl);
+    public Result<Boolean> afterDbMiss(String id) {
+        if (option.requireNegativeCache()) {
+            return Results.success();
+        }
+        return versionNegativeCacheOps.setNegative(id, option.ttlOption().negativeTtl());
     }
 
     @Override
-    public Result<Boolean> afterQueryMiss(String id, long version, TtlStrategy ttl) {
-        return versionNegativeCacheOps.setNegative(id, version, ttl);
+    public Result<Boolean> afterUpdate(String id, T value, long newVersion) {
+        if (!option.requireTombstone()) {
+            return Results.success();
+        }
+        return versionTombstoneOps.setTombstone(id, newVersion, option.ttlOption().tombstoneTtl());
     }
 
     @Override
-    public Result<Boolean> afterInsert(String id) {
+    public Result<Boolean> afterInsert(String id, T value, long newVersion) {
+        if (option.requireNegativeCache()) {
+            return Results.success();
+        }
         return versionNegativeCacheOps.cleanNegative(id);
     }
 }

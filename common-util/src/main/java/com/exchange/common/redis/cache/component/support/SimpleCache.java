@@ -19,7 +19,7 @@ import java.time.Duration;
 public class SimpleCache implements ReadableCache, RawDeletableCache {
     private final CacheEncoder cacheEncoder;
     private final BaseRedisSupport<String> baseRedisSupport;
-    private final DefaultReadableCache simpleRedisReadSupport;
+    private final ReadableCache readableCache;
 
     public SimpleCache(
             ValueCodec codec,
@@ -27,7 +27,7 @@ public class SimpleCache implements ReadableCache, RawDeletableCache {
             ReadableCacheFactory factory) {
         this.cacheEncoder = codec;
         this.baseRedisSupport = baseRedisSupport;
-        this.simpleRedisReadSupport = factory.create(codec, baseRedisSupport);
+        this.readableCache = factory.create(codec, baseRedisSupport);
     }
 
 //    public Result<CacheValueInfo<String>> get(String key) {
@@ -35,7 +35,7 @@ public class SimpleCache implements ReadableCache, RawDeletableCache {
 //    }
 
     public <T> Result<CacheValueInfo<T>> get(String key, Class<T> clazz) {
-        return simpleRedisReadSupport.get(key, clazz);
+        return readableCache.get(key, clazz);
     }
 
     public <T> Result<Void> set(String key, T value, TtlStrategy ttl) {

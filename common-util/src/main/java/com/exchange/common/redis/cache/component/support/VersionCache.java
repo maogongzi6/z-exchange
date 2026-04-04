@@ -28,7 +28,7 @@ import java.util.Collections;
 @Slf4j
 public class VersionCache implements ReadableCache, RawDeletableCache {
     private final VersionCacheEncoder cacheEncoder;
-    private final DefaultReadableCache versionRedisReadSupport;
+    private final ReadableCache readableCache;
     private final BaseRedisSupport<String> baseRedisSupport;
     private final ResourceLoader resourceLoader;
     private final RedissonClient redissonClient;
@@ -41,7 +41,7 @@ public class VersionCache implements ReadableCache, RawDeletableCache {
             ReadableCacheFactory factory,
             ResourceLoader resourceLoader,
             RedissonClient redissonClient) {
-        this.versionRedisReadSupport = factory.create(versionCodec, baseRedisSupport);
+        this.readableCache = factory.create(versionCodec, baseRedisSupport);
         this.cacheEncoder = versionCodec;
         this.baseRedisSupport = baseRedisSupport;
         this.resourceLoader = resourceLoader;
@@ -65,8 +65,9 @@ public class VersionCache implements ReadableCache, RawDeletableCache {
 //        return versionRedisReadSupport.get(key);
 //    }
 
+    // TODO maybe delete this, let readable cache handle
     public <T> Result<CacheValueInfo<T>> get(String key, Class<T> clazz) {
-        return versionRedisReadSupport.get(key, clazz);
+        return readableCache.get(key, clazz);
     }
 
     public <T> Result<Boolean> setIfAbsentOrNewer(String key, T value, long newVersion, TtlStrategy ttl) {

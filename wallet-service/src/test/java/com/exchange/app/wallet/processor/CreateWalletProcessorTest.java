@@ -30,13 +30,13 @@ public class CreateWalletProcessorTest {
     @Test
     public void testCreateWalletProcessor() {
         String ref = "create-wallet-test-7";
-        String asset = "1";
+        String asset = "asset-1";
         CreateWalletRequestPb request = CreateWalletRequestPb.newBuilder()
                 .setReferenceId(ref)
                 .setAssetId(asset)
-                .setServiceId(ServiceIdPb.ServiceIdPb_User)
+                .setServiceId(ServiceIdPb.ServiceIdPb_System)
                 .setOwnerId("sun")
-                .setOwnerType(OwnerTypePb.OwnerTypePb_User).build();
+                .setOwnerType(OwnerTypePb.OwnerTypePb_System).build();
 
         CreateWalletReplyPb reply = createWalletProcessor.createWallet(request);
         System.out.println(reply);

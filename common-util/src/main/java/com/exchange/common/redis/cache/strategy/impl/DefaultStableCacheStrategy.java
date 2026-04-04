@@ -20,6 +20,7 @@ public class DefaultStableCacheStrategy<T> implements StableCacheStrategy<T> {
     private final NegativeCacheOps negativeCacheOps;
     private final SelfRecoverOps selfRecoverOps;
 
+    // package private constructor. expose factory method for external user
     DefaultStableCacheStrategy(ReadOps<T> readOps, SimpleWriteOps<T> simpleBaseOps, NegativeCacheOps negativeCacheOps, SelfRecoverOps selfRecoverOps) {
         this.readOps = readOps;
         this.simpleBaseOps = simpleBaseOps;

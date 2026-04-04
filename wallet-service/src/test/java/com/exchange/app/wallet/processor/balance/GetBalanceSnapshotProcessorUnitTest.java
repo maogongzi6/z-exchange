@@ -19,7 +19,7 @@ public class GetBalanceSnapshotProcessorUnitTest {
     public void getBalanceSnapshotShouldLoadByWalletId() {
         BalanceSnapshotStore balanceSnapshotStore = mock(BalanceSnapshotStore.class);
         GetBalanceSnapshotProcessor processor = new GetBalanceSnapshotProcessor(balanceSnapshotStore);
-        BalanceSnapshot snapshot = BalanceSnapshot.create("wallet-1", ServiceId.USER, "ref-1", "asset-1", WalletStatus.OPEN, OwnerType.USER, "owner-1", 100L, 20L);
+        BalanceSnapshot snapshot = BalanceSnapshot.create("wallet-1", ServiceId.USER, "ref-1", "asset-1", WalletStatus.OPEN, OwnerType.USER, "owner-1", 100L, 20L, 0L);
 
         when(balanceSnapshotStore.getByWalletId("wallet-1")).thenReturn(Results.success(snapshot));
 

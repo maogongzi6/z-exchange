@@ -70,6 +70,8 @@ app:
       done-ttl: 24h
       jitter-ms: 100
     data:
+      entity-cache-ttl: 120s
       index-cache-ttl: 1h
+      tombstone-ttl: 120s # should be short to only cover request ttl
       negative-ttl: 30s
       jitter: 100ms

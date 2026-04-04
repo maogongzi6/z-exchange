@@ -1,32 +1,33 @@
 package com.exchange.common.redis.cache.strategy.impl;
 
 import com.exchange.common.redis.cache.model.CacheValueInfo;
+import com.exchange.common.redis.cache.model.StrategyOption;
 import com.exchange.common.redis.cache.ops.ReadOps;
 import com.exchange.common.redis.cache.ops.SelfRecoverOps;
 import com.exchange.common.redis.cache.ops.VersionWriteOps;
 import com.exchange.common.redis.cache.ops.VersionNegativeCacheOps;
-import com.exchange.common.redis.cache.ops.impl.L1L2ReadOpsImpl;
-import com.exchange.common.redis.cache.strategy.VersionPostRefreshStrategy;
-import com.exchange.common.utils.TtlStrategy;
+import com.exchange.common.redis.cache.strategy.VersionCacheStrategy;
 import com.exchange.common.utils.result.CommonErrorCode;
 import com.exchange.common.utils.result.Result;
 import com.exchange.common.utils.result.Results;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 // No Tombstone logic for post-refresh strategy
 @Slf4j
-public class DefaultVersionPostRefreshStrategy<T> implements VersionPostRefreshStrategy<T> {
+public class DefaultVersionPostRefreshStrategy<T> implements VersionCacheStrategy<T> {
     private final ReadOps<T> readOps;
     private final VersionWriteOps<T> versionBaseOps;
     private final VersionNegativeCacheOps versionNegativeCacheOps;
     private final SelfRecoverOps selfRecoverOps;
+    private final StrategyOption option;
 
-    DefaultVersionPostRefreshStrategy(ReadOps<T> readOps, VersionWriteOps<T> versionBaseOps, VersionNegativeCacheOps versionNegativeCacheOps, SelfRecoverOps selfRecoverOps) {
+    // package private constructor. expose factory method for external user
+    DefaultVersionPostRefreshStrategy(ReadOps<T> readOps, VersionWriteOps<T> versionBaseOps, VersionNegativeCacheOps versionNegativeCacheOps, SelfRecoverOps selfRecoverOps, StrategyOption option) {
         this.readOps = readOps;
         this.versionBaseOps = versionBaseOps;
         this.versionNegativeCacheOps = versionNegativeCacheOps;
         this.selfRecoverOps = selfRecoverOps;
+        this.option = option;
     }
 
     @Override
@@ -40,17 +41,25 @@ public class DefaultVersionPostRefreshStrategy<T> implements VersionPostRefreshS
     }
 
     @Override
-    public Result<Boolean> set(String id, T value, long newVersion, TtlStrategy ttl) {
-        return versionBaseOps.set(id, value, newVersion, ttl);
+    public Result<Boolean> afterDbHit(String id, T value, long newVersion) {
+        return versionBaseOps.set(id, value, newVersion, option.ttlOption().entityTtl());
     }
 
     @Override
-    public Result<Boolean> setNegative(String id, long version, TtlStrategy ttl) {
-        return versionNegativeCacheOps.setNegative(id, version, ttl);
+    public Result<Boolean> afterDbMiss(String id) {
+        if (option.requireNegativeCache()) {
+            return Results.success();
+        }
+        return versionNegativeCacheOps.setNegative(id, option.ttlOption().negativeTtl());
     }
 
     @Override
-    public Result<Boolean> cleanNegative(String id) {
-        return versionNegativeCacheOps.cleanNegative(id);
+    public Result<Boolean> afterUpdate(String id, T value, long newVersion) {
+        return afterDbHit(id, value, newVersion);
+    }
+
+    @Override
+    public Result<Boolean> afterInsert(String id, T value, long newVersion) {
+        return afterDbHit(id, value, newVersion);
     }
 }

@@ -33,6 +33,8 @@ public class CustomCacheProperties {
         @NotNull
         private Duration negativeTtl;
         @NotNull
+        private Duration tombstoneTtl;
+        @NotNull
         private Duration jitter;
     }
 }

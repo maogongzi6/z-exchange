@@ -14,25 +14,6 @@ public class VersionWriteOpsImpl<T> implements VersionWriteOps<T> {
     private final VersionCache versionedRedisSupport;
     private final CacheDescriptor<T> cacheDescriptor;
 
-//    @Override
-//    public Result<CacheValueInfo<T>> get(String id) {
-//        String cacheKey = cacheDescriptor.buildCacheKey(id);
-//        Result<CacheValueInfo<T>> cacheResult = versionedRedisSupport.get(cacheKey, cacheDescriptor.getClazz());
-//        if (!cacheResult.success) {
-//            // cache error should not block the main flow
-//            log.error("cache get failed, cache_key: {}, result: {}", cacheKey, cacheResult);
-//            if (Result.is(cacheResult, CommonErrorCode.PARSE_CACHE_ERROR)) {
-//                // delete the abnormal value to fast recover
-//                log.error("invalid cache value, delete to fast recover, cache_key: {}, result: {}", cacheKey, cacheResult);
-//                Result<Boolean> deleteResult = versionedRedisSupport.delete(cacheKey);
-//                if (!deleteResult.success || !deleteResult.value) {
-//                    log.error("cache delete failed, cache_key: {}", cacheKey);
-//                }
-//            }
-//        }
-//        return cacheResult;
-//    }
-
     @Override
     public Result<Boolean> set(String id, T value, long newVersion, TtlStrategy ttl) {
         String cacheKey = cacheDescriptor.buildCacheKey(id);

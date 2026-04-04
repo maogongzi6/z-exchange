@@ -15,14 +15,14 @@ public class VersionNegativeCacheOpsImpl implements VersionNegativeCacheOps {
     private final CacheDescriptor<?> cacheDescriptor;
 
     @Override
-    public Result<Boolean> setNegative(String id, long version, TtlStrategy ttl) {
+    public Result<Boolean> setNegative(String id, TtlStrategy ttl) {
         String cacheKey = cacheDescriptor.buildCacheKey(id);
-        Result<Boolean> setResult = versionedRedisSupport.setNegative(cacheKey, version, ttl);
+        Result<Boolean> setResult = versionedRedisSupport.setNegative(cacheKey, 0L, ttl);
         if (!setResult.success()) {
             // cache error should not block the main flow
-            log.error("negative cache set failed, cache_key: {}, version: {}, result: {}", cacheKey, version, setResult);
+            log.error("negative cache set failed, cache_key: {}, result: {}", cacheKey, setResult);
         } else if (!setResult.value()) {
-            log.debug("negative cache not set, cache_key: {}, version: {}", cacheKey, version);
+            log.debug("negative cache not set, cache_key: {}", cacheKey);
         }
         return setResult;
     }

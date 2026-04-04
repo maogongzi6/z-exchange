@@ -37,7 +37,7 @@ public class BalanceSnapshot extends BaseEntity {
     @Version
     private Long version;
 
-    private BalanceSnapshot(String walletId, ServiceId serviceId, String walletReferenceId, String assetId, WalletStatus walletStatus, OwnerType ownerType, String ownerId, Long available, Long reserved) {
+    private BalanceSnapshot(String walletId, ServiceId serviceId, String walletReferenceId, String assetId, WalletStatus walletStatus, OwnerType ownerType, String ownerId, Long available, Long reserved, Long version) {
         this.walletId = walletId;
         this.serviceId = serviceId;
         this.walletReferenceId = walletReferenceId;
@@ -47,9 +47,10 @@ public class BalanceSnapshot extends BaseEntity {
         this.ownerId = ownerId;
         this.available = available;
         this.reserved = reserved;
+        this.version = version;
     }
 
-    public static BalanceSnapshot create(String walletId, ServiceId serviceId, String walletReferenceId, String assetId, WalletStatus walletStatus, OwnerType ownerType, String ownerId, Long available, Long reserved) {
-        return new BalanceSnapshot(walletId, serviceId, walletReferenceId, assetId, walletStatus, ownerType, ownerId, available, reserved);
+    public static BalanceSnapshot create(String walletId, ServiceId serviceId, String walletReferenceId, String assetId, WalletStatus walletStatus, OwnerType ownerType, String ownerId, Long available, Long reserved, Long version) {
+        return new BalanceSnapshot(walletId, serviceId, walletReferenceId, assetId, walletStatus, ownerType, ownerId, available, reserved, version);
     }
 }

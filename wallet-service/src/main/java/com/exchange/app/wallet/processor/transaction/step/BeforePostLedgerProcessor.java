@@ -260,6 +260,9 @@ public class BeforePostLedgerProcessor {
         return Results.success(reservation);
     }
 
+    // TODO for db txn updates, uses select for update to lock records, then update it
+    //  this is safer in multi-instance scenario,
+    //  and also good for cache refreshing
     private Result<Void> updateSnapshotsBeforePosting(Map<String, List<WalletAction>> walletIdToActions, List<BalanceSnapshot> snapshots) {
         List<BalanceSnapshot> snapshotInOrder = snapshots.stream().sorted(Comparator.comparing(BalanceSnapshot::getId)).collect(Collectors.toList());
         // update snapshot to reserve/release money by id order
