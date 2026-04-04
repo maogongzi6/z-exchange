@@ -69,3 +69,7 @@ app:
       pending-ttl: 120s
       done-ttl: 24h
       jitter-ms: 100
+    data:
+      index-cache-ttl: 1h
+      negative-ttl: 30s
+      jitter: 100ms

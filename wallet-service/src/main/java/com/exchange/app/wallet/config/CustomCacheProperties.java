@@ -2,7 +2,6 @@ package com.exchange.app.wallet.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.validation.annotation.Validated;
 
 import javax.validation.constraints.Min;
@@ -10,7 +9,7 @@ import javax.validation.constraints.NotNull;
 import java.time.Duration;
 
 public class CustomCacheProperties {
-    @Data
+    @lombok.Data
     @Validated
     @ConfigurationProperties(prefix = "app.cache.idemp")
     static public class Idemp {
@@ -21,5 +20,17 @@ public class CustomCacheProperties {
         @Min(1)
         @NotNull
         private Integer jitterMs;
+    }
+
+    @lombok.Data
+    @Validated
+    @ConfigurationProperties(prefix = "app.cache.data")
+    static public class Data {
+        @NotNull
+        private Duration indexCacheTtl;
+        @NotNull
+        private Duration negativeTtl;
+        @NotNull
+        private Duration jitter;
     }
 }

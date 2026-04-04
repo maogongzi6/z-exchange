@@ -4,6 +4,7 @@ import com.exchange.app.wallet.client.AccountServiceClient;
 import com.exchange.app.wallet.dao.repository.BalanceSnapshotRepository;
 import com.exchange.app.wallet.dao.repository.WalletAccountMappingRepository;
 import com.exchange.app.wallet.dao.repository.WalletRepository;
+import com.exchange.app.wallet.dao.store.BalanceSnapshotStore;
 import com.exchange.app.wallet.dao.mapper.WalletMapper;
 import com.exchange.app.wallet.po.enums.OwnerType;
 import com.exchange.app.wallet.po.enums.ServiceId;
@@ -40,6 +41,7 @@ public class CreateWalletProcessor {
     final private WalletAccountMappingRepository walletAccountMappingManager;
 
     final private WalletRepository walletManager;
+    final private BalanceSnapshotStore balanceSnapshotStore;
 
     final private AccountServiceClient accountServiceClient;
 
@@ -53,6 +55,7 @@ public class CreateWalletProcessor {
 
         Wallet walletInDb = walletMapper.selectByReferenceId(serviceId, req.getReferenceId());
         if (walletInDb != null && walletInDb.getWalletStatus().hasInitiated()) {
+            balanceSnapshotStore.cleanNegativeCacheAfterInsert(walletInDb.getReferenceId());
             return replySuccess("wallet has been created");
         } else if (walletInDb == null) {
             Result<Wallet> walletResult = createWalletInDb(req, serviceId, ownerType);
@@ -66,6 +69,7 @@ public class CreateWalletProcessor {
         if (!result.success()) {
            return replyError(result);
         }
+        balanceSnapshotStore.cleanNegativeCacheAfterInsert(walletInDb.getReferenceId());
 
         result = enableWallet(walletInDb);
         if (!result.success()) {

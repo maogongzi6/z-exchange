@@ -28,6 +28,16 @@ public class BalanceSnapshotRepository extends DbBaseRepository<BalanceSnapshot,
         return mapper.selectList(query);
     }
 
+    public BalanceSnapshot getByWalletId(String walletId) {
+        var query = Wrappers.<BalanceSnapshot>lambdaQuery().eq(BalanceSnapshot::getWalletId, walletId);
+        return mapper.selectOne(query);
+    }
+
+    public BalanceSnapshot getByWalletReferenceId(String walletReferenceId) {
+        var query = Wrappers.<BalanceSnapshot>lambdaQuery().eq(BalanceSnapshot::getWalletReferenceId, walletReferenceId);
+        return mapper.selectOne(query);
+    }
+
     public List<BalanceSnapshot> selectIdByRefs(ServiceId serviceId, List<String> walletRefs) {
         LambdaQueryWrapper<BalanceSnapshot> wrapper = new LambdaQueryWrapper<>();
         wrapper = wrapper.select(BalanceSnapshot::getId, BalanceSnapshot::getWalletId, BalanceSnapshot::getServiceId, BalanceSnapshot::getWalletReferenceId)

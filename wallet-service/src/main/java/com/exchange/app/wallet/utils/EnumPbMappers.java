@@ -4,6 +4,7 @@ import com.exchange.app.wallet.po.enums.transaction.ActionType;
 import com.exchange.app.wallet.po.enums.BusinessType;
 import com.exchange.app.wallet.po.enums.OwnerType;
 import com.exchange.app.wallet.po.enums.ServiceId;
+import com.exchange.app.wallet.po.enums.WalletStatus;
 import com.exchange.app.wallet.po.enums.transaction.TransactionStatus;
 import com.exchange.common.utils.enums.EnumMapper;
 import com.exchange.proto.wallet.common.*;
@@ -23,6 +24,16 @@ public class EnumPbMappers {
                 put(ServiceIdPb.ServiceIdPb_Unknown, ServiceId.UNKNOWN);
                 put(ServiceIdPb.ServiceIdPb_System, ServiceId.SYSTEM);
                 put(ServiceIdPb.ServiceIdPb_User, ServiceId.USER);
+            }}
+    );
+
+    final static public EnumMapper<WalletStatusPb, WalletStatus> walletStatusPbMapper = new EnumMapper<>(
+            new HashMap<>() {{
+                put(WalletStatusPb.WalletStatusPb_Unknown, WalletStatus.UNKNOWN);
+                put(WalletStatusPb.WalletStatusPb_Init, WalletStatus.INIT);
+                put(WalletStatusPb.WalletStatusPb_Open, WalletStatus.OPEN);
+                put(WalletStatusPb.WalletStatusPb_Frozen, WalletStatus.FROZEN);
+                put(WalletStatusPb.WalletStatusPb_Close, WalletStatus.CLOSE);
             }}
     );
 
