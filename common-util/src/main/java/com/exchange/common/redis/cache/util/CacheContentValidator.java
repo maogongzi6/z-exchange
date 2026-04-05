@@ -5,14 +5,9 @@ import com.exchange.common.utils.ValidateHelper;
 
 public class CacheContentValidator {
     public static <T> boolean validateContent(T content, CacheType cacheType) {
-        switch (cacheType) {
-            case TOMBSTONE:
-            case NEGATIVE:
-                return ValidateHelper.isEmpty(content);
-            case STRING:
-            case JSON:
-                return !ValidateHelper.isEmpty(content);
-        }
-        return false;
+        return switch (cacheType) {
+            case TOMBSTONE, NEGATIVE -> ValidateHelper.isEmpty(content);
+            case STRING, JSON -> !ValidateHelper.isEmpty(content);
+        };
     }
 }

@@ -38,7 +38,7 @@ public class GetLedgerTxnProcessorIntegrationTest {
     private LedgerTxnStore ledgerTxnStore;
 
     @Test
-    void shouldReturnSuccessWhenLookupByTxnIdAndIncludeEntries() throws InterruptedException {
+    void shouldReturnSuccessWhenLookupByTxnIdAndIncludeEntries() {
 
         // Arrange
         //String txnId = "TXN_TEST_" + System.currentTimeMillis() + "_" + Math.random();

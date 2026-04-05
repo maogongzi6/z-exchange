@@ -15,7 +15,7 @@ public class Results {
         return new Result<>(false, null, error, errorDetail);
     }
 
-    public static <T> Result<T> result(T newValue, Result<T> result) {
+    public static <T> Result<T> result(T newValue, Result<?> result) {
         Objects.requireNonNull(result);
         return new Result<>(result.success(), newValue, result.errorCode(), result.errorDetail());
     }

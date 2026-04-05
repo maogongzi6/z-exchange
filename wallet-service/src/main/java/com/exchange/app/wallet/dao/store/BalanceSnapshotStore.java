@@ -1,6 +1,5 @@
 package com.exchange.app.wallet.dao.store;
 
-import com.exchange.app.wallet.constant.cache.CacheTtlStrategies;
 import com.exchange.app.wallet.dao.repository.BalanceSnapshotRepository;
 import com.exchange.app.wallet.po.enums.OwnerType;
 import com.exchange.app.wallet.po.wallet.BalanceSnapshot;
@@ -8,7 +7,7 @@ import com.exchange.app.wallet.result.Results;
 import com.exchange.common.component.PromotionClassifier;
 import com.exchange.common.redis.cache.constant.CacheType;
 import com.exchange.common.redis.cache.model.CacheValueInfo;
-import com.exchange.common.redis.cache.strategy.StableCacheStrategy;
+import com.exchange.common.redis.cache.strategy.RawCacheStrategy;
 import com.exchange.common.redis.cache.strategy.VersionCacheStrategy;
 import com.exchange.common.utils.result.Result;
 import lombok.extern.slf4j.Slf4j;
@@ -19,24 +18,22 @@ import org.springframework.stereotype.Component;
 @Component
 public class BalanceSnapshotStore {
     private final BalanceSnapshotRepository balanceSnapshotRepository;
-    private final StableCacheStrategy<String> balanceSnapshotRefCache;
+    // TODO hot
+    private final RawCacheStrategy<String> balanceSnapshotRefCache;
     private final VersionCacheStrategy<BalanceSnapshot> hotSnapshotCache;
     private final VersionCacheStrategy<BalanceSnapshot> normalSnapshotCache;
-    private final CacheTtlStrategies cacheTtlStrategies;
     private final PromotionClassifier promotionClassifier;
 
     public BalanceSnapshotStore(
             BalanceSnapshotRepository balanceSnapshotRepository,
-            @Qualifier("balanceSnapshotRefCache") StableCacheStrategy<String> balanceSnapshotRefCache,
+            @Qualifier("balanceSnapshotRefCache") RawCacheStrategy<String> balanceSnapshotRefCache,
             @Qualifier("hotSnapshotCache") VersionCacheStrategy<BalanceSnapshot> hotSnapshotCache,
             @Qualifier("normalSnapshotCache") VersionCacheStrategy<BalanceSnapshot> normalSnapshotCache,
-            CacheTtlStrategies cacheTtlStrategies,
             @Qualifier("hotBalanceSnapshotClassifier") PromotionClassifier promotionClassifier) {
         this.balanceSnapshotRepository = balanceSnapshotRepository;
         this.balanceSnapshotRefCache = balanceSnapshotRefCache;
         this.hotSnapshotCache = hotSnapshotCache;
         this.normalSnapshotCache = normalSnapshotCache;
-        this.cacheTtlStrategies = cacheTtlStrategies;
         this.promotionClassifier = promotionClassifier;
     }
 
@@ -52,11 +49,9 @@ public class BalanceSnapshotStore {
         promoteHotSnapshot(walletId, ownerType);
 
         // clean negative ref cache
-        Result<Boolean> refResult = balanceSnapshotRefCache.cleanNegative(refId);
+        Result<Boolean> refResult = balanceSnapshotRefCache.afterInsert(refId, walletId);
         if (!refResult.success()) {
             log.error("clean negative cache failed, ref_id: {}, refResult: {}", refId, refResult);
-        } else if (!refResult.value()) {
-            log.debug("negative cache not cleaned, ref_id: {}, refResult: {}", refId, refResult);
         }
     }
 
@@ -106,11 +101,9 @@ public class BalanceSnapshotStore {
             if (snapshotResult.value() == null) {
                 // TODO should not set negative if already hit a negative (this could infinitely renewal the negative ttl)
                 // set negative cache
-                Result<Void> result = balanceSnapshotRefCache.setNegative(refId, cacheTtlStrategies.getNegativeStrategy());
+                Result<Boolean> result = balanceSnapshotRefCache.afterDbMiss(refId);
                 if (!result.success()) {
                     log.error("set negative result failed, ref_id: {}, result: {}", refId, result);
-                } else {
-                    log.debug("set negative result, ref_id: {}, result: {}", refId, result);
                 }
             } else {
                 // try to promote hot snapshot
@@ -139,7 +132,7 @@ public class BalanceSnapshotStore {
 
         BalanceSnapshot snapshot = balanceSnapshotRepository.getByWalletReferenceId(refId);
         if (snapshot != null) {
-            Result<Void> setRefCacheResult = balanceSnapshotRefCache.set(refId, snapshot.getWalletId(), cacheTtlStrategies.getBalanceSnapshotRefStrategy());
+            Result<Boolean> setRefCacheResult = balanceSnapshotRefCache.afterDbHit(refId, snapshot.getWalletId());
             if (!setRefCacheResult.success()) {
                 log.error("set ref cache failed, ref_id: {}, result: {}", refId, setRefCacheResult);
             }

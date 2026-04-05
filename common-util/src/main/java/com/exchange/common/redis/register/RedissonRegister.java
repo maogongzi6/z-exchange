@@ -21,8 +21,8 @@ import org.springframework.context.annotation.Primary;
 public class RedissonRegister {
 
     @Primary
-    @Bean(name = "normalRedissonClient", destroyMethod = "shutdown")
-    public RedissonClient normalRedissonClient(RedisProperties redisProperties, RedissonProperties redissonProperties) {
+    @Bean(name = "defaultRedissonClient", destroyMethod = "shutdown")
+    public RedissonClient defaultRedissonClient(RedisProperties redisProperties, RedissonProperties redissonProperties) {
         Config config = new Config();
         RedissonProperties.ClientProperties redissonClientProperties = redissonProperties.getNormalProperties();
 

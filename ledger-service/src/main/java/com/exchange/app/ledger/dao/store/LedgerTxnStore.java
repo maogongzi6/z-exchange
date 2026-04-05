@@ -1,16 +1,14 @@
 package com.exchange.app.ledger.dao.store;
 
-import com.exchange.app.ledger.constant.cache.CacheTtlStrategies;
 import com.exchange.app.ledger.dao.repository.LedgerTxnRepository;
 import com.exchange.app.ledger.po.ledger.LedgerTxn;
 import com.exchange.app.ledger.result.Results;
 import com.exchange.common.redis.cache.constant.CacheType;
 import com.exchange.common.redis.cache.model.CacheValueInfo;
-import com.exchange.common.redis.cache.strategy.StableCacheStrategy;
+import com.exchange.common.redis.cache.strategy.RawCacheStrategy;
 import com.exchange.common.redis.cache.strategy.VersionCacheStrategy;
 import com.exchange.common.utils.result.Result;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
@@ -19,26 +17,21 @@ import org.springframework.stereotype.Component;
 public class LedgerTxnStore {
     private final LedgerTxnRepository ledgerTxnRepository;
     private final VersionCacheStrategy<LedgerTxn> ledgerTxnCache;
-    private final StableCacheStrategy<String> ledgerRefCache;
-    private final CacheTtlStrategies cacheTtlStrategies;
+    private final RawCacheStrategy<String> ledgerRefCache;
 
     public LedgerTxnStore(
             LedgerTxnRepository ledgerTxnRepository,
             @Qualifier("ledgerTxnCache") VersionCacheStrategy<LedgerTxn> ledgerTxnCache,
-            @Qualifier("ledgerRefCache") StableCacheStrategy<String> ledgerRefCache,
-            CacheTtlStrategies cacheTtlStrategies) {
+            @Qualifier("ledgerRefCache") RawCacheStrategy<String> ledgerRefCache) {
         this.ledgerTxnRepository = ledgerTxnRepository;
         this.ledgerTxnCache = ledgerTxnCache;
         this.ledgerRefCache = ledgerRefCache;
-        this.cacheTtlStrategies = cacheTtlStrategies;
     }
 
     public void postInsert(LedgerTxn ledgerTxn) {
-        Result<Boolean> result = ledgerRefCache.cleanNegative(ledgerTxn.getReferenceId());
+        Result<Boolean> result = ledgerRefCache.afterInsert(ledgerTxn.getReferenceId(), ledgerTxn.getTxnId());
         if (!result.success()) {
             log.error("clean negative cache failed, ref_id: {}, result: {}", ledgerTxn.getReferenceId(), result);
-        } else if (!result.value()) {
-            log.error("negative cache not cleaned, ref_id: {}, result: {}", ledgerTxn.getReferenceId(), result);
         }
 
         result = ledgerTxnCache.afterInsert(ledgerTxn.getTxnId(), ledgerTxn, ledgerTxn.getVersion());
@@ -95,7 +88,7 @@ public class LedgerTxnStore {
         Result<LedgerTxn> txnResult = doGetByRefId(refId);
         if (txnResult.success() && txnResult.value() == null) {
             // TODO should not set negative if already hit a negative (this could infinitely renewal the negative ttl)
-            Result<Void> result = ledgerRefCache.setNegative(refId, cacheTtlStrategies.getNegativeStrategy());
+            Result<Boolean> result = ledgerRefCache.afterDbMiss(refId);
             if (!result.success()) {
                 log.error("set negative result failed, ref_id: {}, result: {}", refId, result);
             }
@@ -125,7 +118,7 @@ public class LedgerTxnStore {
 
         LedgerTxn txn = ledgerTxnRepository.getByRefId(refId);
         if (txn != null) {
-            Result<Void> setRefCacheResult = ledgerRefCache.set(refId, txn.getTxnId(), cacheTtlStrategies.getLedgerRefStrategy());
+            Result<Boolean> setRefCacheResult = ledgerRefCache.afterDbHit(refId, txn.getTxnId());
             if (!setRefCacheResult.success()) {
                 log.error("set ref cache failed, ref_id: {}, result: {}", refId, setRefCacheResult);
             }

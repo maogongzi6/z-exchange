@@ -1,8 +1,8 @@
 package com.exchange.app.ledger;
 
-import com.exchange.common.redis.BaseRedisSupport;
-import com.exchange.common.redis.cache.register.simple.SimpleCacheRegister;
-import com.exchange.common.redis.cache.register.version.VersionCacheRegister;
+import com.exchange.common.redis.cache.register.CacheSupportRegister;
+import com.exchange.common.redis.cache.strategy.impl.StrategyFactory;
+import com.exchange.common.redis.register.BaseCacheRegister;
 import com.exchange.common.redis.register.RedissonRegister;
 import com.exchange.common.redis.idemp.register.RedisIdempRegister;
 import com.exchange.common.db.register.CommonDbComponentRegister;
@@ -28,11 +28,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         },
         scanBasePackageClasses = {
                 CommonDbComponentRegister.class,
+                BaseCacheRegister.class,
                 RedissonRegister.class,
-                BaseRedisSupport.class,
-                SimpleCacheRegister.class,
-                VersionCacheRegister.class,
+                CacheSupportRegister.class,
                 RedisIdempRegister.class,
+                StrategyFactory.class
         })
 public class LedgerServer {
     public static void main(String[] args) {

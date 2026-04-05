@@ -1,38 +1,32 @@
 package com.exchange.common.redis.cache.strategy.impl;
 
-import com.exchange.common.redis.cache.model.StrategyOption;
-import com.exchange.common.redis.cache.ops.*;
-import com.exchange.common.redis.cache.strategy.StableCacheStrategy;
+import com.exchange.common.redis.cache.component.codec.impl.ValueCodec;
+import com.exchange.common.redis.cache.component.codec.impl.VersionCodec;
+import com.exchange.common.redis.cache.component.support.DefaultCacheReader;
+import com.exchange.common.redis.cache.component.support.RawCacheWriter;
+import com.exchange.common.redis.cache.component.support.VersionCacheWriter;
+import com.exchange.common.redis.cache.strategy.model.CacheDescriptor;
+import com.exchange.common.redis.cache.strategy.model.RawStrategyConfig;
+import com.exchange.common.redis.cache.strategy.model.VersionStrategyConfig;
+import com.exchange.common.redis.cache.strategy.RawCacheStrategy;
 import com.exchange.common.redis.cache.strategy.VersionCacheStrategy;
 import org.springframework.stereotype.Component;
 
 @Component
-public class StrategyFactory {
-    public <T> StableCacheStrategy<T> buildStableCacheStrategy(
-            ReadOps<T> readOps,
-            SimpleWriteOps<T> simpleBaseOps,
-            NegativeCacheOps negativeCacheOps,
-            SelfRecoverOps selfRecoverOps) {
-        return new DefaultStableCacheStrategy<>(readOps, simpleBaseOps, negativeCacheOps, selfRecoverOps);
+public final class StrategyFactory {
+    public <T> RawCacheStrategy<T> buildRawCacheStrategy(
+            CacheDescriptor<T> descriptor,
+            DefaultCacheReader<ValueCodec> cacheReader,
+            RawCacheWriter cacheWriter,
+            RawStrategyConfig config) {
+        return new DefaultRawCacheStrategy<>(descriptor, cacheReader, cacheWriter, config);
     }
     
-    public <T> VersionCacheStrategy<T> buildVersionCacheAsideStrategy(
-            ReadOps<T> readOps,
-            VersionWriteOps<T> versionBaseOps,
-            VersionTombstoneOps versionTombstoneOps,
-            VersionNegativeCacheOps versionNegativeCacheOps,
-            SelfRecoverOps selfRecoverOps,
-            StrategyOption option
-            ) {
-        return new DefaultVersionCacheAsideStrategy<>(readOps, versionBaseOps, versionTombstoneOps, versionNegativeCacheOps, selfRecoverOps, option);
-    }
-
-    public <T> VersionCacheStrategy<T> buildVersionPostRefreshStrategy(
-            ReadOps<T> readOps,
-            VersionWriteOps<T> versionBaseOps,
-            VersionNegativeCacheOps versionNegativeCacheOps,
-            SelfRecoverOps selfRecoverOps,
-            StrategyOption option) {
-        return new DefaultVersionPostRefreshStrategy<>(readOps, versionBaseOps, versionNegativeCacheOps, selfRecoverOps, option);
+    public <T> VersionCacheStrategy<T> buildVersionCacheStrategy(
+            CacheDescriptor<T> descriptor,
+            DefaultCacheReader<VersionCodec> cacheReader,
+            VersionCacheWriter cacheWriter,
+            VersionStrategyConfig config) {
+        return new DefaultVersionCacheStrategy<>(descriptor, cacheReader, cacheWriter, config);
     }
 }

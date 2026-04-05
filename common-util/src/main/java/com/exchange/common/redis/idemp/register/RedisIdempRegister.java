@@ -13,7 +13,7 @@ public class RedisIdempRegister {
     @Bean
     public IdempRedisClient idempRedisClient(
             BaseRedisSupport<String> baseRedisSupport,
-            @Qualifier("normalRedissonClient") RedissonClient redissonClient,
+            @Qualifier("defaultRedissonClient") RedissonClient redissonClient,
             ResourceLoader resourceLoader
     ) {
         return new IdempRedisClient(baseRedisSupport, redissonClient, resourceLoader);
