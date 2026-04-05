@@ -45,7 +45,7 @@ public class DefaultVersionCacheAsideStrategy<T> implements VersionCacheStrategy
 
     @Override
     public Result<Boolean> afterDbMiss(String id) {
-        if (option.requireNegativeCache()) {
+        if (!option.requireNegativeCache()) {
             return Results.success();
         }
         return versionNegativeCacheOps.setNegative(id, option.ttlOption().negativeTtl());
@@ -61,7 +61,7 @@ public class DefaultVersionCacheAsideStrategy<T> implements VersionCacheStrategy
 
     @Override
     public Result<Boolean> afterInsert(String id, T value, long newVersion) {
-        if (option.requireNegativeCache()) {
+        if (!option.requireNegativeCache()) {
             return Results.success();
         }
         return versionNegativeCacheOps.cleanNegative(id);

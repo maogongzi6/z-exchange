@@ -21,8 +21,8 @@ public class CacheTtlStrategies {
 
     private TtlStrategy balanceSnapshotRefStrategy;
 
-    private StrategyOption.TtlOption hotLedgerTxnOption;
-    private StrategyOption.TtlOption normalLedgerTxnOption;
+    private StrategyOption.TtlOption hotSnapshotOption;
+    private StrategyOption.TtlOption normalSnapshotOption;
 
     CacheTtlStrategies(CustomCacheProperties.Data dataConfig) {
         this.dataConfig = dataConfig;
@@ -36,7 +36,7 @@ public class CacheTtlStrategies {
         negativeStrategy = new TtlStrategy(dataConfig.getNegativeTtl(), dataConfig.getJitter());
         tombstoneStrategy = new TtlStrategy(dataConfig.getTombstoneTtl(), dataConfig.getJitter());
 
-        hotLedgerTxnOption = new StrategyOption.TtlOption(defaultEntityStrategy, negativeStrategy, tombstoneStrategy);
-        normalLedgerTxnOption = new StrategyOption.TtlOption(defaultEntityStrategy, negativeStrategy, tombstoneStrategy);
+        hotSnapshotOption = new StrategyOption.TtlOption(defaultEntityStrategy, negativeStrategy, tombstoneStrategy);
+        normalSnapshotOption = new StrategyOption.TtlOption(defaultEntityStrategy, negativeStrategy, tombstoneStrategy);
     }
 }

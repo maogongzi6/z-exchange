@@ -47,7 +47,7 @@ public class DefaultVersionPostRefreshStrategy<T> implements VersionCacheStrateg
 
     @Override
     public Result<Boolean> afterDbMiss(String id) {
-        if (option.requireNegativeCache()) {
+        if (!option.requireNegativeCache()) {
             return Results.success();
         }
         return versionNegativeCacheOps.setNegative(id, option.ttlOption().negativeTtl());

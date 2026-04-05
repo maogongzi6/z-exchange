@@ -10,5 +10,7 @@
 - DB is the source of truth; Redis is a fast gate/cache, Kafka is transport, neither defines committed outcome.
 - Idempotency is layered and mandatory; retries or duplicate deliveries must never create duplicate business effects.
 - Cache is optional acceleration: on failure fall back to DB; mutable records require versioned/CAS writes.
+- If a mutable record is cached, every DB mutation path for that record must also publish cache refresh/invalidation; 
+- Hot/normal cache routing must come from durable business facts or a rebuildable source; instance-local promotion state must not decide correctness-sensitive behavior.
 - Do not move wallet business rules into ledger, or ledger accounting rules into wallet.
 - Never use floating-point money or publish cross-service events directly from business logic.

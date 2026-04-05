@@ -61,6 +61,15 @@ public class BalanceSnapshotStore {
     }
 
     public Result<BalanceSnapshot> getByWalletId(String walletId) {
+        var result = doGetByWalletId(walletId);
+        if (result.success() && result.value() != null) {
+            BalanceSnapshot balanceSnapshot = result.value();
+            promoteHotSnapshot(balanceSnapshot.getWalletId(), balanceSnapshot.getOwnerType());
+        }
+        return result;
+    }
+
+    public Result<BalanceSnapshot> doGetByWalletId(String walletId) {
         var snapshotCache = determineCacheStrategy(walletId);
 
         Result<CacheValueInfo<BalanceSnapshot>> cacheResult = snapshotCache.get(walletId);
@@ -93,14 +102,22 @@ public class BalanceSnapshotStore {
     // querying by ref id is a user-facing path, so keep a stable negative cache here
     public Result<BalanceSnapshot> getByRefId(String refId) {
         Result<BalanceSnapshot> snapshotResult = doGetByRefId(refId);
-        // TODO should not set negative if already hit a negative (this could infinitely renewal the negative ttl)
-        if (snapshotResult.success() && snapshotResult.value() == null) {
-            Result<Void> result = balanceSnapshotRefCache.setNegative(refId, cacheTtlStrategies.getNegativeStrategy());
-            if (!result.success()) {
-                log.error("set negative result failed, ref_id: {}, result: {}", refId, result);
+        if (snapshotResult.success()) {
+            if (snapshotResult.value() == null) {
+                // TODO should not set negative if already hit a negative (this could infinitely renewal the negative ttl)
+                // set negative cache
+                Result<Void> result = balanceSnapshotRefCache.setNegative(refId, cacheTtlStrategies.getNegativeStrategy());
+                if (!result.success()) {
+                    log.error("set negative result failed, ref_id: {}, result: {}", refId, result);
+                } else {
+                    log.debug("set negative result, ref_id: {}, result: {}", refId, result);
+                }
             } else {
-                log.debug("set negative result, ref_id: {}, result: {}", refId, result);
+                // try to promote hot snapshot
+                BalanceSnapshot balanceSnapshot = snapshotResult.value();
+                promoteHotSnapshot(balanceSnapshot.getWalletId(), balanceSnapshot.getOwnerType());
             }
+
         }
         return snapshotResult;
     }

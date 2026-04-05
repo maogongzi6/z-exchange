@@ -43,7 +43,7 @@ public class WalletCacheRegister {
         VersionNegativeCacheOps negativeCacheOps = new VersionNegativeCacheOpsImpl(versionCache, descriptor);
         VersionTombstoneOps versionTombstoneOps = new VersionTombstoneOpsImpl(versionCache, descriptor);
         SelfRecoverOps selfRecoverOps = new RawDeleteRecoverOpsImpl(versionCache, descriptor);
-        StrategyOption option = new StrategyOption(cacheTtlStrategies.getHotLedgerTxnOption(), true, true);
+        StrategyOption option = new StrategyOption(cacheTtlStrategies.getNormalSnapshotOption(), true, true);
         return factory.buildVersionCacheAsideStrategy(
                 readOps,
                 versionWriteOps,
@@ -65,7 +65,7 @@ public class WalletCacheRegister {
         VersionWriteOps<BalanceSnapshot> versionWriteOps = new VersionWriteOpsImpl<>(versionCache, descriptor);
         VersionNegativeCacheOps negativeCacheOps = new VersionNegativeCacheOpsImpl(versionCache, descriptor);
         SelfRecoverOps selfRecoverOps = new RawDeleteRecoverOpsImpl(versionCache, descriptor);
-        StrategyOption option = new StrategyOption(cacheTtlStrategies.getHotLedgerTxnOption(), false, true);
+        StrategyOption option = new StrategyOption(cacheTtlStrategies.getHotSnapshotOption(), false, true);
         return factory.buildVersionPostRefreshStrategy(
                 readOps,
                 versionWriteOps,
