@@ -26,23 +26,34 @@ public class RawCacheWriter implements NegativeWriter {
         }
 
         CacheType cacheType = CacheType.fromSource(value);
-        return doSet(key, value, cacheType, ttl.afterJitter());
+        Result<String> result = encode(value, cacheType);
+        if (!result.success()) {
+            return Results.fail(result);
+        }
+
+        baseRedisSupport.set(key, result.value(), ttl.afterJitter());
+        return Results.success();
     }
 
     // conflict risk without version check
     public Result<Void> setNegative(String key, TtlStrategy ttl) {
-        return doSet(key, "", CacheType.NEGATIVE, ttl.afterJitter());
+        Result<String> result = encode("", CacheType.NEGATIVE);
+        if (!result.success()) {
+            return Results.fail(result);
+        }
+
+        baseRedisSupport.set(key, result.value(), ttl.afterJitter());
+        return Results.success();
     }
 
-    private Result<Void> doSet(String key, Object value, CacheType cacheType, Duration ttl) {
+    private Result<String> encode(Object value, CacheType cacheType) {
         String encoded;
         try {
             encoded = cacheEncoder.encode(value, cacheType);
         } catch (CacheParseException e) {
-            log.error("failed to encode value, key: {}, value: {}", key, value, e);
-            return Results.fail(CommonErrorCode.PARSE_CACHE_ERROR, "failed to encode value, key: " + key);
+            log.error("failed to encode value: {}", value, e);
+            return Results.fail(CommonErrorCode.PARSE_CACHE_ERROR, "failed to encode value");
         }
-        baseRedisSupport.set(key, encoded, ttl);
-        return Results.success();
+        return Results.success(encoded);
     }
 }

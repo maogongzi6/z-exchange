@@ -63,8 +63,7 @@ public class DefaultRawCacheStrategy<T> implements RawCacheStrategy<T> {
 
     @Override
     public Result<Boolean> afterUpdate(String id, T value) {
-        String key = descriptor.buildCacheKey(id);
-        return afterDbHit(key, value);
+        return afterDbHit(id, value);
     }
 
     @Override

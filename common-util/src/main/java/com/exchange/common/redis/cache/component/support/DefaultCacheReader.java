@@ -30,7 +30,4 @@ public class DefaultCacheReader<C extends CacheDecoder> {
         }
     }
 
-//    public Result<CacheValueInfo<String>> get(String key) {
-//        return get(key, String.class);
-//    }
 }

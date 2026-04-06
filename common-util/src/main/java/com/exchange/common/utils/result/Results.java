@@ -15,6 +15,10 @@ public class Results {
         return new Result<>(false, null, error, errorDetail);
     }
 
+    public static <T> Result<T> fail(Result<?> result) {
+        return new Result<>(false, null, result.errorCode(), result.errorDetail());
+    }
+
     public static <T> Result<T> result(T newValue, Result<?> result) {
         Objects.requireNonNull(result);
         return new Result<>(result.success(), newValue, result.errorCode(), result.errorDetail());

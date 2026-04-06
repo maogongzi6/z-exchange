@@ -4,7 +4,7 @@ import com.exchange.common.redis.cache.register.CacheSupportRegister;
 import com.exchange.common.redis.cache.strategy.impl.StrategyFactory;
 import com.exchange.common.redis.idemp.register.RedisIdempRegister;
 import com.exchange.common.db.register.CommonDbComponentRegister;
-import com.exchange.common.redis.register.BaseCacheRegister;
+import com.exchange.common.redis.register.BaseRegister;
 import com.exchange.common.redis.register.RedissonRegister;
 import org.mybatis.spring.annotation.MapperScan;
 import org.mybatis.spring.annotation.MapperScans;
@@ -28,7 +28,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         },
         scanBasePackageClasses = {
                 CommonDbComponentRegister.class,
-                BaseCacheRegister.class,
+                BaseRegister.class,
                 RedissonRegister.class,
                 CacheSupportRegister.class,
                 RedisIdempRegister.class,

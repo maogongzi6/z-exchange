@@ -1,74 +1,39 @@
-I want you to evaluate the cache design in this codebase.
+I have refactored the cache design. Evaluate the cache design in this codebase.
 
 Scope:
 - Evaluate: common-util/src/main/java/com/exchange/common/redis
-- Exclude completely: common-util/src/main/java/com/exchange/common/redis/idemp
+- Exclude: common-util/src/main/java/com/exchange/common/redis/idemp
+- free to inspect other project code if necessary
 
-Reference implementations currently using the cache design:
+Reference usages:
 - wallet-service/src/main/java/com/exchange/app/wallet/processor/balance/GetBalanceSnapshotProcessor.java
 - ledger-service/src/main/java/com/exchange/app/ledger/processor/post/GetLedgerTxnProcessor.java
 
-Important scope note:
-- The business flow is not complete yet:
-    update cache in snapshot is not complete, TTL in the config is not well determined.
-    DefaultStableCacheStrategy is planed to be refactor to expose interface like VersionCacheStrategy (but no version params)
-- Do NOT evaluate unfinished business logic.
-- Focus only on the cache design, cache abstractions, invariants, architecture, and system behavior.
+Notes:
+- Business flow is not complete yet
+- Snapshot cache update flow is incomplete
+- TTL config is not final, so you may skip detailed TTL scoring
+- Do not evaluate unfinished business logic
+- Focus on cache design, abstractions, invariants, architecture, trade-offs, and runtime behavior
 
-Source of truth for strategy expectations:
-- Read first: doc/redis_strategy_code_review_guide.md
-- The main cache strategies and logic are defined there.
-- Strategy A / C / D are currently used in Snapshot / LedgerTxn / Ref cache.
+Context:
+- wallet_id ->system balance snapshot, is considered as hot path for both update and read. using versioned cache + negative cache + lazy local promotion + client-side cache + specific redisson client.
+- wallet_id -> user balance snapshot, ledger txn_id -> ledger_txn, is considered as normal path, using versioned cache + tombstone
+- ref -> wallet_id/ledger txn_id, is considered stable and could be used by external caller (so need negative cache protect), use raw cache + negative cache
 
-Your task:
-1. Read doc/redis_strategy_code_review_guide.md first.
-2. Inspect the relevant cache code under common-util/src/main/java/com/exchange/common/redis.
-3. Inspect the two current usage examples:
-   - GetBalanceSnapshotProcessor
-   - GetLedgerTxnProcessor
-4. Evaluate whether the implemented design is consistent with the strategy guide.
-5. Focus on architecture quality, invariants, correctness boundaries, extensibility, trade-offs, and likely runtime behavior.
-6. Ignore minor bugs unless they reveal a deeper design flaw.
-7. Be strict and realistic. Do not inflate scores.
-8. If important information is missing, state the uncertainty explicitly instead of guessing.
+Your tasks:
+1. Inspect the cache code from common-util/src/main/java/com/exchange/common/redis.
+2. Inspect the two usage examples above. And also inspect codes you think necessary.
+3. Evaluate whether the design matches the strategy guide.
+4. Be strict and realistic.
+5. Ignore minor bugs unless they reveal deeper design flaws.
+6. State uncertainty explicitly if information is missing.
 
-What I want from you:
+Output:
+Write the evaluation to:
+- ai/codex/evaluate/refactored-cache-design-evaluation.md
 
-A. Overall score for the whole design (1-10)
-
-B. Overall verdict:
-- weak
-- not bad
-- decent (interview-ready)
-- strong
-- very strong
-
-C. Engineer level suggested by this design:
-- graduate
-- junior
-- junior+
-- mid
-- strong mid
-- senior potential
-
-Scoring rules:
-- Be strict and realistic
-- Do not inflate scores
-- A 7/10 already means clearly above average
-- A 9/10 means unusually strong design quality
-
-Evaluation principles:
-- Focus on architecture, invariants, trade-offs, and system behavior
-- Check whether the design matches the intended Redis strategies
-- Check whether the abstractions are clean and whether future extension is safe
-- Check whether TTL, versioning, tombstone/negative-cache concepts, and hot-key/client-side-cache routing are modeled coherently
-- Check whether the design is understandable and maintainable for future engineers
-- Prefer deeper design risks over surface-level style issues
-
-Please write the evaluation into:
-- ai/codex/evaluate/cache-design-evaluation.md
-
-Required output structure in that file:
+Required output structure:
 
 # Cache Design Evaluation
 
@@ -76,73 +41,51 @@ Required output structure in that file:
 - Score: X/10
 
 ## 2. Overall verdict
-- Verdict: ...
+- weak / not bad / decent (interview-ready) / strong / very strong
 
 ## 3. Suggested engineer level
-- Level: ...
+- graduate / junior / junior+ / mid / strong mid / senior potential
 
 ## 4. Scope reviewed
-- List exactly what code and docs were reviewed
-- State what was intentionally excluded
 
 ## 5. Design summary
-- Briefly summarize the cache architecture as implemented
-- Map the observed design to Strategy A / C / D where applicable
 
 ## 6. What is working well
-- Explain the strongest parts of the design
-- Focus on architectural strengths, not superficial compliments
 
 ## 7. Main design concerns
-- Explain the most important weaknesses or risks
-- Focus on invariants, correctness boundaries, coupling, abstraction leakage, extensibility, and runtime behavior
 
 ## 8. Strategy alignment review
-For each applicable strategy, explain:
-- what the guide expects
-- what the code actually does
-- whether alignment is strong / partial / weak
-- where the main mismatch or uncertainty is
+- expected by guide
+- actual implementation
+- alignment: strong / partial / weak
+- mismatch or uncertainty
 
-## 9. Runtime/system-behavior review
-Evaluate likely behavior under:
+## 9. Runtime / system behavior review
 - cache miss
 - stale data risk
 - concurrent reads/writes
 - future client-side cache / hot-key expansion
-- TTL expiration / refill behavior
-- ref cache and entity cache consistency expectations
+- ref cache and entity cache consistency
 
 ## 10. Abstraction and extensibility review
-Evaluate:
-- whether the current abstraction is clean
-- whether adding new cache strategies will remain manageable
-- whether responsibilities are well separated
-- whether strategy-specific logic is isolated enough
 
 ## 11. Strongest design decisions
-- List and explain the strongest decisions
 
 ## 12. Weakest design decisions
-- List and explain the weakest decisions
 
 ## 13. Signs of mature engineering judgment
-- List concrete signals from the design
 
-## 14. Signs of over-design or unnecessary complexity
-- List concrete examples if any
+## 14. Signs of over-design or unnecessary complexity (if have)
 
 ## 15. The 3 highest-leverage design improvements
-- Give the 3 most important improvements
-- For each one, explain why it matters and what it would improve
 
 ## 16. Final judgment
-- Give a concise closing assessment
-- State clearly where the design sits in terms of practical engineering quality
 
-Important writing rules:
+Rules:
 - Be concrete and evidence-based
-- Reference specific classes/methods when making important claims
-- Prefer design reasoning over code style comments
-- Do not spend much space on naming/style unless it affects architecture
-- Be honest about uncertainty where business flow is incomplete
+- Reference specific classes/methods for important claims
+- Focus on architecture, invariants, correctness boundaries, extensibility, and system behavior
+- Do not over-focus on naming/style unless it affects design
+- Do not inflate scores
+- 7/10 means clearly above average
+- 9/10 means unusually strong design quality
