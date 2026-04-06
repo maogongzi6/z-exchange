@@ -10,12 +10,14 @@ import org.mybatis.spring.annotation.MapperScan;
 import org.mybatis.spring.annotation.MapperScans;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @MapperScans({
         @MapperScan("com.exchange.app.ledger.dao.mapper"),
         @MapperScan("com.exchange.common.outbox.dao.mapper")
 })
+@EnableAspectJAutoProxy
 @EnableScheduling
 @SpringBootApplication(
         scanBasePackages = {
