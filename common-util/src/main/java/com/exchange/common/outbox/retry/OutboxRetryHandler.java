@@ -6,9 +6,8 @@ import com.exchange.common.outbox.config.OutboxProperties;
 import com.exchange.common.outbox.dao.repository.OutboxRepository;
 import com.exchange.common.outbox.po.Outbox;
 import com.exchange.common.outbox.po.enums.OutboxStatus;
-import com.exchange.common.utils.result.CommonErrorCode;
-import com.exchange.common.utils.result.Result;
-import com.exchange.common.utils.result.Results;
+import com.exchange.common.result.Result;
+import com.exchange.common.result.error.OutboxErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,25 +44,24 @@ public class OutboxRetryHandler {
                 List<Outbox> locked = outboxManager.selectForClaimSkipLock(now, outboxConfig.getMaxRetries(), lastId.get(), outboxConfig.getPageLimit());
                 outboxes.addAll(locked);
                 if (outboxes.isEmpty()) {
-                    return Results.success();
+                    return Result.success();
                 }
                 lastId.set(locked.get(locked.size() - 1).getId());
                 int claimedCount = outboxManager.batchClaim(locked.stream().map(Outbox::getId).collect(Collectors.toList()), now.plusSeconds(outboxConfig.getAttemptIntervalSec()));
                 if (claimedCount != locked.size()) {
                     log.error("unexpected claim outbox failure, claimed: {}, locked: {}", claimedCount, locked);
-                    // maybe use Result + CommonErrorCode
-                    return Results.fail(CommonErrorCode.UNEXPECTED_DB_ERROR, "unexpected claim outbox failure");
+                    return Result.failure(OutboxErrorCode.UNEXPECTED_DB_ERROR, "unexpected claim outbox failure");
                 }
-                return Results.success();
+                return Result.success();
             });
-            if (!result.success()) {
+            if (!result.isSuccess()) {
                 log.error("claim failed, outbox: {}", outboxes);
                 continue;
             }
             // retry publish
             for (Outbox outbox : outboxes) {
                 Result<Void> publishResult = publisher.publish(outbox);
-                if (publishResult.success()) {
+                if (publishResult.isSuccess()) {
                     successOutboxes.add(outbox);
                 } else {
                     failedOutboxes.add(outbox);

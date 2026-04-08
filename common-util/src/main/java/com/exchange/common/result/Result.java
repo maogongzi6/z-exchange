@@ -1,13 +1,13 @@
 package com.exchange.common.result;
 
 import com.exchange.common.result.error.ErrorCode;
-import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 import java.util.Objects;
 
-@Data
-@EqualsAndHashCode(callSuper = false)
+@ToString
+@EqualsAndHashCode(callSuper=false)
 public final class Result<T> implements IResult<T> {
     private final boolean success;
     private final T value;
@@ -60,6 +60,14 @@ public final class Result<T> implements IResult<T> {
         return new Result<>(false, null, Objects.requireNonNull(errorCode, "errorCode"), detail, scope);
     }
 
+    public static <T> Result<T> failure(IResult<?> result) {
+        Objects.requireNonNull(result, "result");
+        if (result.isSuccess()) {
+            throw new IllegalArgumentException("cannot create failure from success result");
+        }
+        return failure(result.getErrorCode(), result.getDetail(), result.getScope());
+    }
+
     public static <T> Result<T> from(IResult<T> result) {
         Objects.requireNonNull(result, "result");
         if (result.isSuccess()) {
@@ -76,29 +84,33 @@ public final class Result<T> implements IResult<T> {
         return failure(result.getErrorCode(), result.getDetail(), result.getScope());
     }
 
-//    @Override
-//    public boolean isSuccess() {
-//        return success;
-//    }
-//
-//    @Override
-//    public ErrorCode getErrorCode() {
-//        return errorCode;
-//    }
-//
-//    @Override
-//    public T getValue() {
-//        return value;
-//    }
-//
-//    @Override
-//    public String getDetail() {
-//        return detail;
-//    }
-//
-//    @Override
-//    public String getScope() {
-//        return scope;
-//    }
+    public static boolean is(IResult<?> result, ErrorCode errorCode) {
+        return result != null && errorCode != null && Objects.equals(result.getErrorCode(), errorCode);
+    }
+
+    @Override
+    public boolean isSuccess() {
+        return success;
+    }
+
+    @Override
+    public ErrorCode getErrorCode() {
+        return errorCode;
+    }
+
+    @Override
+    public T getValue() {
+        return value;
+    }
+
+    @Override
+    public String getDetail() {
+        return detail;
+    }
+
+    @Override
+    public String getScope() {
+        return scope;
+    }
 
 }

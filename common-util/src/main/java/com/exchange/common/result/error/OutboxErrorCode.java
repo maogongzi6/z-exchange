@@ -5,9 +5,8 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public enum IdempErrorCode implements ErrorCode {
-    INVALID_IDEMP_KEY(-1000, ErrorCategory.INTERNAL, "invalid_idemp_key"),
-    INVALID_IDEMP_VALUE(-1001, ErrorCategory.INTERNAL, "invalid_idemp_value");
+public enum OutboxErrorCode implements ErrorCode {
+    UNEXPECTED_DB_ERROR(-1, ErrorCategory.INTERNAL, "unexpected_db_error");
 
     private final int code;
     private final ErrorCategory category;
@@ -15,6 +14,6 @@ public enum IdempErrorCode implements ErrorCode {
 
     @Override
     public String getNamespace() {
-        return ErrorNamespace.IDEMP;
+        return ErrorNamespace.OUTBOX;
     }
 }

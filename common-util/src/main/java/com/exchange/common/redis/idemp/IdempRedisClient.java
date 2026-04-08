@@ -1,10 +1,9 @@
 package com.exchange.common.redis.idemp;
 
 import com.exchange.common.redis.BaseRedisSupport;
+import com.exchange.common.result.Result;
 import com.exchange.common.redis.idemp.constant.CommonIdempStatus;
 import com.exchange.common.redis.idemp.utils.CommonIdempHelper;
-import com.exchange.common.utils.result.Result;
-import com.exchange.common.utils.result.Results;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RScript;
@@ -67,7 +66,7 @@ public class IdempRedisClient {
         String key = CommonIdempHelper.idempKey(service, scope, idempId);
         Object result = redissonClient.getScript(StringCodec.INSTANCE)
                 .eval(RScript.Mode.READ_WRITE, releaseIdempIfOwnedScript, RScript.ReturnType.VALUE, Collections.singletonList(key), value);
-        return Results.success((String) result);
+        return Result.success((String) result);
     }
 
     public Boolean forceDeleteIdemp(String service, String scope, String idempId) {
