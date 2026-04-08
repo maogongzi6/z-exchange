@@ -3,9 +3,8 @@ package com.exchange.app.ledger.processor.post;
 import com.exchange.app.ledger.dao.store.LedgerTxnStore;
 import com.exchange.app.ledger.po.ledger.LedgerEntry;
 import com.exchange.app.ledger.po.ledger.LedgerTxn;
-import com.exchange.app.ledger.result.ErrorCode;
-import com.exchange.app.ledger.result.Results;
-import com.exchange.common.utils.result.Result;
+import com.exchange.app.ledger.result.LedgerServiceErrorCode;
+import com.exchange.common.result.Result;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import com.exchange.app.ledger.dao.repository.LedgerEntryRepository;
@@ -38,11 +37,11 @@ public class GetLedgerTxnProcessor {
         // Step 1: Validate parameters
         if (Strings.isEmpty(lookupValue)) {
             log.error("lookup_value is required");
-            return Results.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "lookup_value is required");
+            return Result.failure(LedgerServiceErrorCode.INVALID_REQUEST_PARAMETER, "lookup_value is required");
         }
         if (type == null) {
             log.error("lookup_type is required");
-            return Results.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "lookup_type is required");
+            return Result.failure(LedgerServiceErrorCode.INTERNAL_ERROR, "lookup_type is required");
         }
 
         // Step 2: Query the ledger transaction
@@ -57,17 +56,17 @@ public class GetLedgerTxnProcessor {
                 break;
             default:
                 log.error("Invalid lookup type: {}", type);
-                return Results.fail(ErrorCode.INVALID_ENUM_ERROR, "invalid lookup type: " + type);
+                return Result.failure(LedgerServiceErrorCode.INTERNAL_ERROR, "invalid lookup type: " + type);
         }
-        if (!ledgerResult.success()) {
+        if (!ledgerResult.isSuccess()) {
             log.error("load ledger txn failed, {}: {}", type.name(), lookupValue);
-            return Results.fail(ErrorCode.INTERNAL_ERROR, "load ledger txn failed");
+            return Result.failure(LedgerServiceErrorCode.INTERNAL_ERROR, "load ledger txn failed");
         }
-        ledgerTxn = ledgerResult.value();
+        ledgerTxn = ledgerResult.getValue();
 
         if (ledgerTxn == null) {
             log.error("Ledger not found for {}: {}", type, lookupValue);
-            return Results.fail(ErrorCode.LEDGER_NOT_FOUND, "ledger not found");
+            return Result.failure(LedgerServiceErrorCode.LEDGER_NOT_FOUND, "ledger not found");
         }
 
         // Step 3: Query entries if requested
@@ -82,6 +81,6 @@ public class GetLedgerTxnProcessor {
 
         // Step 4: Combine transaction and entries into a result object
         LedgerTxnInfo txnInfo = new LedgerTxnInfo(ledgerTxn, ledgerEntries);
-        return Results.success(txnInfo);
+        return Result.success(txnInfo);
     }
 }

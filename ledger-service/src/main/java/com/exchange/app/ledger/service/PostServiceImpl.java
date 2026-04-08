@@ -2,12 +2,12 @@ package com.exchange.app.ledger.service;
 
 
 import com.exchange.app.ledger.processor.post.GetLedgerTxnProcessor;
-import com.exchange.app.ledger.result.ErrorCode;
+import com.exchange.app.ledger.result.LedgerBoundaryErrorMapper;
+import com.exchange.app.ledger.result.LedgerServiceErrorCode;
 import com.exchange.app.ledger.processor.post.PostLedgerProcessor;
 import com.exchange.app.ledger.result.PbErrorBuilder;
-import com.exchange.app.ledger.result.Results;
 import com.exchange.app.ledger.utils.PbConverter;
-import com.exchange.common.utils.result.Result;
+import com.exchange.common.result.Result;
 import com.exchange.proto.ledger.post.*;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
@@ -38,8 +38,8 @@ public class PostServiceImpl extends PostServiceGrpc.PostServiceImplBase {
                                           boolean includeEntries, StreamObserver<GetTxnReplyPb> responseObserver) {
         try {
             Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = getLedgerTxnProcessor.getLedgerTxn(lookupType, lookupValue, includeEntries);
-            if (result.success()) {
-                GetLedgerTxnProcessor.LedgerTxnInfo info = result.value();
+            if (result.isSuccess()) {
+                GetLedgerTxnProcessor.LedgerTxnInfo info = result.getValue();
                 GetTxnReplyPb.Builder replyBuilder = GetTxnReplyPb.newBuilder()
                         .setTransaction(PbConverter.convertToLedgerTransactionPb(info.txn));
                 if (includeEntries) {
@@ -47,14 +47,15 @@ public class PostServiceImpl extends PostServiceGrpc.PostServiceImplBase {
                 }
                 responseObserver.onNext(replyBuilder.build());
             } else {
+                LedgerServiceErrorCode errorCode = LedgerBoundaryErrorMapper.toLedgerErrorCode(result);
                 responseObserver.onNext(GetTxnReplyPb.newBuilder()
-                        .setError(PbErrorBuilder.build(Results.getErrorCode(result), result.errorDetail()))
+                        .setError(PbErrorBuilder.build(errorCode, result.getDetail()))
                         .build());
             }
         } catch (Exception e) {
             log.error("Error processing transaction request", e);
             responseObserver.onNext(GetTxnReplyPb.newBuilder()
-                    .setError(PbErrorBuilder.build(ErrorCode.SERVER_ERROR))
+                    .setError(PbErrorBuilder.build(LedgerServiceErrorCode.SERVER_ERROR))
                     .build());
         }
         responseObserver.onCompleted();
@@ -67,7 +68,9 @@ public class PostServiceImpl extends PostServiceGrpc.PostServiceImplBase {
             reply = postLedgerProcessor.postTransaction(request);
         } catch (Exception e) {
             log.error("uncaught exception", e);
-            reply = PostTransactionReplyPb.newBuilder().setError(PbErrorBuilder.build(ErrorCode.SERVER_ERROR)).build();
+            reply = PostTransactionReplyPb.newBuilder()
+                    .setError(PbErrorBuilder.build(LedgerServiceErrorCode.SERVER_ERROR))
+                    .build();
         }
         responseObserver.onNext(reply);
         responseObserver.onCompleted();

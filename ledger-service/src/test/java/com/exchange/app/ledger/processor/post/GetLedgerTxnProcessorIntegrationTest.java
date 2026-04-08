@@ -9,8 +9,8 @@ import com.exchange.app.ledger.dao.store.LedgerTxnStore;
 import com.exchange.app.ledger.po.enums.Direction;
 import com.exchange.app.ledger.po.ledger.LedgerEntry;
 import com.exchange.app.ledger.po.ledger.LedgerTxn;
-import com.exchange.app.ledger.result.ErrorCode;
-import com.exchange.common.utils.result.Result;
+import com.exchange.app.ledger.result.LedgerServiceErrorCode;
+import com.exchange.common.result.Result;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -58,9 +58,9 @@ public class GetLedgerTxnProcessorIntegrationTest {
 
         // Assert
         assertThat(result).isNotNull();
-        assertThat(result.success()).isTrue();
+        assertThat(result.isSuccess()).isTrue();
 
-        GetLedgerTxnProcessor.LedgerTxnInfo info = result.value();
+        GetLedgerTxnProcessor.LedgerTxnInfo info = result.getValue();
         assertThat(info).isNotNull();
         assertThat(info.txn).isNotNull();
         assertThat(info.txn.getTxnId()).isEqualTo(txnId);
@@ -69,8 +69,8 @@ public class GetLedgerTxnProcessorIntegrationTest {
         assertThat(info.entries).isNotEmpty();
 
         // update to set tombstone
-        result.value().txn.setMetadata("{\"k\":\"updated\"}");
-        ledgerTxnStore.updateMetadataByPk(result.value().txn);
+        result.getValue().txn.setMetadata("{\"k\":\"updated\"}");
+        ledgerTxnStore.updateMetadataByPk(result.getValue().txn);
 
         // get again, check and load cache
         result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.TXN_ID, txnId, true);
@@ -102,9 +102,9 @@ public class GetLedgerTxnProcessorIntegrationTest {
 
         // Assert
         assertThat(result).isNotNull();
-        assertThat(result.success()).isTrue();
+        assertThat(result.isSuccess()).isTrue();
 
-        GetLedgerTxnProcessor.LedgerTxnInfo info = result.value();
+        GetLedgerTxnProcessor.LedgerTxnInfo info = result.getValue();
         assertThat(info).isNotNull();
         assertThat(info.txn).isNotNull();
         assertThat(info.txn.getReferenceId()).isEqualTo(refId);
@@ -113,8 +113,8 @@ public class GetLedgerTxnProcessorIntegrationTest {
         assertThat(info.entries).hasSize(5);
 
         // update to set tombstone
-        result.value().txn.setMetadata("{\"k\":\"updated\"}");
-        ledgerTxnStore.updateMetadataByPk(result.value().txn);
+        result.getValue().txn.setMetadata("{\"k\":\"updated\"}");
+        ledgerTxnStore.updateMetadataByPk(result.getValue().txn);
 
         // Act
         result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.REF_ID, refId, true);
@@ -127,9 +127,9 @@ public class GetLedgerTxnProcessorIntegrationTest {
                 getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.REF_ID, refId, true);
         // Assert
         assertThat(result).isNotNull();
-        assertThat(result.success()).isFalse();
-        assertThat(result.errorCode()).isEqualTo(ErrorCode.LEDGER_NOT_FOUND);
-        assertThat(result.value()).isNull();
+        assertThat(result.isSuccess()).isFalse();
+        assertThat(result.getErrorCode()).isEqualTo(LedgerServiceErrorCode.LEDGER_NOT_FOUND);
+        assertThat(result.getValue()).isNull();
         result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.REF_ID, refId, true);
 
     }

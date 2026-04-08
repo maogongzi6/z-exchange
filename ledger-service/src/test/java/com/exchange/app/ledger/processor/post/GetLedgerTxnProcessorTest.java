@@ -4,12 +4,13 @@ import com.exchange.app.ledger.dao.repository.LedgerEntryRepository;
 import com.exchange.app.ledger.dao.repository.LedgerTxnRepository;
 import com.exchange.app.ledger.po.ledger.LedgerEntry;
 import com.exchange.app.ledger.po.ledger.LedgerTxn;
-import com.exchange.app.ledger.result.ErrorCode;
-import com.exchange.common.utils.result.Result;
+import com.exchange.app.ledger.result.LedgerServiceErrorCode;
+import com.exchange.common.result.Result;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.Collections;
 
@@ -32,18 +33,18 @@ public class GetLedgerTxnProcessorTest {
     void shouldReturnInvalidParameterErrorWhenLookupValueIsEmpty() {
         Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.TXN_ID, null, false);
 
-        assertFalse(result.success());
-        assertEquals(ErrorCode.INVALID_REQUEST_PARAMETER, result.errorCode());
-        assertEquals("lookup_value is required", result.errorDetail());
+        assertFalse(result.isSuccess());
+        assertEquals(LedgerServiceErrorCode.INVALID_REQUEST_PARAMETER, result.getErrorCode());
+        assertEquals("lookup_value is required", result.getDetail());
     }
 
     @Test
     void shouldReturnInvalidParameterErrorWhenLookupTypeIsNull() {
         Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = getLedgerTxnProcessor.getLedgerTxn(null, "testValue", false);
 
-        assertFalse(result.success());
-        assertEquals(ErrorCode.INVALID_REQUEST_PARAMETER, result.errorCode());
-        assertEquals("lookup_type is required", result.errorDetail());
+        assertFalse(result.isSuccess());
+        assertEquals(LedgerServiceErrorCode.INTERNAL_ERROR, result.getErrorCode());
+        assertEquals("lookup_type is required", result.getDetail());
     }
 
     @Test
@@ -52,9 +53,9 @@ public class GetLedgerTxnProcessorTest {
 
         Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.TXN_ID, "testTxnId", false);
 
-        assertFalse(result.success());
-        assertEquals(ErrorCode.LEDGER_NOT_FOUND, result.errorCode());
-        assertEquals("ledger not found", result.errorDetail());
+        assertFalse(result.isSuccess());
+        assertEquals(LedgerServiceErrorCode.LEDGER_NOT_FOUND, result.getErrorCode());
+        assertEquals("ledger not found", result.getDetail());
     }
 
     @Test
@@ -63,9 +64,9 @@ public class GetLedgerTxnProcessorTest {
 
         Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.REF_ID, "testRefId", false);
 
-        assertFalse(result.success());
-        assertEquals(ErrorCode.LEDGER_NOT_FOUND, result.errorCode());
-        assertEquals("ledger not found", result.errorDetail());
+        assertFalse(result.isSuccess());
+        assertEquals(LedgerServiceErrorCode.LEDGER_NOT_FOUND, result.getErrorCode());
+        assertEquals("ledger not found", result.getDetail());
     }
 
     @Test
@@ -77,9 +78,9 @@ public class GetLedgerTxnProcessorTest {
 
         Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.TXN_ID, id, false);
 
-        assertTrue(result.success());
-        assertEquals(mockTxn, result.value().txn);
-        assertNull(result.value().entries);
+        assertTrue(result.isSuccess());
+        assertEquals(mockTxn, result.getValue().txn);
+        assertNull(result.getValue().entries);
     }
 
     @Test
@@ -90,9 +91,9 @@ public class GetLedgerTxnProcessorTest {
 
         Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.REF_ID, "testRefId", false);
 
-        assertTrue(result.success());
-        assertEquals(mockTxn, result.value().txn);
-        assertNull(result.value().entries);
+        assertTrue(result.isSuccess());
+        assertEquals(mockTxn, result.getValue().txn);
+        assertNull(result.getValue().entries);
     }
 
     @Test
@@ -106,23 +107,22 @@ public class GetLedgerTxnProcessorTest {
 
         Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.TXN_ID, id, true);
 
-        assertTrue(result.success());
-        assertEquals(mockTxn, result.value().txn);
-        assertEquals(1, result.value().entries.size());
-        assertEquals(mockEntry, result.value().entries.get(0));
+        assertTrue(result.isSuccess());
+        assertEquals(mockTxn, result.getValue().txn);
+        assertEquals(1, result.getValue().entries.size());
+        assertEquals(mockEntry, result.getValue().entries.get(0));
     }
 
     @Test
-    void shouldReturnInternalErrorWhenEntriesNotFoundForTxnId() {
+    void shouldThrowWhenEntriesNotFoundForTxnId() {
         LedgerTxn mockTxn = new LedgerTxn();
         mockTxn.setTxnId("testTxnId");
         when(ledgerTxnRepository.getByTxnId("testTxnId")).thenReturn(mockTxn);
         when(ledgerEntryRepository.getByTransactionId("testTxnId")).thenReturn(null);
 
-        Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.TXN_ID, "testTxnId", true);
-
-        assertFalse(result.success());
-        assertEquals(ErrorCode.INTERNAL_ERROR, result.errorCode());
-        assertEquals("internal error", result.errorDetail());
+        assertThrows(
+                DataIntegrityViolationException.class,
+                () -> getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.TXN_ID, "testTxnId", true)
+        );
     }
 }

@@ -7,12 +7,12 @@ import com.exchange.app.ledger.exception.RetriableException;
 import com.exchange.app.ledger.kafka.constant.LedgerTopic;
 import com.exchange.app.ledger.kafka.producer.DefaultPublisher;
 import com.exchange.app.ledger.processor.post.PostLedgerProcessor;
-import com.exchange.app.ledger.result.ErrorCode;
+import com.exchange.app.ledger.result.LedgerServiceErrorCode;
 import com.exchange.app.ledger.utils.OutboxHelper;
 import com.exchange.common.outbox.dao.repository.OutboxRepository;
 import com.exchange.common.outbox.po.Outbox;
 import com.exchange.common.outbox.po.enums.OutboxStatus;
-import com.exchange.common.utils.result.Result;
+import com.exchange.common.result.Result;
 import com.exchange.common.utils.time.LocalDateTimeHelper;
 import com.exchange.proto.common.error.ErrorCodePb;
 import com.exchange.proto.common.event.EventEnvelopePb;
@@ -46,14 +46,14 @@ public class DefaultListener {
             if (outboxManager.insertWithClaim(replyOutbox, LocalDateTimeHelper.nowAfterMs(OutboxConstant.BASE_ATTEMPT_INTERVAL_MS))
                     != 1) {
                 log.error("duplicated outbox, {}", replyOutbox);
-                throw new RetriableException(ErrorCode.LEDGER_OUTBOX_DUPLICATED, "insert outbox failed, outbox=" + replyOutbox);
+                throw new RetriableException(LedgerServiceErrorCode.LEDGER_OUTBOX_DUPLICATED, "insert outbox failed, outbox=" + replyOutbox);
             }
             // ack first, then try to publish immediately
             ack.acknowledge();
             tryToPublishReply(replyOutbox);
         } catch (InvalidProtocolBufferException e) {
             log.error("Error parsing envelope", e);
-            throw new AbnormalProtoDataException(ErrorCode.SERIALIZE_ERROR, "Error parsing envelope", e);
+            throw new AbnormalProtoDataException(LedgerServiceErrorCode.SERIALIZE_ERROR, "Error parsing envelope", e);
         }
     }
 
@@ -65,7 +65,7 @@ public class DefaultListener {
                 replyOutbox = handlePostLedger(envelope);
                 break;
             default:
-                throw new AbnormalProtoDataException(ErrorCode.INVALID_ENUM_ERROR, "invalid event type" + envelope.getEventType());
+                throw new AbnormalProtoDataException(LedgerServiceErrorCode.INVALID_ENUM_ERROR, "invalid event type" + envelope.getEventType());
         }
         return replyOutbox;
     }
@@ -78,11 +78,11 @@ public class DefaultListener {
         if (reply.getError().getCode() != ErrorCodePb.ERROR_OK) {
             if (reply.getError().getCode() != ErrorCodePb.ERROR_INTERNAL) {
                 log.error("internal error, wait for retry: {}", reply.getError());
-                throw new RetriableException(ErrorCode.SERVER_ERROR, "internal error, wait for retry," + reply.getError());
+                throw new RetriableException(LedgerServiceErrorCode.SERVER_ERROR, "internal error, wait for retry," + reply.getError());
             } else {
                 log.error("non retriable, queue dlq: {}", reply.getError());
                 // TODO change exception type
-                throw new AbnormalProtoDataException(ErrorCode.SERVER_ERROR, "non retriable, queue dlq");
+                throw new AbnormalProtoDataException(LedgerServiceErrorCode.SERVER_ERROR, "non retriable, queue dlq");
             }
         }
         return OutboxHelper.fromPostTransactionReply(reply, envelope.getCommandId());
@@ -90,7 +90,7 @@ public class DefaultListener {
 
     private void tryToPublishReply(Outbox replyOutbox) {
         Result<Void> result = replyWalletPublisher.publish(replyOutbox);
-        if (result.success()) {
+        if (result.isSuccess()) {
             if (outboxManager.updateStatusToFinalize(replyOutbox, OutboxStatus.SENT, replyOutbox.getLastAttemptAt()) != 1) {
                 // do not fail, ack as normal, wait cronjob to retry outbox
                 log.error("finalize outbox failed, {}", replyOutbox);

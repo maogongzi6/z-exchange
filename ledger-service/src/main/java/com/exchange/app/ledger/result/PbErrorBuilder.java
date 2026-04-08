@@ -6,20 +6,6 @@ import com.exchange.proto.common.error.ErrorPb;
 import java.util.Objects;
 
 public class PbErrorBuilder {
-    static public ErrorPb build(com.exchange.common.utils.result.Result<?> result) {
-        Objects.requireNonNull(result, "result");
-        return build(Results.getErrorCode(result), result.errorDetail());
-    }
-
-    static public ErrorPb build(ErrorCode error) {
-        return build(error, "");
-    }
-
-    static public ErrorPb build(ErrorCode error, String errorDetail) {
-        Objects.requireNonNull(error, "error");
-        return build(error.protoCode, error.getMessage(), errorDetail);
-    }
-
     static public ErrorPb build(LedgerServiceErrorCode errorCode) {
         return build(errorCode, "");
     }

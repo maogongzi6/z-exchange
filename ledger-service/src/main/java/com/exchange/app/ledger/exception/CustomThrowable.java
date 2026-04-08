@@ -1,6 +1,6 @@
 package com.exchange.app.ledger.exception;
 
-import com.exchange.app.ledger.result.ErrorCode;
+import com.exchange.common.result.error.ErrorCode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -9,7 +9,7 @@ import lombok.Setter;
 public abstract class CustomThrowable extends RuntimeException {
     private ErrorCode code;
     public CustomThrowable(ErrorCode c) {
-        super(c.message);
+        super(c.getMessage());
         code = c;
     }
 
@@ -19,7 +19,7 @@ public abstract class CustomThrowable extends RuntimeException {
     }
 
     public CustomThrowable(ErrorCode c, Throwable cause) {
-        super(c.message, cause);
+        super(c.getMessage(), cause);
         code = c;
     }
 
