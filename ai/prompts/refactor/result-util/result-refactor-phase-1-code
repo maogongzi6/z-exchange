@@ -1,0 +1,18 @@
+you have read ai/codex/refactor/result-util/result-error-handling-implementation-checklist.md
+
+what I have done:
+1. I have implemented basic error code and result interfaces in common-util/src/main/java/com/exchange/common/result.
+2. I left some concrete implementation for you to complete.
+3. I implement IdempErrorCode as an example of sub system error code.
+the work is basically for phase 1/2/3 in result-error-handling-implementation-checklist.md
+
+what you need to do:
+1. you have evaluated my design, evaluation is in ai/codex/refactor/result-util/result-error-handling-evaluation.md.
+2. change current record type Result design into a final class with private constructor
+3. complete code in:
+    - Result, use final class Result<T> with private constructor
+      put success(...), failure(...), from(...) as static factory methods on Result
+    - complete ProtoErrorMapper, map from ErrorCategory to ErrorCodePb in grpc-proto/common-proto/src/main/proto/com/exchange/proto/common/error.proto
+4. this project has not gone online, no need for backward compactability.
+5. do not change other files for now.
+6. create a new
