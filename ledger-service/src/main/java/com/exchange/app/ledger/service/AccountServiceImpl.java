@@ -1,9 +1,7 @@
 package com.exchange.app.ledger.service;
 
-import com.exchange.app.ledger.result.ErrorCode;
-
 import com.exchange.app.ledger.processor.account.CreateAccountProcessor;
-
+import com.exchange.app.ledger.result.LedgerServiceErrorCode;
 import com.exchange.app.ledger.result.PbErrorBuilder;
 import com.exchange.proto.ledger.account.AccountServiceGrpc;
 import com.exchange.proto.ledger.account.CreateAccountReplyPb;
@@ -27,7 +25,9 @@ public class AccountServiceImpl extends AccountServiceGrpc.AccountServiceImplBas
             reply = createAccountProcessor.createAccount(request);
         } catch (Exception e) {
             log.error("uncaught exception", e);
-            reply = CreateAccountReplyPb.newBuilder().setError(PbErrorBuilder.build(ErrorCode.SERVER_ERROR)).build();
+            reply = CreateAccountReplyPb.newBuilder()
+                    .setError(PbErrorBuilder.build(LedgerServiceErrorCode.SERVER_ERROR))
+                    .build();
         }
         responseObserver.onNext(reply);
         responseObserver.onCompleted();

@@ -1,5 +1,6 @@
-package com.exchange.common.result.error;
+package com.exchange.app.ledger.result;
 
+import com.exchange.common.result.error.ErrorCategory;
 import com.exchange.proto.common.error.ErrorCodePb;
 
 public final class ProtoErrorMapper {
@@ -25,7 +26,7 @@ public final class ProtoErrorMapper {
         };
     }
 
-    public static ErrorCodePb toProto(ErrorCode errorCode) {
+    public static ErrorCodePb toProto(com.exchange.common.result.error.ErrorCode errorCode) {
         if (errorCode == null) {
             return ErrorCodePb.ERROR_INTERNAL;
         }
