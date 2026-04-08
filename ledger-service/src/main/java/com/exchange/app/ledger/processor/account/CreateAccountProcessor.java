@@ -5,6 +5,7 @@ import com.exchange.app.ledger.dao.repository.AccountRepository;
 import com.exchange.app.ledger.dao.mapper.AssetMapper;
 import com.exchange.app.ledger.po.account.Account;
 import com.exchange.app.ledger.po.asset.Asset;
+import com.exchange.app.ledger.result.LedgerBoundaryErrorMapper;
 import com.exchange.app.ledger.result.LedgerServiceErrorCode;
 import com.exchange.app.ledger.result.PbErrorBuilder;
 import com.exchange.common.result.IResult;
@@ -86,15 +87,16 @@ public class CreateAccountProcessor {
                 .build();
     }
 
-    private CreateAccountReplyPb replyError(com.exchange.common.result.error.ErrorCode errorCode, String detail) {
+    private CreateAccountReplyPb replyError(LedgerServiceErrorCode errorCode, String detail) {
         CreateAccountReplyPb.Builder builder = CreateAccountReplyPb.newBuilder();
         return builder.setError(PbErrorBuilder.build(errorCode, detail)).build();
     }
 
     private CreateAccountReplyPb replyError(IResult<?> result) {
         Objects.requireNonNull(result);
+        LedgerServiceErrorCode errorCode = LedgerBoundaryErrorMapper.toLedgerErrorCode(result);
         return CreateAccountReplyPb.newBuilder()
-                .setError(PbErrorBuilder.build(result))
+                .setError(PbErrorBuilder.build(errorCode, result.getDetail()))
                 .build();
     }
 }

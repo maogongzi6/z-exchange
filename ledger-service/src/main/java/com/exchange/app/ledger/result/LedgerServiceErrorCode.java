@@ -1,9 +1,9 @@
 package com.exchange.app.ledger.result;
 
 import com.exchange.common.result.error.ErrorCategory;
-import com.exchange.common.result.error.ErrorCode;
 
-public enum LedgerServiceErrorCode implements ErrorCode {
+public enum LedgerServiceErrorCode implements com.exchange.common.result.error.ErrorCode {
+    INTERNAL_ERROR(2, ErrorCategory.INTERNAL, "internal_error"),
     SERVER_ERROR(3, ErrorCategory.INTERNAL, "server_error"),
     INVALID_REQUEST_PARAMETER(100, ErrorCategory.INVALID_ARGUMENT, "invalid_request_parameter"),
     ASSET_NOT_FOUND(1200, ErrorCategory.NOT_FOUND, "asset_not_found");

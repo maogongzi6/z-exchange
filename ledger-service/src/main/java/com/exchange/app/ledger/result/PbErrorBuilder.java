@@ -1,6 +1,5 @@
 package com.exchange.app.ledger.result;
 
-import com.exchange.common.result.IResult;
 import com.exchange.proto.common.error.ErrorCodePb;
 import com.exchange.proto.common.error.ErrorPb;
 
@@ -12,14 +11,6 @@ public class PbErrorBuilder {
         return build(Results.getErrorCode(result), result.errorDetail());
     }
 
-    static public ErrorPb build(IResult<?> result) {
-        Objects.requireNonNull(result, "result");
-        if (result.isSuccess()) {
-            return success(result.getDetail());
-        }
-        return build(result.getErrorCode(), result.getDetail());
-    }
-
     static public ErrorPb build(ErrorCode error) {
         return build(error, "");
     }
@@ -29,11 +20,11 @@ public class PbErrorBuilder {
         return build(error.protoCode, error.getMessage(), errorDetail);
     }
 
-    static public ErrorPb build(com.exchange.common.result.error.ErrorCode errorCode) {
+    static public ErrorPb build(LedgerServiceErrorCode errorCode) {
         return build(errorCode, "");
     }
 
-    static public ErrorPb build(com.exchange.common.result.error.ErrorCode errorCode, String errorDetail) {
+    static public ErrorPb build(LedgerServiceErrorCode errorCode, String errorDetail) {
         Objects.requireNonNull(errorCode, "errorCode");
         return build(ProtoErrorMapper.toProto(errorCode), errorCode.getMessage(), errorDetail);
     }

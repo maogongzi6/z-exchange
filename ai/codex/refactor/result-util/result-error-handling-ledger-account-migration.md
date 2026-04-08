@@ -13,6 +13,7 @@ Touched ledger code:
 Added boundary-side support:
 
 - [`LedgerServiceErrorCode.java`](D:/TestProgram/Java/JavaEE/z-exchange/ledger-service/src/main/java/com/exchange/app/ledger/result/LedgerServiceErrorCode.java)
+- [`LedgerBoundaryErrorMapper.java`](D:/TestProgram/Java/JavaEE/z-exchange/ledger-service/src/main/java/com/exchange/app/ledger/result/LedgerBoundaryErrorMapper.java)
 - [`ProtoErrorMapper.java`](D:/TestProgram/Java/JavaEE/z-exchange/ledger-service/src/main/java/com/exchange/app/ledger/result/ProtoErrorMapper.java)
 
 It does not migrate the ledger post flow or delete the legacy ledger `Results` helper.
@@ -39,22 +40,36 @@ Added [`ProtoErrorMapper.java`](D:/TestProgram/Java/JavaEE/z-exchange/ledger-ser
 
 It maps shared `ErrorCategory` values to `ErrorCodePb` at the ledger boundary, instead of importing proto mapping from `common-util`.
 
-### `PbErrorBuilder` now supports both paths
+### Boundary policy is now separate from protobuf assembly
 
-[`PbErrorBuilder.java`](D:/TestProgram/Java/JavaEE/z-exchange/ledger-service/src/main/java/com/exchange/app/ledger/result/PbErrorBuilder.java) now has overloads for:
+Added [`LedgerBoundaryErrorMapper.java`](D:/TestProgram/Java/JavaEE/z-exchange/ledger-service/src/main/java/com/exchange/app/ledger/result/LedgerBoundaryErrorMapper.java) for ledger-owned public error mapping.
 
-- legacy ledger result types
-- new shared `IResult<?>`
-- new shared `ErrorCode`
+Current rule:
 
-This lets the account slice build `ErrorPb` without downcasting a foreign result into the legacy ledger enum.
+- pass through `LedgerServiceErrorCode` unchanged
+- map current common-util internal/shared errors explicitly:
+- `IdempErrorCode.INVALID_IDEMP_KEY` -> `LedgerServiceErrorCode.INTERNAL_ERROR`
+- `IdempErrorCode.INVALID_IDEMP_VALUE` -> `LedgerServiceErrorCode.INTERNAL_ERROR`
+- `CacheErrorCode.PARSE_CACHE_ERROR` -> `LedgerServiceErrorCode.INTERNAL_ERROR`
+- `OutboxErrorCode.UNEXPECTED_DB_ERROR` -> `LedgerServiceErrorCode.INTERNAL_ERROR`
+- fallback every other foreign/common error to `LedgerServiceErrorCode.INTERNAL_ERROR`
 
-The old overloads were kept so the post flow can stay unchanged for this step.
+Unmapped fallback is logged before returning the ledger-owned internal error.
+
+This keeps foreign/common error enums out of the ledger gRPC surface while still allowing business code to return ledger-owned errors directly when the public meaning is already known.
+
+[`PbErrorBuilder.java`](D:/TestProgram/Java/JavaEE/z-exchange/ledger-service/src/main/java/com/exchange/app/ledger/result/PbErrorBuilder.java) is now back to a narrower role on the new path:
+
+- build `ErrorPb` from `LedgerServiceErrorCode`
+- keep legacy overloads only for the untouched post flow
+
+That separation is intentional. Mapping foreign/common errors into ledger public errors is service policy, not protobuf assembly.
 
 ### Ledger shared-service errors are isolated from the legacy catch-all enum
 
 Added [`LedgerServiceErrorCode.java`](D:/TestProgram/Java/JavaEE/z-exchange/ledger-service/src/main/java/com/exchange/app/ledger/result/LedgerServiceErrorCode.java) as the new service-wide naming direction, even though this step only migrates the account flow.
 
+- `INTERNAL_ERROR`
 - `SERVER_ERROR`
 - `INVALID_REQUEST_PARAMETER`
 - `ASSET_NOT_FOUND`
@@ -71,7 +86,7 @@ The ledger legacy path is still present in:
 
 So this step removes the cast-driven boundary handling only for the account slice, not for all of `ledger-service`.
 
-The next meaningful step is to migrate the post flow onto the shared `Result` contract, then delete the legacy ledger `Results` helper and the enum-held `protoCode` field.
+The next meaningful step is to migrate the post flow onto the shared `Result` contract, route it through `LedgerBoundaryErrorMapper`, then delete the legacy ledger `Results` helper and the enum-held `protoCode` field.
 
 ## Verification
 
