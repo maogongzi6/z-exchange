@@ -4,12 +4,11 @@ import com.exchange.app.wallet.constant.EventType;
 import com.exchange.app.wallet.kafka.constant.WalletTopic;
 import com.exchange.app.wallet.po.enums.outbox.OutboxEventType;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
-import com.exchange.app.wallet.result.ErrorCode;
-import com.exchange.app.wallet.result.Results;
+import com.exchange.app.wallet.result.WalletServiceErrorCode;
 import com.exchange.common.outbox.po.enums.OutboxStatus;
+import com.exchange.common.result.Result;
 import com.exchange.common.utils.enums.EnumMapper;
 import com.exchange.common.outbox.po.Outbox;
-import com.exchange.common.utils.result.Result;
 import com.exchange.common.utils.time.LongTimeHelper;
 import com.exchange.proto.common.event.EventEnvelopePb;
 import com.exchange.proto.ledger.post.PostTransactionRequestPb;
@@ -24,7 +23,7 @@ public class OutboxHelper {
     static public Result<EventEnvelopePb> toEventEnvelope(Outbox outbox) {
         String eventType = outboxEventTypeStringMapper.to(outbox.getEventType());
         if (Strings.isEmpty(eventType)) {
-            return Results.fail(ErrorCode.INVALID_ENUM_ERROR, "invalid outbox event type: " + outbox.getEventType());
+            return Result.failure(WalletServiceErrorCode.INVALID_ENUM_ERROR, "invalid outbox event type: " + outbox.getEventType());
         }
         EventEnvelopePb eventEnvelope = EventEnvelopePb.newBuilder()
                 .setEventId(outbox.getEventId())
@@ -32,7 +31,7 @@ public class OutboxHelper {
                 .setEventType(eventType)
                 .setPayload(ByteString.copyFrom(outbox.getPayload()))
                 .setOccurredAt(LongTimeHelper.now()).build();
-        return Results.success(eventEnvelope);
+        return Result.success(eventEnvelope);
     }
 
     final static public EnumMapper<Integer, OutboxEventType> outboxEventTypeMapper = new EnumMapper<>(

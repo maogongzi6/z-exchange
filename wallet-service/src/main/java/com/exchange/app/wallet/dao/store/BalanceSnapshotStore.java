@@ -3,13 +3,12 @@ package com.exchange.app.wallet.dao.store;
 import com.exchange.app.wallet.dao.repository.BalanceSnapshotRepository;
 import com.exchange.app.wallet.po.enums.OwnerType;
 import com.exchange.app.wallet.po.wallet.BalanceSnapshot;
-import com.exchange.app.wallet.result.Results;
 import com.exchange.common.component.PromotionClassifier;
+import com.exchange.common.result.Result;
 import com.exchange.common.redis.cache.constant.CacheType;
 import com.exchange.common.redis.cache.model.CacheValueInfo;
 import com.exchange.common.redis.cache.strategy.RawCacheStrategy;
 import com.exchange.common.redis.cache.strategy.VersionCacheStrategy;
-import com.exchange.common.utils.result.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -40,7 +39,7 @@ public class BalanceSnapshotStore {
     public void postInsert(BalanceSnapshot balanceSnapshot) {
         postInsert(balanceSnapshot.getWalletId(), balanceSnapshot.getWalletReferenceId(), balanceSnapshot.getOwnerType());
         Result<Boolean> result = determineCacheStrategy(balanceSnapshot.getWalletId()).afterInsert(balanceSnapshot.getWalletId(), balanceSnapshot, balanceSnapshot.getVersion());
-        if (!result.success()) {
+        if (!result.isSuccess()) {
             log.error("after_insert, cache strategy failed: {}, snapshot: {}", result, balanceSnapshot);
         }
     }
@@ -50,15 +49,15 @@ public class BalanceSnapshotStore {
 
         // clean negative ref cache
         Result<Boolean> refResult = balanceSnapshotRefCache.afterInsert(refId, walletId);
-        if (!refResult.success()) {
+        if (!refResult.isSuccess()) {
             log.error("clean negative cache failed, ref_id: {}, refResult: {}", refId, refResult);
         }
     }
 
     public Result<BalanceSnapshot> getByWalletId(String walletId) {
         var result = doGetByWalletId(walletId);
-        if (result.success() && result.value() != null) {
-            BalanceSnapshot balanceSnapshot = result.value();
+        if (result.isSuccess() && result.getValue() != null) {
+            BalanceSnapshot balanceSnapshot = result.getValue();
             promoteHotSnapshot(balanceSnapshot.getWalletId(), balanceSnapshot.getOwnerType());
         }
         return result;
@@ -68,46 +67,46 @@ public class BalanceSnapshotStore {
         var snapshotCache = determineCacheStrategy(walletId);
 
         Result<CacheValueInfo<BalanceSnapshot>> cacheResult = snapshotCache.get(walletId);
-        if (!cacheResult.success()) {
+        if (!cacheResult.isSuccess()) {
             log.error("getByWalletId cache failed, walletId: {}, result: {}", walletId, cacheResult);
         } else {
-            CacheValueInfo<BalanceSnapshot> valueInfo = cacheResult.value();
+            CacheValueInfo<BalanceSnapshot> valueInfo = cacheResult.getValue();
             if (CacheValueInfo.ifCacheHit(valueInfo)) {
-                return Results.success(valueInfo.value);
+                return Result.success(valueInfo.value);
             }
         }
 
         BalanceSnapshot balanceSnapshot = balanceSnapshotRepository.getByWalletId(walletId);
         if (balanceSnapshot != null) {
             Result<Boolean> setResult = snapshotCache.afterDbHit(balanceSnapshot.getWalletId(), balanceSnapshot, balanceSnapshot.getVersion());
-            if (!setResult.success()) {
+            if (!setResult.isSuccess()) {
                 log.error("getByWalletId|afterDbHit cache failed, snapshot: {}, result: {}", balanceSnapshot, setResult);
             }
         } else {
             Result<Boolean> setResult = snapshotCache.afterDbMiss(walletId);
-            if (!setResult.success()) {
+            if (!setResult.isSuccess()) {
                 log.error("afterDbMiss cache failed, walletId: {}, result: {}", walletId, setResult);
             }
         }
 
-        return Results.success(balanceSnapshot);
+        return Result.success(balanceSnapshot);
     }
 
     // negative value for cache miss, key -> NULL
     // querying by ref id is a user-facing path, so keep a stable negative cache here
     public Result<BalanceSnapshot> getByRefId(String refId) {
         Result<BalanceSnapshot> snapshotResult = doGetByRefId(refId);
-        if (snapshotResult.success()) {
-            if (snapshotResult.value() == null) {
+        if (snapshotResult.isSuccess()) {
+            if (snapshotResult.getValue() == null) {
                 // TODO should not set negative if already hit a negative (this could infinitely renewal the negative ttl)
                 // set negative cache
                 Result<Boolean> result = balanceSnapshotRefCache.afterDbMiss(refId);
-                if (!result.success()) {
+                if (!result.isSuccess()) {
                     log.error("set negative result failed, ref_id: {}, result: {}", refId, result);
                 }
             } else {
                 // try to promote hot snapshot
-                BalanceSnapshot balanceSnapshot = snapshotResult.value();
+                BalanceSnapshot balanceSnapshot = snapshotResult.getValue();
                 promoteHotSnapshot(balanceSnapshot.getWalletId(), balanceSnapshot.getOwnerType());
             }
 
@@ -117,14 +116,14 @@ public class BalanceSnapshotStore {
 
     private Result<BalanceSnapshot> doGetByRefId(String refId) {
         Result<CacheValueInfo<String>> refCacheResult = balanceSnapshotRefCache.get(refId);
-        if (!refCacheResult.success()) {
+        if (!refCacheResult.isSuccess()) {
             log.error("get cache failed, ref_id: {}, result: {}", refId, refCacheResult);
         } else {
-            CacheValueInfo<String> cacheInfo = refCacheResult.value();
+            CacheValueInfo<String> cacheInfo = refCacheResult.getValue();
             if (CacheValueInfo.ifCacheHit(cacheInfo)) {
                 String walletId = cacheInfo.value;
                 if (cacheInfo.cacheType == CacheType.NEGATIVE) {
-                    return Results.success(null);
+                    return Result.success(null);
                 }
                 return getByWalletId(walletId);
             }
@@ -133,16 +132,16 @@ public class BalanceSnapshotStore {
         BalanceSnapshot snapshot = balanceSnapshotRepository.getByWalletReferenceId(refId);
         if (snapshot != null) {
             Result<Boolean> setRefCacheResult = balanceSnapshotRefCache.afterDbHit(refId, snapshot.getWalletId());
-            if (!setRefCacheResult.success()) {
+            if (!setRefCacheResult.isSuccess()) {
                 log.error("set ref cache failed, ref_id: {}, result: {}", refId, setRefCacheResult);
             }
 
             Result<Boolean> result = determineCacheStrategy(snapshot.getWalletId()).afterDbHit(snapshot.getWalletId(), snapshot, snapshot.getVersion());
-            if (!result.success()) {
+            if (!result.isSuccess()) {
                 log.error("doGetByRefId|afterDbHit cache failed, snapshot: {}, result: {}", snapshot, result);
             }
         }
-        return Results.success(snapshot);
+        return Result.success(snapshot);
     }
 
     private void promoteHotSnapshot(String id, OwnerType ownerType) {

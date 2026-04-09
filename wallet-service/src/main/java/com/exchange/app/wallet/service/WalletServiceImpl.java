@@ -5,11 +5,11 @@ import com.exchange.app.wallet.processor.transaction.AtomicTransactionProcessor;
 import com.exchange.app.wallet.processor.CreateWalletProcessor;
 import com.exchange.app.wallet.processor.balance.GetBalanceSnapshotProcessor;
 import com.exchange.app.wallet.processor.transaction.ReserveTransactionProcessor;
-import com.exchange.app.wallet.result.ErrorCode;
+import com.exchange.app.wallet.result.WalletBoundaryErrorMapper;
 import com.exchange.app.wallet.result.PbErrorBuilder;
-import com.exchange.app.wallet.result.Results;
+import com.exchange.app.wallet.result.WalletServiceErrorCode;
 import com.exchange.app.wallet.utils.PbConverter;
-import com.exchange.common.utils.result.Result;
+import com.exchange.common.result.Result;
 import com.exchange.proto.wallet.wallet.*;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +34,7 @@ public class WalletServiceImpl extends WalletServiceGrpc.WalletServiceImplBase {
             reply = createWalletProcessor.createWallet(request);
         } catch (Exception e) {
             log.error("uncaught exception", e);
-            reply = CreateWalletReplyPb.newBuilder().setError(PbErrorBuilder.build(ErrorCode.SERVER_ERROR)).build();
+            reply = CreateWalletReplyPb.newBuilder().setError(PbErrorBuilder.build(WalletServiceErrorCode.SERVER_ERROR)).build();
         }
         responseObserver.onNext(reply);
         responseObserver.onCompleted();
@@ -48,7 +48,7 @@ public class WalletServiceImpl extends WalletServiceGrpc.WalletServiceImplBase {
             reply = atomicTransactionProcessor.executeAtomic(request);
         } catch (Exception e) {
             log.error("uncaught exception", e);
-            reply = AtomicTransactionReplyPb.newBuilder().setError(PbErrorBuilder.build(ErrorCode.SERVER_ERROR)).build();
+            reply = AtomicTransactionReplyPb.newBuilder().setError(PbErrorBuilder.build(WalletServiceErrorCode.SERVER_ERROR)).build();
         }
         responseObserver.onNext(reply);
         responseObserver.onCompleted();
@@ -61,7 +61,7 @@ public class WalletServiceImpl extends WalletServiceGrpc.WalletServiceImplBase {
             reply = reserveTransactionProcessor.reserve(request);
         } catch (Exception e) {
             log.error("uncaught exception", e);
-            reply = ReserveTransactionReplyPb.newBuilder().setError(PbErrorBuilder.build(ErrorCode.SERVER_ERROR)).build();
+            reply = ReserveTransactionReplyPb.newBuilder().setError(PbErrorBuilder.build(WalletServiceErrorCode.SERVER_ERROR)).build();
         }
         responseObserver.onNext(reply);
         responseObserver.onCompleted();
@@ -74,7 +74,7 @@ public class WalletServiceImpl extends WalletServiceGrpc.WalletServiceImplBase {
             reply = applyReservationTransactionProcessor.apply(request);
         } catch (Exception e) {
             log.error("uncaught exception", e);
-            reply = ApplyReservationTransactionReplyPb.newBuilder().setError(PbErrorBuilder.build(ErrorCode.SERVER_ERROR)).build();
+            reply = ApplyReservationTransactionReplyPb.newBuilder().setError(PbErrorBuilder.build(WalletServiceErrorCode.SERVER_ERROR)).build();
         }
         responseObserver.onNext(reply);
         responseObserver.onCompleted();
@@ -95,19 +95,20 @@ public class WalletServiceImpl extends WalletServiceGrpc.WalletServiceImplBase {
                                        StreamObserver<GetSnapshotReplyPb> responseObserver) {
         try {
             Result<com.exchange.app.wallet.po.wallet.BalanceSnapshot> result = getBalanceSnapshotProcessor.getBalanceSnapshot(lookupType, lookupValue);
-            if (result.success()) {
+            if (result.isSuccess()) {
                 responseObserver.onNext(GetSnapshotReplyPb.newBuilder()
-                        .setTransaction(PbConverter.convertToBalanceSnapshotPb(result.value()))
+                        .setTransaction(PbConverter.convertToBalanceSnapshotPb(result.getValue()))
                         .build());
             } else {
+                WalletServiceErrorCode errorCode = WalletBoundaryErrorMapper.toWalletErrorCode(result);
                 responseObserver.onNext(GetSnapshotReplyPb.newBuilder()
-                        .setError(PbErrorBuilder.build(Results.getErrorCode(result), result.errorDetail()))
+                        .setError(PbErrorBuilder.build(errorCode, result.getDetail()))
                         .build());
             }
         } catch (Exception e) {
             log.error("error processing balance snapshot request", e);
             responseObserver.onNext(GetSnapshotReplyPb.newBuilder()
-                    .setError(PbErrorBuilder.build(ErrorCode.SERVER_ERROR))
+                    .setError(PbErrorBuilder.build(WalletServiceErrorCode.SERVER_ERROR))
                     .build());
         }
         responseObserver.onCompleted();

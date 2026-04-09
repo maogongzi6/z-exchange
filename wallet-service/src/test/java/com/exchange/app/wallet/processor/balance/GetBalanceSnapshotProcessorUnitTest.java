@@ -5,8 +5,8 @@ import com.exchange.app.wallet.po.enums.OwnerType;
 import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.enums.WalletStatus;
 import com.exchange.app.wallet.po.wallet.BalanceSnapshot;
-import com.exchange.app.wallet.result.ErrorCode;
-import com.exchange.app.wallet.result.Results;
+import com.exchange.app.wallet.result.WalletServiceErrorCode;
+import com.exchange.common.result.Result;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -21,12 +21,12 @@ public class GetBalanceSnapshotProcessorUnitTest {
         GetBalanceSnapshotProcessor processor = new GetBalanceSnapshotProcessor(balanceSnapshotStore);
         BalanceSnapshot snapshot = BalanceSnapshot.create("wallet-1", ServiceId.USER, "ref-1", "asset-1", WalletStatus.OPEN, OwnerType.USER, "owner-1", 100L, 20L, 0L);
 
-        when(balanceSnapshotStore.getByWalletId("wallet-1")).thenReturn(Results.success(snapshot));
+        when(balanceSnapshotStore.getByWalletId("wallet-1")).thenReturn(Result.success(snapshot));
 
-        com.exchange.common.utils.result.Result<BalanceSnapshot> result = processor.getBalanceSnapshot(GetBalanceSnapshotProcessor.LookupType.WALLET_ID, "wallet-1");
+        Result<BalanceSnapshot> result = processor.getBalanceSnapshot(GetBalanceSnapshotProcessor.LookupType.WALLET_ID, "wallet-1");
 
-        Assert.assertTrue(result.success());
-        Assert.assertEquals(snapshot, result.value());
+        Assert.assertTrue(result.isSuccess());
+        Assert.assertEquals(snapshot, result.getValue());
         verify(balanceSnapshotStore).getByWalletId("wallet-1");
     }
 
@@ -35,12 +35,12 @@ public class GetBalanceSnapshotProcessorUnitTest {
         BalanceSnapshotStore balanceSnapshotStore = mock(BalanceSnapshotStore.class);
         GetBalanceSnapshotProcessor processor = new GetBalanceSnapshotProcessor(balanceSnapshotStore);
 
-        when(balanceSnapshotStore.getByRefId("ref-miss")).thenReturn(Results.success(null));
+        when(balanceSnapshotStore.getByRefId("ref-miss")).thenReturn(Result.success(null));
 
-        com.exchange.common.utils.result.Result<BalanceSnapshot> result = processor.getBalanceSnapshot(GetBalanceSnapshotProcessor.LookupType.REF_ID, "ref-miss");
+        Result<BalanceSnapshot> result = processor.getBalanceSnapshot(GetBalanceSnapshotProcessor.LookupType.REF_ID, "ref-miss");
 
-        Assert.assertFalse(result.success());
-        Assert.assertEquals(ErrorCode.BALANCE_SNAPSHOT_NOT_FOUND, result.errorCode());
+        Assert.assertFalse(result.isSuccess());
+        Assert.assertEquals(WalletServiceErrorCode.BALANCE_SNAPSHOT_NOT_FOUND, result.getErrorCode());
         verify(balanceSnapshotStore).getByRefId("ref-miss");
     }
 }

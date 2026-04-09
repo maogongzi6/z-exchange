@@ -8,7 +8,7 @@ import com.exchange.app.wallet.po.transaction.WalletTransaction;
 import com.exchange.app.wallet.processor.transaction.model.TransactionInfo;
 import com.exchange.app.wallet.processor.transaction.step.BeforePostLedgerProcessor;
 import com.exchange.app.wallet.processor.transaction.step.IdempPrecheckProcessor;
-import com.exchange.app.wallet.result.Results;
+import com.exchange.common.result.Result;
 import com.exchange.proto.common.error.ErrorCodePb;
 import com.exchange.proto.wallet.common.BusinessTypePb;
 import com.exchange.proto.wallet.common.OperationTypePb;
@@ -33,9 +33,9 @@ public class ApplyReservationTransactionProcessorUnitTest {
         IdempPrecheckProcessor idempPrecheckProcessor = mock(IdempPrecheckProcessor.class);
         ApplyReservationTransactionProcessor processor = new ApplyReservationTransactionProcessor(beforePostLedgerProcessor, idempPrecheckProcessor);
 
-        when(idempPrecheckProcessor.idempAndValidatePrecheck(any())).thenReturn(Results.success());
+        when(idempPrecheckProcessor.idempAndValidatePrecheck(any())).thenReturn(Result.success());
         WalletTransaction txn = WalletTransaction.create("txn-release", "ref-release", ServiceId.USER, "idem-release", TransactionStatus.COMPLETED, TransactionType.TWO_STEP, BusinessType.TRANSFER);
-        when(beforePostLedgerProcessor.beforePostingLedger(any(), eq(false))).thenReturn(Results.success(new TransactionInfo(txn, null, null, null, null)));
+        when(beforePostLedgerProcessor.beforePostingLedger(any(), eq(false))).thenReturn(Result.success(new TransactionInfo(txn, null, null, null, null)));
 
         ApplyReservationTransactionReplyPb reply = processor.apply(ApplyReservationTransactionRequestPb.newBuilder()
                 .setReferenceId("ref-release")
@@ -62,9 +62,9 @@ public class ApplyReservationTransactionProcessorUnitTest {
         IdempPrecheckProcessor idempPrecheckProcessor = mock(IdempPrecheckProcessor.class);
         ApplyReservationTransactionProcessor processor = new ApplyReservationTransactionProcessor(beforePostLedgerProcessor, idempPrecheckProcessor);
 
-        when(idempPrecheckProcessor.idempAndValidatePrecheck(any())).thenReturn(Results.success());
+        when(idempPrecheckProcessor.idempAndValidatePrecheck(any())).thenReturn(Result.success());
         WalletTransaction txn = WalletTransaction.create("txn-transfer", "ref-transfer", ServiceId.USER, "idem-transfer", TransactionStatus.PENDING, TransactionType.TWO_STEP, BusinessType.TRANSFER);
-        when(beforePostLedgerProcessor.beforePostingLedger(any(), eq(true))).thenReturn(Results.success(new TransactionInfo(txn, null, null, null, null)));
+        when(beforePostLedgerProcessor.beforePostingLedger(any(), eq(true))).thenReturn(Result.success(new TransactionInfo(txn, null, null, null, null)));
 
         ApplyReservationTransactionReplyPb reply = processor.apply(ApplyReservationTransactionRequestPb.newBuilder()
                 .setReferenceId("ref-transfer")

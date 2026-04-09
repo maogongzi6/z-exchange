@@ -7,15 +7,14 @@ import com.exchange.app.wallet.po.transaction.WalletTransaction;
 import com.exchange.app.wallet.processor.transaction.model.RequestInfo;
 import com.exchange.app.wallet.processor.transaction.util.Constant;
 import com.exchange.app.wallet.processor.transaction.util.ValidateHelper;
-import com.exchange.app.wallet.result.ErrorCode;
-import com.exchange.app.wallet.result.Results;
+import com.exchange.app.wallet.result.WalletServiceErrorCode;
 import com.exchange.app.wallet.utils.EnumPbMappers;
 import com.exchange.common.redis.idemp.IdempRedisClient;
 import com.exchange.common.redis.idemp.utils.CommonIdempHelper;
 import com.exchange.common.redis.idemp.utils.IdempValue;
 import com.exchange.common.constant.GlobalServiceId;
+import com.exchange.common.result.Result;
 import com.exchange.common.utils.JitterHelper;
-import com.exchange.common.utils.result.Result;
 import com.exchange.proto.wallet.common.ServiceIdPb;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,29 +41,29 @@ public class IdempPrecheckProcessor {
         Result<Void> precheckResult = ValidateHelper.requestPrecheck(requestInfo);
         if (precheckResult.isFailed()) {
             // fast fail before claim idemp
-            return Results.fail(precheckResult);
+            return Result.failure(precheckResult);
         }
 
         Result<IdempValue> valueResult = claimIdempCacheIfAbsent(requestInfo);
         // there should be no idemp value with the given token in the cache if fails here. no need to release here
         if (valueResult.isFailed()) {
-            return Results.fail(valueResult);
+            return Result.failure(valueResult);
         }
 
-        IdempValue value = valueResult.value();
+        IdempValue value = valueResult.getValue();
         // when value is not null, it means claim idemp fails because it has been claimed, no need to release here
         if (value != null) {
             switch (value.status) {
                 case PENDING:
                     // another request with same params is in processing (but likely no wallet_txn has been persisted in db)
                     log.error("another same request in processing, requestInfo:{}, idempValue:{}", requestInfo, value);
-                    return Results.fail(ErrorCode.REQUEST_IN_PROCESSING, "request still processing");
+                    return Result.failure(WalletServiceErrorCode.REQUEST_IN_PROCESSING, "request still processing");
                 case ACCEPTED:
                     // return txn id
-                    return Results.success(value.content, "wallet txn already accepted");
+                    return Result.success(value.content, "wallet txn already accepted");
                 default:
                     log.error("unknown idemp state:{}", value);
-                    return Results.fail(ErrorCode.INVALID_ENUM_ERROR, "unknown idemp state");
+                    return Result.failure(WalletServiceErrorCode.INVALID_ENUM_ERROR, "unknown idemp state");
             }
         }
 
@@ -76,10 +75,10 @@ public class IdempPrecheckProcessor {
                     JitterHelper.jitter(idempConfig.getDoneTtl(), idempConfig.getJitterMs()));
 
             log.info("wallet txn already exists: {}", walletTxn);
-            return Results.success(walletTxn.getTxnId(), "wallet txn already exists");
+            return Result.success(walletTxn.getTxnId(), "wallet txn already exists");
         }
 
-        return Results.success();
+        return Result.success();
     }
 
 
@@ -93,7 +92,7 @@ public class IdempPrecheckProcessor {
         Boolean success = idempRedisClient.claimIdempIfAbsent(globalCode, Constant.SCOPE, requestInfo.idempotenceKey,
                 reqHash, requestInfo.token, JitterHelper.jitter(idempConfig.getPendingTtl(), idempConfig.getJitterMs()));
         if (success) {
-            return Results.success();
+            return Result.success();
         }
 
         String idempV = idempRedisClient.getIdemp(globalCode, Constant.SCOPE, requestInfo.idempotenceKey);
@@ -104,16 +103,16 @@ public class IdempPrecheckProcessor {
             // force delete here, value is malformed and possibly cannot get a token to verify the owner.
             idempRedisClient.forceDeleteIdemp(globalCode, Constant.SCOPE, requestInfo.idempotenceKey);
             // return null then access db to check if exists
-            return Results.success();
+            return Result.success();
         }
 
-        IdempValue idempValue = parseResult.value();
+        IdempValue idempValue = parseResult.getValue();
         if (!Objects.equals(idempValue.hash, reqHash)) {
             log.error("idemp value hashcode conflict, key:{}, value:{}, hash:{}, reqInfo: {}", key, idempValue, reqHash, requestInfo);
-            return Results.fail(ErrorCode.REQUEST_HASH_CONFLICT, "idemp value hashcode conflict");
+            return Result.failure(WalletServiceErrorCode.REQUEST_HASH_CONFLICT, "idemp value hashcode conflict");
         }
 
-        return Results.success(idempValue);
+        return Result.success(idempValue);
     }
 
     private WalletTransaction idempDbCheck(ServiceIdPb serviceIdPb, String idempotencyKey) {

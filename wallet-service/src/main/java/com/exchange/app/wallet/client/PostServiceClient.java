@@ -1,8 +1,8 @@
 package com.exchange.app.wallet.client;
 
-import com.exchange.app.wallet.result.ErrorCode;
-import com.exchange.app.wallet.result.Results;
-import com.exchange.common.utils.result.Result;
+import com.exchange.app.wallet.result.WalletRemoteErrorWrapper;
+import com.exchange.app.wallet.result.WalletServiceErrorCode;
+import com.exchange.common.result.Result;
 import com.exchange.proto.common.error.ErrorCodePb;
 import com.exchange.proto.ledger.post.PostServiceGrpc;
 import com.exchange.proto.ledger.post.PostTransactionReplyPb;
@@ -21,8 +21,8 @@ public class PostServiceClient {
         PostTransactionReplyPb reply = postServiceBlockingStub.postTransaction(req);
         if (reply.getError().getCode() != ErrorCodePb.ERROR_OK) {
             log.error("post_transaction failed: {}", reply.getError());
-            return Results.fail(ErrorCode.POST_TRANSACTION_FAILED, reply.getError().getMessage());
+            return WalletRemoteErrorWrapper.failure(WalletServiceErrorCode.POST_TRANSACTION_FAILED, "ledger.post", reply.getError());
         }
-        return Results.success(reply);
+        return Result.success(reply);
     }
 }

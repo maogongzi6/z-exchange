@@ -8,13 +8,13 @@ import com.exchange.app.wallet.processor.transaction.model.RequestInfo;
 import com.exchange.app.wallet.processor.transaction.model.TransactionInfo;
 import com.exchange.app.wallet.processor.transaction.step.BeforePostLedgerProcessor;
 import com.exchange.app.wallet.processor.transaction.step.IdempPrecheckProcessor;
-import com.exchange.app.wallet.result.ErrorCode;
 import com.exchange.app.wallet.result.PbErrorBuilder;
-import com.exchange.app.wallet.result.Results;
+import com.exchange.app.wallet.result.WalletBoundaryErrorMapper;
+import com.exchange.app.wallet.result.WalletServiceErrorCode;
 import com.exchange.app.wallet.utils.EnumPbMappers;
 import com.exchange.common.constant.GlobalServiceId;
+import com.exchange.common.result.Result;
 import com.exchange.common.utils.TokenHelper;
-import com.exchange.common.utils.result.Result;
 import com.exchange.proto.wallet.common.OperationTypePb;
 import com.exchange.proto.wallet.wallet.*;
 import lombok.RequiredArgsConstructor;
@@ -44,8 +44,8 @@ public class ReserveTransactionProcessor {
         Result<String> idempResult = idempPrecheckProcessor.idempAndValidatePrecheck(requestInfo);
         if (idempResult.isFailed()) {
             return replyError(idempResult);
-        } else if (!Strings.isEmpty(idempResult.value())) {
-            return replySuccess(idempResult.value(), idempResult.errorDetail());
+        } else if (!Strings.isEmpty(idempResult.getValue())) {
+            return replySuccess(idempResult.getValue(), idempResult.getDetail());
         }
 
         Result<TransactionInfo> result = beforePostLedgerProcessor.beforePostingLedger(requestInfo, false);
@@ -53,16 +53,16 @@ public class ReserveTransactionProcessor {
             return replyError(result);
         }
 
-        return replySuccess(result.value(), result.errorDetail());
+        return replySuccess(result.getValue(), result.getDetail());
     }
 
     private Result<Void> validate(ReserveTransactionRequestPb request) {
         for (TransactionLinePb line : request.getLinesList()) {
             if (line.getOperationType() != OperationTypePb.OperationTypePb_Reserve) {
-                return Results.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid operation type: " + line.getOperationType());
+                return Result.failure(WalletServiceErrorCode.INVALID_REQUEST_PARAMETER, "invalid operation type: " + line.getOperationType());
             }
         }
-        return Results.success();
+        return Result.success();
     }
 
     private ReserveTransactionReplyPb replySuccess(String txnId, String detail) {
@@ -81,7 +81,7 @@ public class ReserveTransactionProcessor {
         return ReserveTransactionReplyPb.newBuilder()
                 .setTransactionId(txnId)
                 .addAllInfos(infos)
-                .setError(PbErrorBuilder.build(ErrorCode.SUCCESS, detail))
+                .setError(PbErrorBuilder.success(detail))
                 .build();
     }
 
@@ -91,7 +91,7 @@ public class ReserveTransactionProcessor {
         ReserveTransactionReplyPb.Builder builder = ReserveTransactionReplyPb.newBuilder()
                 .setTransactionId(txn.getTxnId())
                 .setStatus(EnumPbMappers.transactionStatusPbMapper.from(txn.getTxnStatus()))
-                .setError(PbErrorBuilder.build(ErrorCode.SUCCESS, detail));
+                .setError(PbErrorBuilder.success(detail));
         List<ReservationInfoPb> infos = new ArrayList<>();
         for (WalletReservation reservation : info.reservations) {
             ReservationInfoPb infoPb = ReservationInfoPb.newBuilder()
@@ -104,13 +104,13 @@ public class ReserveTransactionProcessor {
         return builder.addAllInfos(infos).build();
     }
 
-    private ReserveTransactionReplyPb replyError(ErrorCode errorCode, String detail) {
+    private ReserveTransactionReplyPb replyError(WalletServiceErrorCode errorCode, String detail) {
         ReserveTransactionReplyPb.Builder builder = ReserveTransactionReplyPb.newBuilder();
         return builder.setError(PbErrorBuilder.build(errorCode, detail)).build();
     }
 
     private ReserveTransactionReplyPb replyError(Result<?> result) {
-        return replyError(Results.getErrorCode(result), result.errorDetail());
+        return replyError(WalletBoundaryErrorMapper.toWalletErrorCode(result), result.getDetail());
     }
 
 //    @AllArgsConstructor

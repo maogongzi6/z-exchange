@@ -1,4 +1,4 @@
-package com.exchange.app.ledger.result;
+package com.exchange.app.wallet.result;
 
 import com.exchange.common.result.error.ErrorCategory;
 import com.exchange.common.result.error.ErrorCode;

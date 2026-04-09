@@ -12,13 +12,12 @@ import com.exchange.app.wallet.po.enums.WalletStatus;
 import com.exchange.app.wallet.po.wallet.BalanceSnapshot;
 import com.exchange.app.wallet.po.wallet.Wallet;
 import com.exchange.app.wallet.po.wallet.WalletAccountMapping;
-import com.exchange.app.wallet.result.ErrorCode;
 import com.exchange.app.wallet.result.PbErrorBuilder;
-import com.exchange.app.wallet.result.Results;
+import com.exchange.app.wallet.result.WalletBoundaryErrorMapper;
+import com.exchange.app.wallet.result.WalletServiceErrorCode;
 import com.exchange.app.wallet.utils.*;
 import com.exchange.common.db.utils.DbTxnExecutor;
-import com.exchange.common.utils.result.Result;
-import com.exchange.proto.common.error.ErrorCodePb;
+import com.exchange.common.result.Result;
 import com.exchange.proto.ledger.account.CreateAccountReplyPb;
 import com.exchange.proto.ledger.account.CreateAccountRequestPb;
 import com.exchange.proto.ledger.common.AccountCategoryPb;
@@ -49,7 +48,7 @@ public class CreateWalletProcessor {
         ServiceId serviceId = EnumPbMappers.serviceIdPbMapper.to(req.getServiceId());
         OwnerType ownerType = EnumPbMappers.ownerTypePbMapper.to(req.getOwnerType());
         Result<Void> result = validateReq(req, serviceId, ownerType);
-        if (!result.success()) {
+        if (!result.isSuccess()) {
             return replyError(result);
         }
 
@@ -59,21 +58,21 @@ public class CreateWalletProcessor {
             return replySuccess("wallet has been created");
         } else if (walletInDb == null) {
             Result<Wallet> walletResult = createWalletInDb(req, serviceId, ownerType);
-            if (!walletResult.success()) {
+            if (!walletResult.isSuccess()) {
                 return replyError(walletResult);
             }
-            walletInDb = walletResult.value();
+            walletInDb = walletResult.getValue();
         }
 
         result = createAccount(walletInDb);
-        if (!result.success()) {
-           return replyError(result);
+        if (!result.isSuccess()) {
+            return replyError(result);
         }
         Result<BalanceSnapshot> enableWalletResult = enableWallet(walletInDb);
-        if (!enableWalletResult.success()) {
+        if (!enableWalletResult.isSuccess()) {
             return replyError(enableWalletResult);
         }
-        BalanceSnapshot snapshot = enableWalletResult.value();
+        BalanceSnapshot snapshot = enableWalletResult.getValue();
         balanceSnapshotStore.postInsert(snapshot);
 
         return replySuccess("success");
@@ -81,12 +80,12 @@ public class CreateWalletProcessor {
 
     private Result<Void> validateReq(CreateWalletRequestPb req, ServiceId serviceId, OwnerType ownerType) {
         if (serviceId == null || serviceId == ServiceId.UNKNOWN) {
-            return Results.fail(ErrorCode.INVALID_REQUEST_PARAMETER,"invalid_service_id: " + req.getServiceId());
+            return Result.failure(WalletServiceErrorCode.INVALID_REQUEST_PARAMETER, "invalid_service_id: " + req.getServiceId());
         }
         if (ownerType == null || ownerType == OwnerType.UNKNOWN) {
-            return Results.fail(ErrorCode.INVALID_REQUEST_PARAMETER,"invalid_owner_type: " + req.getOwnerType());
+            return Result.failure(WalletServiceErrorCode.INVALID_REQUEST_PARAMETER, "invalid_owner_type: " + req.getOwnerType());
         }
-        return Results.success(null);
+        return Result.success();
     }
 
     private Result<Wallet> createWalletInDb(CreateWalletRequestPb req, ServiceId serviceId, OwnerType ownerType) {
@@ -94,9 +93,9 @@ public class CreateWalletProcessor {
         Wallet wallet = Wallet.create(walletId, serviceId, req.getReferenceId(), req.getAssetId(), WalletStatus.INIT, ownerType, req.getOwnerId());
         // return duplicated wallet error here, maybe some other thread is creating the same wallet
         if (walletManager.insertIgnore(wallet) == 0) {
-            return Results.fail(ErrorCode.WALLET_DUPLICATED, wallet.toString());
+            return Result.failure(WalletServiceErrorCode.WALLET_DUPLICATED, wallet.toString());
         }
-        return Results.success(wallet);
+        return Result.success(wallet);
     }
 
     private Result<Void> createAccount(Wallet wallet) {
@@ -109,11 +108,11 @@ public class CreateWalletProcessor {
                 .setOwnerType(LedgerServiceHelper.ownerTypeToLedgerPb(wallet.getOwnerType()))
                 .setOwnerId(wallet.getOwnerId())
                 .build();
-        CreateAccountReplyPb reply = accountServiceClient.createAccount(req);
-        if (reply.getError().getCode() != ErrorCodePb.ERROR_OK) {
-            return Results.fail(ErrorCode.CREATE_ACCOUNT_FAILED, reply.getError().getMessage());
+        Result<CreateAccountReplyPb> result = accountServiceClient.createAccount(req);
+        if (result.isFailed()) {
+            return Result.failure(result);
         }
-        return Results.success();
+        return Result.success();
     }
 
     // return fail for duplicated error code, another thread could be operating the same wallet
@@ -123,32 +122,30 @@ public class CreateWalletProcessor {
 
         Result<Void> result = dbTxnExecutor.executeWithDefault(() -> {
             if (walletMapper.updateWalletStatus(wallet.getWalletId(), WalletStatus.INIT, WalletStatus.OPEN) == 0) {
-                return Results.fail(ErrorCode.WALLET_UPDATE_FAILED, "unable_to_change_status: " + wallet);
+                return Result.failure(WalletServiceErrorCode.WALLET_UPDATE_FAILED, "unable_to_change_status: " + wallet);
             }
             if (walletAccountMappingManager.insertIgnore(mapping) == 0) {
-                return Results.fail(ErrorCode.WALLET_ACCOUNT_MAPPING_DUPLICATED, "unexpected duplicate: " + mapping);
+                return Result.failure(WalletServiceErrorCode.WALLET_ACCOUNT_MAPPING_DUPLICATED, "unexpected duplicate: " + mapping);
             }
             if (balanceSnapshotManager.insertIgnore(snapshot) == 0) {
-                return Results.fail(ErrorCode.BALANCE_SNAPSHOT_DUPLICATED, "unexpected duplicate: " + snapshot);
+                return Result.failure(WalletServiceErrorCode.BALANCE_SNAPSHOT_DUPLICATED, "unexpected duplicate: " + snapshot);
             }
-            return Results.success();
+            return Result.success();
         });
-        if (!result.success()) {
-            return Results.fail(result);
+        if (!result.isSuccess()) {
+            return Result.failure(result);
         }
-        return Results.success(snapshot);
+        return Result.success(snapshot);
     }
 
     private CreateWalletReplyPb replySuccess(String detail) {
-        return replyError(ErrorCode.SUCCESS, detail);
-    }
-
-    private CreateWalletReplyPb replyError(ErrorCode errorCode, String detail) {
         CreateWalletReplyPb.Builder builder = CreateWalletReplyPb.newBuilder();
-        return builder.setError(PbErrorBuilder.build(errorCode, detail)).build();
+        return builder.setError(PbErrorBuilder.success(detail)).build();
     }
 
     private CreateWalletReplyPb replyError(Result<?> result) {
-        return replyError(Results.getErrorCode(result), result.errorDetail());
+        WalletServiceErrorCode errorCode = WalletBoundaryErrorMapper.toWalletErrorCode(result);
+        CreateWalletReplyPb.Builder builder = CreateWalletReplyPb.newBuilder();
+        return builder.setError(PbErrorBuilder.build(errorCode, result.getDetail())).build();
     }
 }

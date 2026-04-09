@@ -1,8 +1,9 @@
 package com.exchange.app.ledger.result;
 
 import com.exchange.common.result.error.ErrorCategory;
+import com.exchange.common.result.error.ErrorCode;
 
-public enum LedgerServiceErrorCode implements com.exchange.common.result.error.ErrorCode {
+public enum LedgerServiceErrorCode implements ErrorCode {
     INTERNAL_ERROR(2, ErrorCategory.INTERNAL, "internal_error"),
     SERVER_ERROR(3, ErrorCategory.INTERNAL, "server_error"),
     DB_ERROR(11, ErrorCategory.INTERNAL, "db_error"),

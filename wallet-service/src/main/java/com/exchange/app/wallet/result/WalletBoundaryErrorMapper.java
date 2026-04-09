@@ -1,4 +1,4 @@
-package com.exchange.app.ledger.result;
+package com.exchange.app.wallet.result;
 
 import com.exchange.common.result.IResult;
 import com.exchange.common.result.error.CacheErrorCode;
@@ -10,52 +10,52 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.Objects;
 
 /**
- * Converts shared/common errors into the ledger-owned public error surface.
+ * Converts shared/common errors into the wallet-owned public error surface.
  * <p>
- * Business code may return LedgerServiceErrorCode directly when the public
- * ledger meaning is already known. Foreign/common errors are normalized here
+ * Business code may return WalletServiceErrorCode directly when the public
+ * wallet meaning is already known. Foreign/common errors are normalized here
  * so gRPC replies do not leak common-util implementation details.
  */
 @Slf4j
-public final class LedgerBoundaryErrorMapper {
-    private LedgerBoundaryErrorMapper() {
+public final class WalletBoundaryErrorMapper {
+    private WalletBoundaryErrorMapper() {
     }
 
-    public static LedgerServiceErrorCode toLedgerErrorCode(IResult<?> result) {
+    public static WalletServiceErrorCode toWalletErrorCode(IResult<?> result) {
         Objects.requireNonNull(result, "result");
         if (result.isSuccess()) {
             throw new IllegalArgumentException("cannot map success result");
         }
-        return toLedgerErrorCode(result.getErrorCode());
+        return toWalletErrorCode(result.getErrorCode());
     }
 
-    public static LedgerServiceErrorCode toLedgerErrorCode(ErrorCode errorCode) {
+    public static WalletServiceErrorCode toWalletErrorCode(ErrorCode errorCode) {
         if (errorCode == null) {
-            return LedgerServiceErrorCode.INTERNAL_ERROR;
+            return WalletServiceErrorCode.INTERNAL_ERROR;
         }
 
-        if (errorCode instanceof LedgerServiceErrorCode ledgerServiceErrorCode) {
-            return ledgerServiceErrorCode;
+        if (errorCode instanceof WalletServiceErrorCode walletServiceErrorCode) {
+            return walletServiceErrorCode;
         }
 
         // These common-util failures indicate malformed internal state or infra
-        // issues inside shared helpers, not caller-correctable ledger requests.
+        // issues inside shared helpers, not caller-correctable wallet requests.
         if (errorCode == IdempErrorCode.INVALID_IDEMP_KEY
                 || errorCode == IdempErrorCode.INVALID_IDEMP_VALUE
                 || errorCode == CacheErrorCode.PARSE_CACHE_ERROR
                 || errorCode == OutboxErrorCode.UNEXPECTED_DB_ERROR) {
-            return LedgerServiceErrorCode.INTERNAL_ERROR;
+            return WalletServiceErrorCode.INTERNAL_ERROR;
         }
 
-        // Keep the ledger API surface stable even for newly introduced foreign
+        // Keep the wallet API surface stable even for newly introduced foreign
         // errors, but log the original metadata so the mapping gap is visible.
         log.warn(
-                "unmapped ledger boundary error, fallback to internal_error, namespace={}, code={}, category={}, message={}",
+                "unmapped wallet boundary error, fallback to internal_error, namespace={}, code={}, category={}, message={}",
                 errorCode.getNamespace(),
                 errorCode.getCode(),
                 errorCode.getCategory(),
                 errorCode.getMessage()
         );
-        return LedgerServiceErrorCode.INTERNAL_ERROR;
+        return WalletServiceErrorCode.INTERNAL_ERROR;
     }
 }

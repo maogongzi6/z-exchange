@@ -16,8 +16,7 @@ import com.exchange.app.wallet.processor.transaction.model.TransactionInfo;
 import com.exchange.app.wallet.processor.transaction.util.Constant;
 import com.exchange.app.wallet.processor.transaction.util.ObjectBuilder;
 import com.exchange.app.wallet.processor.transaction.util.ValidateHelper;
-import com.exchange.app.wallet.result.ErrorCode;
-import com.exchange.app.wallet.result.Results;
+import com.exchange.app.wallet.result.WalletServiceErrorCode;
 import com.exchange.app.wallet.utils.*;
 import com.exchange.common.redis.idemp.IdempRedisClient;
 import com.exchange.app.wallet.config.CustomCacheProperties;
@@ -27,7 +26,7 @@ import com.exchange.common.db.utils.DbTxnExecutor;
 import com.exchange.common.outbox.dao.repository.OutboxRepository;
 import com.exchange.common.outbox.po.Outbox;
 import com.exchange.common.outbox.po.enums.OutboxStatus;
-import com.exchange.common.utils.result.Result;
+import com.exchange.common.result.Result;
 import com.exchange.common.utils.time.LocalDateTimeHelper;
 import com.exchange.proto.wallet.wallet.TransactionLinePb;
 import lombok.RequiredArgsConstructor;
@@ -89,7 +88,7 @@ public class BeforePostLedgerProcessor {
             if (reservationsInRequest.size() != reservationRefs.size()) {
                 log.error("reservations not found, requested_reservation: {}, reservation_in_db: {}", reservationRefs, reservationsInRequest);
                 releaseIdempBeforeReturnError(requestInfo.idempotenceKey, requestInfo.getStableHash(), requestInfo.token);
-                return Results.fail(ErrorCode.WALLET_RESERVATION_NOT_FOUND, "reservations not found");
+                return Result.failure(WalletServiceErrorCode.WALLET_RESERVATION_NOT_FOUND, "reservations not found");
             }
         }
         Map<String, WalletReservation> refToReservation = reservationsInRequest.stream().collect(Collectors.toMap(WalletReservation::getReferenceId, reservation->reservation));
@@ -102,7 +101,7 @@ public class BeforePostLedgerProcessor {
             if (snapshot == null) {
                 log.error("snapshot not found, line: {}", line);
                 releaseIdempBeforeReturnError(requestInfo.idempotenceKey, requestInfo.getStableHash(), requestInfo.token);
-                return Results.fail(ErrorCode.BALANCE_SNAPSHOT_NOT_FOUND, "snapshot not found");
+                return Result.failure(WalletServiceErrorCode.BALANCE_SNAPSHOT_NOT_FOUND, "snapshot not found");
             }
 
             WalletReservation reservation = null;
@@ -119,7 +118,7 @@ public class BeforePostLedgerProcessor {
                     if (reservation == null) {
                         log.error("reservation not found, ref: {}", line);
                         releaseIdempBeforeReturnError(requestInfo.idempotenceKey, requestInfo.getStableHash(), requestInfo.token);
-                        return Results.fail(ErrorCode.WALLET_RESERVATION_NOT_FOUND, "reservation not found");
+                        return Result.failure(WalletServiceErrorCode.WALLET_RESERVATION_NOT_FOUND, "reservation not found");
                     }
             }
 
@@ -136,22 +135,22 @@ public class BeforePostLedgerProcessor {
         if (result.isFailed()) {
             log.error("validate action info failed, result: {}", result);
             releaseIdempBeforeReturnError(requestInfo.idempotenceKey, requestInfo.getStableHash(), requestInfo.token);
-            return Results.fail(result);
+            return Result.failure(result);
         }
 
         Result<Outbox> outboxResult = createOutboxIfNeeded(walletTxn, actions, requestInfo, needPostLedger);
-        if (!outboxResult.success()) {
+        if (!outboxResult.isSuccess()) {
             releaseIdempBeforeReturnError(requestInfo.idempotenceKey, requestInfo.getStableHash(), requestInfo.token);
-            return Results.fail(outboxResult);
+            return Result.failure(outboxResult);
         }
-        Outbox outbox = outboxResult.value();
+        Outbox outbox = outboxResult.getValue();
 
 
         result = updateDbToCreateTxn(walletTxn, actions, balanceSnapshots, reservationsInRequest, createdReservations, outbox);
         if (result.isFailed()) {
             log.error("updateDbToCreateTxn failed: {}", result);
             releaseIdempBeforeReturnError(requestInfo.idempotenceKey, requestInfo.getStableHash(), requestInfo.token);
-            return Results.fail(result);
+            return Result.failure(result);
         }
         // set idemp to DONE when found wallet txn
         idempRedisClient.markIdempDone(GlobalServiceId.WALLET.code, Constant.SCOPE, requestInfo.idempotenceKey,
@@ -161,7 +160,7 @@ public class BeforePostLedgerProcessor {
             postLedger(outbox);
         }
 
-        return Results.success(TransactionInfo.create(walletTxn, actions, new ArrayList<>(refToReservation.values()), balanceSnapshots));
+        return Result.success(TransactionInfo.create(walletTxn, actions, new ArrayList<>(refToReservation.values()), balanceSnapshots));
     }
 
     private void releaseIdempBeforeReturnError(String IdempKey, String hash, String token) {
@@ -195,42 +194,42 @@ public class BeforePostLedgerProcessor {
                     (reservation) -> updateReservationBeforePosting(reservation, walletIdToActions));
             if (result.isFailed()) {
                 log.error("update reservations failed, {}, {}", result, reservationsInRequest);
-                return Results.fail(result);
+                return Result.failure(result);
             }
 
 
             result = updateSnapshotsBeforePosting(walletIdToActions, balanceSnapshots);
             if (result.isFailed()) {
                 log.error("update snapshots failed, {}, {}", result, balanceSnapshots);
-                return Results.fail(result);
+                return Result.failure(result);
             }
 
             if (!createdReservations.isEmpty()) {
                 if (walletReservationManager.batchInsert(createdReservations) != createdReservations.size()) {
                     log.error("insert reservations failed, {}, {}", result, createdReservations);
-                    return Results.fail(ErrorCode.WALLET_RESERVATION_DUPLICATED, "unexpected reservation duplicated");
+                    return Result.failure(WalletServiceErrorCode.WALLET_RESERVATION_DUPLICATED, "unexpected reservation duplicated");
                 }
             }
 
             if (walletTransactionManager.insertIgnore(walletTxn) == 0) {
                 // TODO maybe get txn and return if info match
                 log.error("insert transaction failed, {}, {}", result, walletTxn);
-                return Results.fail(ErrorCode.WALLET_TRANSACTION_DUPLICATED, "unexpected transaction duplicated");
+                return Result.failure(WalletServiceErrorCode.WALLET_TRANSACTION_DUPLICATED, "unexpected transaction duplicated");
             }
             if (walletActionManager.batchInsert(actions) != actions.size()) {
                 log.error("insert actions failed, {}, {}", result, actions);
-                return Results.fail(ErrorCode.WALLET_ACTION_DUPLICATION, "unexpected action duplicated");
+                return Result.failure(WalletServiceErrorCode.WALLET_ACTION_DUPLICATION, "unexpected action duplicated");
             }
             if (outbox != null) {
                 // immediately claim the outbox and attempt to publish it right after update db
                 if (outboxManager.insertWithClaim(outbox, LocalDateTimeHelper.nowAfterMs(OutboxConstant.BASE_ATTEMPT_INTERVAL_MS))
                         == 0) {
                     log.error("insert outbox failed, {}, {}", result, outbox);
-                    return Results.fail(ErrorCode.WALLET_OUTBOX_DUPLICATED, "unexpected outbox duplicated");
+                    return Result.failure(WalletServiceErrorCode.WALLET_OUTBOX_DUPLICATED, "unexpected outbox duplicated");
                 }
             }
 
-            return Results.success();
+            return Result.success();
         });
     }
 
@@ -239,14 +238,14 @@ public class BeforePostLedgerProcessor {
             switch (action.getActionType()) {
                 case CONSUME:
                     if (reservation.getRemaining() < action.getAmount()) {
-                        return Results.fail(ErrorCode.WALLET_RESERVATION_NOT_SATISFIED, String.format("fail to consume, remaining not enough, reservation: %s, action: %s ", reservation, action));
+                        return Result.failure(WalletServiceErrorCode.WALLET_RESERVATION_NOT_SATISFIED, String.format("fail to consume, remaining not enough, reservation: %s, action: %s ", reservation, action));
                     }
                     reservation.setRemaining(reservation.getRemaining() - action.getAmount());
                     reservation.setPendingSettle(reservation.getPendingSettle() + action.getAmount());
                     break;
                 case RELEASE:
                     if (reservation.getRemaining() < action.getAmount()) {
-                        return Results.fail(ErrorCode.WALLET_RESERVATION_NOT_SATISFIED, String.format("fail to release, remaining not enough, reservation: %s, action: %s ", reservation, action));
+                        return Result.failure(WalletServiceErrorCode.WALLET_RESERVATION_NOT_SATISFIED, String.format("fail to release, remaining not enough, reservation: %s, action: %s ", reservation, action));
                     }
                     reservation.setRemaining(reservation.getRemaining() - action.getAmount());
                     reservation.setReleased(reservation.getReleased() + action.getAmount());
@@ -257,7 +256,7 @@ public class BeforePostLedgerProcessor {
                     break;
             }
         }
-        return Results.success(reservation);
+        return Result.success(reservation);
     }
 
     // TODO for db txn updates, uses select for update to lock records, then update it
@@ -276,19 +275,19 @@ public class BeforePostLedgerProcessor {
                         if (balanceSnapshotManager.reserveFromWalletId(snapshot.getId(), action.getWalletId(), action.getAssetId(), action.getAmount())
                                 != 1) {
                             log.error("failed to update snapshot to reserve amount, reservation: {}, action: {}", snapshot, action);
-                            return Results.fail(ErrorCode.BALANCE_SNAPSHOT_UPDATE_FAILED, "failed to update snapshot to reserve amount");
+                            return Result.failure(WalletServiceErrorCode.BALANCE_SNAPSHOT_UPDATE_FAILED, "failed to update snapshot to reserve amount");
                         }
                         break;
                     case RELEASE:
                         if (balanceSnapshotManager.releaseFromWalletId(snapshot.getId(), action.getWalletId(), action.getAssetId(), action.getAmount())
                                 != 1) {
                             log.error("failed to update snapshot to release amount, reservation: {}, action: {}", snapshot, action);
-                            return Results.fail(ErrorCode.BALANCE_SNAPSHOT_UPDATE_FAILED, "failed to update snapshot to release amount");
+                            return Result.failure(WalletServiceErrorCode.BALANCE_SNAPSHOT_UPDATE_FAILED, "failed to update snapshot to release amount");
                         }
                 }
             }
         }
-        return Results.success();
+        return Result.success();
     }
 
     private Result<Outbox> createOutboxIfNeeded(WalletTransaction walletTxn, List<WalletAction> actions, RequestInfo requestInfo, boolean needPostLedger) {
@@ -304,22 +303,22 @@ public class BeforePostLedgerProcessor {
             List<WalletAccountMapping> mappings = walletAccountMappingManager.selectInWalletIds(walletIds);
             if (mappings.size() != walletIds.size()) {
                 log.error("wallet_account_mapping_not_found, wallet_ids: {}, mappings: {}", walletIds, mappings);
-                return Results.fail(ErrorCode.WALLET_ACCOUNT_MAPPING_NOT_FOUND, "wallet_account_mapping_not_found");
+                return Result.failure(WalletServiceErrorCode.WALLET_ACCOUNT_MAPPING_NOT_FOUND, "wallet_account_mapping_not_found");
             }
             Result<Outbox> outboxResult = ObjectBuilder.createOutbox(walletTxn, actions, mappings);
             if (outboxResult.isFailed()) {
                 log.error("createOutbox failed: {}", outboxResult);
                 releaseIdempBeforeReturnError(requestInfo.idempotenceKey, requestInfo.getStableHash(), requestInfo.token);
-                return Results.fail(outboxResult);
+                return Result.failure(outboxResult);
             }
-            outbox = outboxResult.value();
+            outbox = outboxResult.getValue();
         }
-        return Results.success(outbox);
+        return Result.success(outbox);
     }
 
     private void postLedger(Outbox outbox) {
         Result<Void> publishResult = postLedgerPublisher.publish(outbox);
-        if (publishResult.success()) {
+        if (publishResult.isSuccess()) {
             if (outboxManager.updateStatusToFinalize(outbox, OutboxStatus.SENT, outbox.getLastAttemptAt())
                     == 1) {
                 outbox.setOutboxStatus(OutboxStatus.SENT);
