@@ -2,7 +2,7 @@ package com.exchange.common.cache.client;
 
 import com.exchange.common.redis.idemp.IdempRedisClient;
 import com.exchange.common.redis.idemp.utils.CommonIdempHelper;
-import com.exchange.common.utils.result.Result;
+import com.exchange.common.result.Result;
 import org.junit.jupiter.api.*;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -77,8 +77,8 @@ class IdempRedisClientIT {
         Result<String> res = idempRedisClient.releaseIdempIfOwned(service, scope, idempId, CommonIdempHelper.idempPendingValue(hash, token));
 
         assertThat(res).isNotNull();
-        assertThat(res.success()).isTrue();
-        assertThat(res.value()).isIn("", null);
+        assertThat(res.isSuccess()).isTrue();
+        assertThat(res.getValue()).isIn("", null);
         assertThat(redisTemplate.hasKey(key)).isFalse();
     }
 
@@ -105,7 +105,7 @@ class IdempRedisClientIT {
         Result<String> res = idempRedisClient.releaseIdempIfOwned(service, scope, idempId, CommonIdempHelper.idempPendingValue(hash, wrongToken));
 
         assertThat(res).isNotNull();
-        assertThat(res.success()).isTrue();
+        assertThat(res.isSuccess()).isTrue();
 
         // Expect no deletion when not owned
         assertThat(redisTemplate.hasKey(key)).isTrue();
@@ -132,7 +132,7 @@ class IdempRedisClientIT {
         Result<String> res = idempRedisClient.releaseIdempIfOwned(service, scope, idempId, CommonIdempHelper.idempPendingValue(hash, token));
 
         assertThat(res).isNotNull();
-        assertThat(res.success()).isTrue();
+        assertThat(res.isSuccess()).isTrue();
         assertThat(redisTemplate.hasKey(key)).isFalse();
     }
 
