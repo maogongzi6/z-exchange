@@ -1,5 +1,7 @@
 package com.exchange.common.redis.cache.strategy.impl;
 
+import com.exchange.common.exception.CacheException;
+import com.exchange.common.redis.aop.CacheExceptionToResult;
 import com.exchange.common.redis.cache.component.codec.impl.VersionCodec;
 import com.exchange.common.redis.cache.component.support.DefaultCacheReader;
 import com.exchange.common.redis.cache.component.support.VersionCacheWriter;
@@ -13,6 +15,7 @@ import com.exchange.common.redis.cache.strategy.model.StrategyType;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@CacheExceptionToResult
 public class DefaultVersionCacheStrategy<T> implements VersionCacheStrategy<T> {
     private final CacheDescriptor<T> descriptor;
     private final DefaultCacheReader<VersionCodec> cacheReader;
@@ -34,32 +37,34 @@ public class DefaultVersionCacheStrategy<T> implements VersionCacheStrategy<T> {
     @Override
     public Result<CacheValueInfo<T>> get(String id) {
         String key = descriptor.buildCacheKey(id);
-        Result<CacheValueInfo<T>> result = cacheReader.get(key, descriptor.getClazz());
-        if (!result.isSuccess() && Result.is(result, CacheErrorCode.PARSE_CACHE_ERROR)) {
-            // ignore recover error
-            config.selfRecoverFeature().recover(key);
+        try {
+            return Result.success(cacheReader.get(key, descriptor.getClazz()));
+        } catch (CacheException e) {
+            if (isSelfRecoverableReadError(e)) {
+                config.selfRecoverFeature().recover(key);
+            }
+            throw e;
         }
-        return result;
     }
 
     @Override
     public Result<Boolean> afterDbHit(String id, T value, long newVersion) {
         String key = descriptor.buildCacheKey(id);
-        return cacheWriter.setIfAbsentOrNewer(key, value, newVersion, config.ttlConfig().cacheTtl());
+        return Result.success(cacheWriter.setIfAbsentOrNewer(key, value, newVersion, config.ttlConfig().cacheTtl()));
     }
 
     @Override
     public Result<Boolean> afterDbMiss(String id) {
         String key = descriptor.buildCacheKey(id);
-        Result<Void> result = config.negativeCacheFeature().set(key, config.ttlConfig().negativeTtl());
-        return Result.from(Boolean.TRUE, result);
+        config.negativeCacheFeature().set(key, config.ttlConfig().negativeTtl());
+        return Result.success(Boolean.TRUE);
     }
 
     @Override
     public Result<Boolean> afterUpdate(String id, T value, long newVersion) {
         if (config.strategyType() == StrategyType.CACHE_ASIDE) {
             String key = descriptor.buildCacheKey(id);
-            return cacheWriter.setTombstone(key, newVersion, config.ttlConfig().tombstoneTtl());
+            return Result.success(cacheWriter.setTombstone(key, newVersion, config.ttlConfig().tombstoneTtl()));
         } else {
             return afterDbHit(id, value, newVersion);
         }
@@ -73,5 +78,10 @@ public class DefaultVersionCacheStrategy<T> implements VersionCacheStrategy<T> {
         } else {
             return afterDbHit(id, value, newVersion);
         }
+    }
+
+    private boolean isSelfRecoverableReadError(CacheException e) {
+        return e.getErrorCode() == CacheErrorCode.MALFORMED_VALUE
+                || e.getErrorCode() == CacheErrorCode.SERIALIZATION;
     }
 }

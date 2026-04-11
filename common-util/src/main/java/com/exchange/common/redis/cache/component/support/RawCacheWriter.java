@@ -1,16 +1,11 @@
 package com.exchange.common.redis.cache.component.support;
 
-import com.exchange.common.exception.CacheParseException;
 import com.exchange.common.redis.BaseRedisSupport;
-import com.exchange.common.result.Result;
-import com.exchange.common.result.error.CacheErrorCode;
 import com.exchange.common.redis.cache.component.codec.CacheEncoder;
 import com.exchange.common.redis.cache.constant.CacheType;
 import com.exchange.common.utils.TtlStrategy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import java.time.Duration;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -18,41 +13,20 @@ public class RawCacheWriter implements NegativeWriter {
     private final CacheEncoder cacheEncoder;
     private final BaseRedisSupport<String> baseRedisSupport;
 
-    public <T> Result<Void> set(String key, T value, TtlStrategy ttl) {
+    public <T> void set(String key, T value, TtlStrategy ttl) {
         if (value == null) {
             log.error("setIfAbsentOrNewer value is null, key: {}", key);
-            return Result.failure(CacheErrorCode.PARSE_CACHE_ERROR, "setIfAbsentOrNewer value is null");
+            throw new IllegalArgumentException("set value must not be null");
         }
 
         CacheType cacheType = CacheType.fromSource(value);
-        Result<String> result = encode(value, cacheType);
-        if (!result.isSuccess()) {
-            return Result.failure(result);
-        }
-
-        baseRedisSupport.set(key, result.getValue(), ttl.afterJitter());
-        return Result.success();
+        String encoded = cacheEncoder.encode(value, cacheType);
+        baseRedisSupport.set(key, encoded, ttl.afterJitter());
     }
 
     // conflict risk without version check
-    public Result<Void> setNegative(String key, TtlStrategy ttl) {
-        Result<String> result = encode("", CacheType.NEGATIVE);
-        if (!result.isSuccess()) {
-            return Result.failure(result);
-        }
-
-        baseRedisSupport.set(key, result.getValue(), ttl.afterJitter());
-        return Result.success();
-    }
-
-    private Result<String> encode(Object value, CacheType cacheType) {
-        String encoded;
-        try {
-            encoded = cacheEncoder.encode(value, cacheType);
-        } catch (CacheParseException e) {
-            log.error("failed to encode value: {}", value, e);
-            return Result.failure(CacheErrorCode.PARSE_CACHE_ERROR, "failed to encode value");
-        }
-        return Result.success(encoded);
+    public void setNegative(String key, TtlStrategy ttl) {
+        String encoded = cacheEncoder.encode("", CacheType.NEGATIVE);
+        baseRedisSupport.set(key, encoded, ttl.afterJitter());
     }
 }

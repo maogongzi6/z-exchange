@@ -1,6 +1,8 @@
 package com.exchange.common.redis.cache.component.support;
 
-import com.exchange.common.result.Result;
+import com.exchange.common.exception.CacheException;
+import com.exchange.common.redis.aop.CacheExceptionTranslate;
+import com.exchange.common.result.error.CacheErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RScript;
@@ -18,6 +20,7 @@ import java.util.Collections;
 
 @Slf4j
 @RequiredArgsConstructor
+@CacheExceptionTranslate
 public class ScriptExecutor {
     private final ResourceLoader resourceLoader;
 
@@ -31,13 +34,13 @@ public class ScriptExecutor {
                 setIfAbsentOrNewerScript = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
             }
         } catch (IOException e) {
-            // Fail fast: without the script, setIfAbsentOrNewer can't work reliably.
-            throw new IllegalStateException("Failed to load setIfAbsentOrNewer Lua script", e);
+            throw new CacheException(CacheErrorCode.CONFIGURATION,
+                    "failed to load setIfAbsentOrNewer Lua script", e);
         }
     }
 
-    public Result<Boolean> setIfAbsentOrNewer(RedissonClient redissonClient, String key, String value, long newVersion, Duration ttl) {
-        Boolean success = redissonClient.getScript(StringCodec.INSTANCE).eval(
+    public Boolean setIfAbsentOrNewer(RedissonClient redissonClient, String key, String value, long newVersion, Duration ttl) {
+        return redissonClient.getScript(StringCodec.INSTANCE).eval(
                 RScript.Mode.READ_WRITE,
                 setIfAbsentOrNewerScript,
                 RScript.ReturnType.BOOLEAN,
@@ -45,6 +48,5 @@ public class ScriptExecutor {
                 value,
                 newVersion,
                 ttl.toMillis());
-        return Result.success(success);
     }
 }

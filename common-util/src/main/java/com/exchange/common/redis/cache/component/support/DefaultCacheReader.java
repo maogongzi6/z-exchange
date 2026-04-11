@@ -1,11 +1,8 @@
 package com.exchange.common.redis.cache.component.support;
 
-import com.exchange.common.exception.CacheParseException;
 import com.exchange.common.redis.BaseCacheReadSupport;
-import com.exchange.common.redis.cache.model.CacheValueInfo;
 import com.exchange.common.redis.cache.component.codec.CacheDecoder;
-import com.exchange.common.result.Result;
-import com.exchange.common.result.error.CacheErrorCode;
+import com.exchange.common.redis.cache.model.CacheValueInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -15,18 +12,11 @@ public class DefaultCacheReader<C extends CacheDecoder> {
     private final C cacheDecoder;
     private final BaseCacheReadSupport<String> baseCacheReadSupport;
 
-    public <T> Result<CacheValueInfo<T>> get(String key, Class<T> clazz) {
+    public <T> CacheValueInfo<T> get(String key, Class<T> clazz) {
         String value = baseCacheReadSupport.get(key);
         if (value == null) {
-            return Result.success();
+            return null;
         }
-        try {
-            CacheValueInfo<T> cacheValueInfo = cacheDecoder.decode(value, clazz);
-            return Result.success(cacheValueInfo);
-        } catch (CacheParseException e) {
-            log.error("decode exception, decode cache error, key: {}, value: {}, class: {}", key, value, clazz, e);
-            return Result.failure(CacheErrorCode.PARSE_CACHE_ERROR, "parse cache error, key: " + key + ", value: " + value);
-        }
+        return cacheDecoder.decode(value, clazz);
     }
-
 }

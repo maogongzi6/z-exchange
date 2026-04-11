@@ -1,5 +1,7 @@
 package com.exchange.common.redis.cache.strategy.impl;
 
+import com.exchange.common.exception.CacheException;
+import com.exchange.common.redis.aop.CacheExceptionToResult;
 import com.exchange.common.redis.cache.component.codec.impl.ValueCodec;
 import com.exchange.common.redis.cache.component.support.DefaultCacheReader;
 import com.exchange.common.redis.cache.component.support.RawCacheWriter;
@@ -12,6 +14,7 @@ import com.exchange.common.redis.cache.strategy.model.RawStrategyConfig;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@CacheExceptionToResult
 public class DefaultRawCacheStrategy<T> implements RawCacheStrategy<T> {
     private final CacheDescriptor<T> descriptor;
     private final DefaultCacheReader<ValueCodec> cacheReader;
@@ -34,19 +37,21 @@ public class DefaultRawCacheStrategy<T> implements RawCacheStrategy<T> {
     @Override
     public Result<CacheValueInfo<T>> get(String id) {
         String key = descriptor.buildCacheKey(id);
-        var result = cacheReader.get(key, descriptor.getClazz());
-        if (!result.isSuccess() && Result.is(result, CacheErrorCode.PARSE_CACHE_ERROR)) {
-            // ignore recover error
-            config.selfRecoverFeature().recover(key);
+        try {
+            return Result.success(cacheReader.get(key, descriptor.getClazz()));
+        } catch (CacheException e) {
+            if (isSelfRecoverableReadError(e)) {
+                config.selfRecoverFeature().recover(key);
+            }
+            throw e;
         }
-        return result;
     }
 
     @Override
     public Result<Boolean> afterDbHit(String id, T value) {
         String key = descriptor.buildCacheKey(id);
-        Result<Void> result = cacheWriter.set(key, value, config.ttlConfig().cacheTtl());
-        return Result.from(Boolean.TRUE, result);
+        cacheWriter.set(key, value, config.ttlConfig().cacheTtl());
+        return Result.success(Boolean.TRUE);
     }
 
     // if id is from our service and used internally,
@@ -56,8 +61,8 @@ public class DefaultRawCacheStrategy<T> implements RawCacheStrategy<T> {
     @Override
     public Result<Boolean> afterDbMiss(String id) {
         String key = descriptor.buildCacheKey(id);
-        Result<Void> result = config.negativeCacheFeature().set(key, config.ttlConfig().negativeTtl());
-        return Result.from(Boolean.TRUE, result);
+        config.negativeCacheFeature().set(key, config.ttlConfig().negativeTtl());
+        return Result.success(Boolean.TRUE);
     }
 
     @Override
@@ -69,5 +74,10 @@ public class DefaultRawCacheStrategy<T> implements RawCacheStrategy<T> {
     public Result<Boolean> afterInsert(String id, T value) {
         String key = descriptor.buildCacheKey(id);
         return config.negativeCacheFeature().clear(key);
+    }
+
+    private boolean isSelfRecoverableReadError(CacheException e) {
+        return e.getErrorCode() == CacheErrorCode.MALFORMED_VALUE
+                || e.getErrorCode() == CacheErrorCode.SERIALIZATION;
     }
 }

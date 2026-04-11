@@ -1,8 +1,8 @@
 package com.exchange.app.wallet.result;
 
 import com.exchange.common.result.IResult;
-import com.exchange.common.result.error.CacheErrorCode;
 import com.exchange.common.result.error.ErrorCode;
+import com.exchange.common.result.error.ErrorNamespace;
 import com.exchange.common.result.error.IdempErrorCode;
 import com.exchange.common.result.error.OutboxErrorCode;
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +42,7 @@ public final class WalletBoundaryErrorMapper {
         // issues inside shared helpers, not caller-correctable wallet requests.
         if (errorCode == IdempErrorCode.INVALID_IDEMP_KEY
                 || errorCode == IdempErrorCode.INVALID_IDEMP_VALUE
-                || errorCode == CacheErrorCode.PARSE_CACHE_ERROR
+                || ErrorNamespace.CACHE.equals(errorCode.getNamespace())
                 || errorCode == OutboxErrorCode.UNEXPECTED_DB_ERROR) {
             return WalletServiceErrorCode.INTERNAL_ERROR;
         }

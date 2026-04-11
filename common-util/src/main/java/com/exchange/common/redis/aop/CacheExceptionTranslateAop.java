@@ -1,11 +1,25 @@
 package com.exchange.common.redis.aop;
 
+import com.exchange.common.exception.CacheException;
+import com.exchange.common.redis.cache.component.support.ScriptExecutor;
+import com.exchange.common.result.error.CacheErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.redisson.client.RedisException;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.dao.PermissionDeniedDataAccessException;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.net.ConnectException;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
+import java.util.concurrent.TimeoutException;
 
 @Slf4j
 @Component
@@ -14,11 +28,67 @@ import org.springframework.stereotype.Component;
 public class CacheExceptionTranslateAop {
     @Around("@within(CacheExceptionTranslate) || @annotation(CacheExceptionTranslate)")
     public Object translate(ProceedingJoinPoint pt) throws Throwable {
-        // TODO
         try {
             return pt.proceed();
-        } catch (Throwable e) {
+        } catch (CacheException e) {
             throw e;
+        } catch (QueryTimeoutException e) {
+            throw translate(pt, CacheErrorCode.TIMEOUT, e);
+        } catch (PermissionDeniedDataAccessException e) {
+            throw translate(pt, CacheErrorCode.ACCESS, e);
+        } catch (DataAccessResourceFailureException e) {
+            throw translate(pt, CacheErrorCode.CONNECTION, e);
+        } catch (DataAccessException e) {
+            throw translate(pt, classify(e, isScriptOperation(pt)), e);
+        } catch (RedisException e) {
+            throw translate(pt, classify(e, isScriptOperation(pt)), e);
         }
+    }
+
+    private CacheException translate(ProceedingJoinPoint pt, CacheErrorCode errorCode, Throwable cause) {
+        String operation = pt.getSignature().toShortString();
+        log.error("cache operation failed, operation: {}, errorCode: {}", operation, errorCode, cause);
+        return new CacheException(errorCode, "cache operation failed: " + operation, cause);
+    }
+
+    private CacheErrorCode classify(Throwable throwable, boolean scriptOperation) {
+        Throwable rootCause = rootCauseOf(throwable);
+        String classNames = throwable.getClass().getName() + " " + rootCause.getClass().getName();
+
+        if (throwable instanceof QueryTimeoutException
+                || rootCause instanceof TimeoutException
+                || rootCause instanceof SocketTimeoutException
+                || classNames.contains("Timeout")) {
+            return CacheErrorCode.TIMEOUT;
+        }
+        if (throwable instanceof PermissionDeniedDataAccessException
+                || classNames.contains("Permission")
+                || classNames.contains("AccessDenied")
+                || classNames.contains("Auth")) {
+            return CacheErrorCode.ACCESS;
+        }
+        if (throwable instanceof DataAccessResourceFailureException
+                || rootCause instanceof ConnectException
+                || rootCause instanceof SocketException
+                || rootCause instanceof IOException
+                || classNames.contains("Connection")) {
+            return CacheErrorCode.CONNECTION;
+        }
+        if (scriptOperation) {
+            return CacheErrorCode.SCRIPT;
+        }
+        return CacheErrorCode.UNEXPECTED_INTERNAL;
+    }
+
+    private boolean isScriptOperation(ProceedingJoinPoint pt) {
+        return pt.getTarget() instanceof ScriptExecutor;
+    }
+
+    private Throwable rootCauseOf(Throwable throwable) {
+        Throwable current = throwable;
+        while (current.getCause() != null && current.getCause() != current) {
+            current = current.getCause();
+        }
+        return current;
     }
 }

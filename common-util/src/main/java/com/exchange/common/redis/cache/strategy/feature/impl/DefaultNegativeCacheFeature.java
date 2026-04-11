@@ -16,19 +16,12 @@ public class DefaultNegativeCacheFeature implements NegativeCacheFeature {
 
     @Override
     public Result<Void> set(String key, TtlStrategy ttlStrategy) {
-        Result<Void> setNegativeResult = negativeWriter.setNegative(key, ttlStrategy);
-        if (!setNegativeResult.isSuccess()) {
-            log.error("negative cache set failed, key: {}, result: {}", key, setNegativeResult);
-        }
-        return setNegativeResult;
+        negativeWriter.setNegative(key, ttlStrategy);
+        return Result.success();
     }
 
     @Override
     public Result<Boolean> clear(String key) {
-        Result<Boolean> result = rawCacheDeleter.delete(key);
-        if (!result.isSuccess()) {
-            log.error("raw cache delete failed, key: {}, result: {}", key, result);
-        }
-        return result;
+        return Result.success(rawCacheDeleter.delete(key));
     }
 }

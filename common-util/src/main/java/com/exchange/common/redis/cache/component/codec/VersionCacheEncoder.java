@@ -1,8 +1,7 @@
 package com.exchange.common.redis.cache.component.codec;
 
-import com.exchange.common.exception.CacheParseException;
 import com.exchange.common.redis.cache.constant.CacheType;
 
 public interface VersionCacheEncoder {
-    <T> String encode(T value, CacheType cacheType, long version) throws CacheParseException;
+    <T> String encode(T value, CacheType cacheType, long version);
 }
