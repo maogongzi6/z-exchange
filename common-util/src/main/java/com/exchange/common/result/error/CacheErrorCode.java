@@ -13,7 +13,8 @@ public enum CacheErrorCode implements ErrorCode {
     MALFORMED_VALUE(-1104, ErrorCategory.INTERNAL, "malformed_value"),
     SCRIPT(-1105, ErrorCategory.INTERNAL, "script"),
     CONFIGURATION(-1106, ErrorCategory.INTERNAL, "configuration"),
-    UNEXPECTED_INTERNAL(-1107, ErrorCategory.INTERNAL, "unexpected_internal");
+    UNEXPECTED_INTERNAL(-1107, ErrorCategory.INTERNAL, "unexpected_internal"),
+    CONTRACT_VIOLATION(-1108, ErrorCategory.INTERNAL, "contract_violation");
 
     private final int code;
     private final ErrorCategory category;

@@ -24,12 +24,12 @@ public class VersionCodec implements VersionCacheEncoder, CacheDecoder {
     public <T> String encode(T content, CacheType cacheType, long version) {
         if (cacheType == null || !CacheContentValidator.validateContent(content, cacheType)) {
             log.error("encode exception, invalid content, content: {}, cacheType: {}", content, cacheType);
-            throw new CacheException(CacheErrorCode.UNEXPECTED_INTERNAL,
+            throw new CacheException(CacheErrorCode.CONTRACT_VIOLATION,
                     "invalid versioned cache content for encode, cacheType: " + cacheType);
         }
         if (version < 0) {
             log.error("encode exception, version is negative, version is {}", version);
-            throw new CacheException(CacheErrorCode.UNEXPECTED_INTERNAL,
+            throw new CacheException(CacheErrorCode.CONTRACT_VIOLATION,
                     "invalid versioned cache content, negative version");
         }
         String encoded = valueParseHelper.encode(content, cacheType);

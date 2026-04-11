@@ -44,7 +44,7 @@ public class LedgerCacheRegister {
                 ttlConfig,
                 recoverFeature,
                 negativeCacheFeature);
-        return factory.buildRawCacheStrategy(descriptor, cacheReader, cacheWriter, strategyConfig);
+        return factory.buildRawCacheSuppressExceptionStrategy(descriptor, cacheReader, cacheWriter, strategyConfig);
     }
 
     @Bean(name = "ledgerTxnCache")
@@ -65,6 +65,6 @@ public class LedgerCacheRegister {
                 ttlConfig,
                 recoverFeature,
                 NegativeCacheFeature.disable());
-        return factory.buildVersionCacheStrategy(descriptor, cacheReader, cacheWriter, versionStrategyConfig);
+        return factory.buildVersionCacheSuppressExceptionStrategy(descriptor, cacheReader, cacheWriter, versionStrategyConfig);
     }
 }

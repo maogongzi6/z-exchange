@@ -45,7 +45,7 @@ public class BalanceSnapshotCacheRegister {
                 selfRecoverFeature,
                 negativeCacheFeature);
 
-        return factory.buildRawCacheStrategy(descriptor, cacheReader, cacheWriter, strategyConfig);
+        return factory.buildRawCacheSuppressExceptionStrategy(descriptor, cacheReader, cacheWriter, strategyConfig);
     }
 
     @Bean("normalSnapshotCache")
@@ -66,7 +66,7 @@ public class BalanceSnapshotCacheRegister {
                 ttlConfig,
                 recoverFeature,
                 NegativeCacheFeature.disable());
-        return factory.buildVersionCacheStrategy(descriptor, cacheReader, cacheWriter, versionStrategyConfig);
+        return factory.buildVersionCacheSuppressExceptionStrategy(descriptor, cacheReader, cacheWriter, versionStrategyConfig);
     }
 
     @Bean("hotSnapshotCache")
@@ -89,6 +89,6 @@ public class BalanceSnapshotCacheRegister {
                 ttlConfig,
                 recoverFeature,
                 negativeCacheFeature);
-        return factory.buildVersionCacheStrategy(descriptor, cacheReader, cacheWriter, versionStrategyConfig);
+        return factory.buildVersionCacheSuppressExceptionStrategy(descriptor, cacheReader, cacheWriter, versionStrategyConfig);
     }
 }

@@ -26,7 +26,7 @@ public class ValueCodec implements CacheEncoder, CacheDecoder {
     public <T> String encode(T content, CacheType cacheType) {
         if (cacheType == null || !CacheContentValidator.validateContent(content, cacheType)) {
             log.error("encode exception, invalid content, content: {}, cacheType: {}", content, cacheType);
-            throw new CacheException(CacheErrorCode.UNEXPECTED_INTERNAL,
+            throw new CacheException(CacheErrorCode.CONTRACT_VIOLATION,
                     "invalid cache content for encode, cacheType: " + cacheType);
         }
 
@@ -36,7 +36,7 @@ public class ValueCodec implements CacheEncoder, CacheDecoder {
                 strContent = (String) content;
             } else {
                 log.error("encode exception, invalid cache type, content: {}, cache_type: {}, target_class: {}", content, cacheType, cacheType);
-                throw new CacheException(CacheErrorCode.UNEXPECTED_INTERNAL,
+                throw new CacheException(CacheErrorCode.CONTRACT_VIOLATION,
                         "invalid cache type for encode, cache_type: " + cacheType);
             }
         } else if (cacheType == CacheType.JSON) {
@@ -49,7 +49,7 @@ public class ValueCodec implements CacheEncoder, CacheDecoder {
             }
         } else if (cacheType != CacheType.TOMBSTONE && cacheType != CacheType.NEGATIVE) {
             log.error("invalid cache type, content: {}, target_class: {}", content, cacheType);
-            throw new CacheException(CacheErrorCode.UNEXPECTED_INTERNAL,
+            throw new CacheException(CacheErrorCode.CONTRACT_VIOLATION,
                     "encode exception, invalid cache type, cache_type: " + cacheType);
         }
         return encodeValue(cacheType, strContent);

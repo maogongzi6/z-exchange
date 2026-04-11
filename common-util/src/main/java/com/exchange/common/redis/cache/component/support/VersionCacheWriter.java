@@ -1,8 +1,10 @@
 package com.exchange.common.redis.cache.component.support;
 
+import com.exchange.common.exception.CacheException;
 import com.exchange.common.redis.aop.CacheExceptionTranslate;
 import com.exchange.common.redis.cache.component.codec.VersionCacheEncoder;
 import com.exchange.common.redis.cache.constant.CacheType;
+import com.exchange.common.result.error.CacheErrorCode;
 import com.exchange.common.utils.TtlStrategy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +23,8 @@ public class VersionCacheWriter implements NegativeWriter {
     public <T> Boolean setIfAbsentOrNewer(String key, T value, long newVersion, TtlStrategy ttl) {
         if (value == null) {
             log.error("setIfAbsentOrNewer value is null, key: {}", key);
-            throw new IllegalArgumentException("setIfAbsentOrNewer value must not be null");
+            throw new CacheException(CacheErrorCode.CONTRACT_VIOLATION,
+                    "setIfAbsentOrNewer value must not be null, key: " + key);
         }
         CacheType cacheType = CacheType.fromSource(value);
         return doSetIfAbsentOrNewer(key, value, cacheType, newVersion, ttl.afterJitter());
