@@ -1,7 +1,6 @@
 package com.exchange.common.redis.cache.strategy.impl;
 
 import com.exchange.common.exception.CacheException;
-import com.exchange.common.redis.aop.CacheExceptionToResult;
 import com.exchange.common.redis.cache.component.codec.impl.VersionCodec;
 import com.exchange.common.redis.cache.component.support.DefaultCacheReader;
 import com.exchange.common.redis.cache.component.support.VersionCacheWriter;
@@ -15,7 +14,6 @@ import com.exchange.common.redis.cache.strategy.model.StrategyType;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@CacheExceptionToResult
 public class DefaultVersionCacheStrategy<T> implements VersionCacheStrategy<T> {
     private final CacheDescriptor<T> descriptor;
     private final DefaultCacheReader<VersionCodec> cacheReader;

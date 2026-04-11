@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Aspect
 @Order(0)
+// unused, replaced by explicit degrade in StrategyFactory
 public class CacheExceptionToResultAop {
     @Around("@within(CacheExceptionToResult) || @annotation(CacheExceptionToResult)")
     public Object downgradeToResult(ProceedingJoinPoint pjp) throws Throwable {

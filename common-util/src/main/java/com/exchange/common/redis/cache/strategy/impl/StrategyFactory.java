@@ -27,6 +27,7 @@ public final class StrategyFactory {
         return new DefaultRawCacheStrategy<>(descriptor, cacheReader, cacheWriter, config);
     }
 
+    // soft fail for exception, downgrade exceptions to Result
     public <T> RawCacheStrategy<T> buildRawCacheSuppressExceptionStrategy(
             CacheDescriptor<T> descriptor,
             DefaultCacheReader<ValueCodec> cacheReader,
@@ -43,6 +44,7 @@ public final class StrategyFactory {
         return new DefaultVersionCacheStrategy<>(descriptor, cacheReader, cacheWriter, config);
     }
 
+    // soft fail for exception, downgrade exceptions to Result
     public <T> VersionCacheStrategy<T> buildVersionCacheSuppressExceptionStrategy(
             CacheDescriptor<T> descriptor,
             DefaultCacheReader<VersionCodec> cacheReader,
@@ -109,6 +111,7 @@ public final class StrategyFactory {
         };
     }
 
+    // downgrade exceptions to Result
     private static <T> Result<T> downgrade(Supplier<Result<T>> invocation) {
         try {
             return invocation.get();

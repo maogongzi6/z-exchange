@@ -16,8 +16,6 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.net.ConnectException;
-import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.concurrent.TimeoutException;
 
@@ -30,17 +28,13 @@ public class CacheExceptionTranslateAop {
     public Object translate(ProceedingJoinPoint pt) throws Throwable {
         try {
             return pt.proceed();
-        } catch (CacheException e) {
-            throw e;
         } catch (QueryTimeoutException e) {
             throw translate(pt, CacheErrorCode.TIMEOUT, e);
         } catch (PermissionDeniedDataAccessException e) {
             throw translate(pt, CacheErrorCode.ACCESS, e);
         } catch (DataAccessResourceFailureException e) {
             throw translate(pt, CacheErrorCode.CONNECTION, e);
-        } catch (DataAccessException e) {
-            throw translate(pt, classify(e, isScriptOperation(pt)), e);
-        } catch (RedisException e) {
+        } catch (DataAccessException | RedisException e) {
             throw translate(pt, classify(e, isScriptOperation(pt)), e);
         }
     }
@@ -68,8 +62,6 @@ public class CacheExceptionTranslateAop {
             return CacheErrorCode.ACCESS;
         }
         if (throwable instanceof DataAccessResourceFailureException
-                || rootCause instanceof ConnectException
-                || rootCause instanceof SocketException
                 || rootCause instanceof IOException
                 || classNames.contains("Connection")) {
             return CacheErrorCode.CONNECTION;

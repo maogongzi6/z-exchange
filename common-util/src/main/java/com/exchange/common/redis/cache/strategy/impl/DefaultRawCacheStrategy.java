@@ -1,7 +1,6 @@
 package com.exchange.common.redis.cache.strategy.impl;
 
 import com.exchange.common.exception.CacheException;
-import com.exchange.common.redis.aop.CacheExceptionToResult;
 import com.exchange.common.redis.cache.component.codec.impl.ValueCodec;
 import com.exchange.common.redis.cache.component.support.DefaultCacheReader;
 import com.exchange.common.redis.cache.component.support.RawCacheWriter;
@@ -14,7 +13,6 @@ import com.exchange.common.redis.cache.strategy.model.RawStrategyConfig;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@CacheExceptionToResult
 public class DefaultRawCacheStrategy<T> implements RawCacheStrategy<T> {
     private final CacheDescriptor<T> descriptor;
     private final DefaultCacheReader<ValueCodec> cacheReader;
