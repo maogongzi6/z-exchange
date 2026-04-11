@@ -2,12 +2,11 @@ package com.exchange.app.ledger.dao.store;
 
 import com.exchange.app.ledger.dao.repository.LedgerTxnRepository;
 import com.exchange.app.ledger.po.ledger.LedgerTxn;
-import com.exchange.app.ledger.result.Results;
 import com.exchange.common.redis.cache.constant.CacheType;
 import com.exchange.common.redis.cache.model.CacheValueInfo;
 import com.exchange.common.redis.cache.strategy.RawCacheStrategy;
 import com.exchange.common.redis.cache.strategy.VersionCacheStrategy;
-import com.exchange.common.utils.result.Result;
+import com.exchange.common.result.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -30,12 +29,12 @@ public class LedgerTxnStore {
 
     public void postInsert(LedgerTxn ledgerTxn) {
         Result<Boolean> result = ledgerRefCache.afterInsert(ledgerTxn.getReferenceId(), ledgerTxn.getTxnId());
-        if (!result.success()) {
+        if (!result.isSuccess()) {
             log.error("clean negative cache failed, ref_id: {}, result: {}", ledgerTxn.getReferenceId(), result);
         }
 
         result = ledgerTxnCache.afterInsert(ledgerTxn.getTxnId(), ledgerTxn, ledgerTxn.getVersion());
-        if (!result.success()) {
+        if (!result.isSuccess()) {
             log.error("ledger_txn_cache, after insert failed, txn_id: {}, result: {}", ledgerTxn.getTxnId(), result);
         }
     }
@@ -49,15 +48,15 @@ public class LedgerTxnStore {
         // check cache
         Result<CacheValueInfo<LedgerTxn>> cacheResult = ledgerTxnCache.get(txnId);
 
-        if (!cacheResult.success()) {
+        if (!cacheResult.isSuccess()) {
             // cache error does not block the main flow
             log.error("cache get failed, txn_id: {}, result: {}", txnId, cacheResult);
         } else {
-            CacheValueInfo<LedgerTxn> cacheInfo = cacheResult.value();
+            CacheValueInfo<LedgerTxn> cacheInfo = cacheResult.getValue();
             if (CacheValueInfo.ifCacheHit(cacheInfo)) {
                 // return target ledger txn if hit a cache
                 // return null to end the query fast if hit a negative cache
-                return Results.success(cacheInfo.value);
+                return Result.success(cacheInfo.value);
             }
         }
 
@@ -67,18 +66,18 @@ public class LedgerTxnStore {
         // update cache
         if (ledgerTxn != null) {
             Result<Boolean> setResult = ledgerTxnCache.afterDbHit(txnId, ledgerTxn, ledgerTxn.getVersion());
-            if (!setResult.success()) {
+            if (!setResult.isSuccess()) {
                 // cache error should not block the main flow
                 log.error("ledger_txn_cache, after db hit failed, txn_id: {}, txn: {}, result: {}", txnId, ledgerTxn, setResult);
             }
         } else {
             Result<Boolean> result = ledgerTxnCache.afterDbMiss(txnId);
-            if (!result.success()) {
+            if (!result.isSuccess()) {
                 log.error("ledger_txn_cache, after db miss failed, txn_id: {}, result: {}", txnId, result);
             }
         }
 
-        return Results.success(ledgerTxn);
+        return Result.success(ledgerTxn);
     }
 
     // negative value for cache miss, key -> NULL
@@ -86,10 +85,10 @@ public class LedgerTxnStore {
     // need to protect external api from random query attack and massive query miss
     public Result<LedgerTxn> getByRefId(String refId) {
         Result<LedgerTxn> txnResult = doGetByRefId(refId);
-        if (txnResult.success() && txnResult.value() == null) {
+        if (txnResult.isSuccess() && txnResult.getValue() == null) {
             // TODO should not set negative if already hit a negative (this could infinitely renewal the negative ttl)
             Result<Boolean> result = ledgerRefCache.afterDbMiss(refId);
-            if (!result.success()) {
+            if (!result.isSuccess()) {
                 log.error("set negative result failed, ref_id: {}, result: {}", refId, result);
             }
         }
@@ -100,17 +99,17 @@ public class LedgerTxnStore {
     private Result<LedgerTxn> doGetByRefId(String refId) {
         Result<CacheValueInfo<String>> refCacheResult = ledgerRefCache.get(refId);
 
-        if (!refCacheResult.success()) {
+        if (!refCacheResult.isSuccess()) {
             // cache error does not block the main flow
             log.error("get cache failed, ref_id: {}, result: {}", refId, refCacheResult);
         } else {
-            CacheValueInfo<String> cacheInfo = refCacheResult.value();
+            CacheValueInfo<String> cacheInfo = refCacheResult.getValue();
             // return result if cache hit
             if (CacheValueInfo.ifCacheHit(cacheInfo)) {
                 String txnId = cacheInfo.value;
                 if (cacheInfo.cacheType == CacheType.NEGATIVE) {
                     // return null to end the query fast if hit a negative cache
-                    return Results.success(null);
+                    return Result.success(null);
                 }
                 return getByTxnId(txnId);
             }
@@ -119,16 +118,16 @@ public class LedgerTxnStore {
         LedgerTxn txn = ledgerTxnRepository.getByRefId(refId);
         if (txn != null) {
             Result<Boolean> setRefCacheResult = ledgerRefCache.afterDbHit(refId, txn.getTxnId());
-            if (!setRefCacheResult.success()) {
+            if (!setRefCacheResult.isSuccess()) {
                 log.error("set ref cache failed, ref_id: {}, result: {}", refId, setRefCacheResult);
             }
 
             Result<Boolean> setCacheResult = ledgerTxnCache.afterDbHit(txn.getTxnId(), txn, txn.getVersion());
-            if (!setCacheResult.success()) {
+            if (!setCacheResult.isSuccess()) {
                 log.error("cache set failed, ref_id: {}, txn_id: {}, txn: {}, result: {}", refId, txn.getTxnId(), txn, setCacheResult);
             }
         }
-        return Results.success(txn);
+        return Result.success(txn);
     }
 
     public int updateMetadataByPk(LedgerTxn txn) {
@@ -138,7 +137,7 @@ public class LedgerTxnStore {
             return 0;
         }
         Result<Boolean> result = ledgerTxnCache.afterUpdate(txn.getTxnId(), txn, txn.getVersion());
-        if (!result.success()) {
+        if (!result.isSuccess()) {
             log.error("ledger_txn_cache, after update failed, txn_id: {}, result: {}", txn.getTxnId(), result);
         }
 

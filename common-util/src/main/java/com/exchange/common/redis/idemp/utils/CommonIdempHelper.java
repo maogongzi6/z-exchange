@@ -1,9 +1,8 @@
 package com.exchange.common.redis.idemp.utils;
 
 import com.exchange.common.redis.idemp.constant.CommonIdempStatus;
-import com.exchange.common.utils.result.CommonErrorCode;
-import com.exchange.common.utils.result.Result;
-import com.exchange.common.utils.result.Results;
+import com.exchange.common.result.Result;
+import com.exchange.common.result.error.IdempErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
 
@@ -37,27 +36,27 @@ public class CommonIdempHelper {
         String[] k = key.split(":");
         if (k.length != 4) {
             log.error("parseIdempKey error, invalid key:{}", key);
-            return Results.fail(CommonErrorCode.INVALID_IDEMP_KEY, "invalid idemp key:" + key);
+            return Result.failure(IdempErrorCode.INVALID_IDEMP_KEY, "invalid idemp key:" + key);
         }
-        return Results.success(new IdempKey(k[1], k[2], k[3]));
+        return Result.success(new IdempKey(k[1], k[2], k[3]));
     }
 
     static public Result<IdempValue> parseIdempValue(String value) {
         String[] v = value.split(":");
         if (v.length < 3) {
             log.error("parseIdempValue error, invalid value:{}", value);
-            return Results.fail(CommonErrorCode.INVALID_IDEMP_VALUE, "invalid idemp value: " + value);
+            return Result.failure(IdempErrorCode.INVALID_IDEMP_VALUE, "invalid idemp value: " + value);
         }
         CommonIdempStatus status = CommonIdempStatus.getByCode(v[0]);
         if (CommonIdempStatus.isUnknown(status)) {
             log.error("parseIdempValue error, invalid value, unknown status:{}", value);
-            return Results.fail(CommonErrorCode.INVALID_IDEMP_VALUE, "invalid value, unknown status: " + value);
+            return Result.failure(IdempErrorCode.INVALID_IDEMP_VALUE, "invalid value, unknown status: " + value);
         }
         if (status == CommonIdempStatus.ACCEPTED && v.length != 4) {
             log.error("parseIdempValue error, empty value with accepted status:{}", value);
-            return Results.fail(CommonErrorCode.INVALID_IDEMP_VALUE, "empty value with accepted status: " + value);
+            return Result.failure(IdempErrorCode.INVALID_IDEMP_VALUE, "empty value with accepted status: " + value);
         }
-        return Results.success(new IdempValue(status, v[1], v[2], status == CommonIdempStatus.ACCEPTED ? v[3] : null));
+        return Result.success(new IdempValue(status, v[1], v[2], status == CommonIdempStatus.ACCEPTED ? v[3] : null));
     }
 
 }

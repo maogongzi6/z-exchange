@@ -4,12 +4,11 @@ import com.exchange.common.redis.cache.component.codec.impl.ValueCodec;
 import com.exchange.common.redis.cache.component.support.DefaultCacheReader;
 import com.exchange.common.redis.cache.component.support.RawCacheWriter;
 import com.exchange.common.redis.cache.model.CacheValueInfo;
+import com.exchange.common.result.Result;
+import com.exchange.common.result.error.CacheErrorCode;
 import com.exchange.common.redis.cache.strategy.RawCacheStrategy;
 import com.exchange.common.redis.cache.strategy.model.CacheDescriptor;
 import com.exchange.common.redis.cache.strategy.model.RawStrategyConfig;
-import com.exchange.common.utils.result.CommonErrorCode;
-import com.exchange.common.utils.result.Result;
-import com.exchange.common.utils.result.Results;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -36,7 +35,7 @@ public class DefaultRawCacheStrategy<T> implements RawCacheStrategy<T> {
     public Result<CacheValueInfo<T>> get(String id) {
         String key = descriptor.buildCacheKey(id);
         var result = cacheReader.get(key, descriptor.getClazz());
-        if (!result.success() && Results.is(result, CommonErrorCode.PARSE_CACHE_ERROR)) {
+        if (!result.isSuccess() && Result.is(result, CacheErrorCode.PARSE_CACHE_ERROR)) {
             // ignore recover error
             config.selfRecoverFeature().recover(key);
         }
@@ -47,7 +46,7 @@ public class DefaultRawCacheStrategy<T> implements RawCacheStrategy<T> {
     public Result<Boolean> afterDbHit(String id, T value) {
         String key = descriptor.buildCacheKey(id);
         Result<Void> result = cacheWriter.set(key, value, config.ttlConfig().cacheTtl());
-        return Results.result(Boolean.TRUE, result);
+        return Result.from(Boolean.TRUE, result);
     }
 
     // if id is from our service and used internally,
@@ -58,7 +57,7 @@ public class DefaultRawCacheStrategy<T> implements RawCacheStrategy<T> {
     public Result<Boolean> afterDbMiss(String id) {
         String key = descriptor.buildCacheKey(id);
         Result<Void> result = config.negativeCacheFeature().set(key, config.ttlConfig().negativeTtl());
-        return Results.result(Boolean.TRUE, result);
+        return Result.from(Boolean.TRUE, result);
     }
 
     @Override

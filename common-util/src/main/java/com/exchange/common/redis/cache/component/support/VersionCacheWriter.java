@@ -1,12 +1,11 @@
 package com.exchange.common.redis.cache.component.support;
 
 import com.exchange.common.exception.CacheParseException;
+import com.exchange.common.result.Result;
+import com.exchange.common.result.error.CacheErrorCode;
 import com.exchange.common.redis.cache.component.codec.VersionCacheEncoder;
 import com.exchange.common.redis.cache.constant.CacheType;
 import com.exchange.common.utils.TtlStrategy;
-import com.exchange.common.utils.result.CommonErrorCode;
-import com.exchange.common.utils.result.Result;
-import com.exchange.common.utils.result.Results;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RedissonClient;
@@ -23,7 +22,7 @@ public class VersionCacheWriter implements NegativeWriter {
     public <T> Result<Boolean> setIfAbsentOrNewer(String key, T value, long newVersion, TtlStrategy ttl) {
         if (value == null) {
             log.error("setIfAbsentOrNewer value is null, key: {}", key);
-            return Results.fail(CommonErrorCode.PARSE_CACHE_ERROR, "setIfAbsentOrNewer value is null");
+            return Result.failure(CacheErrorCode.PARSE_CACHE_ERROR, "setIfAbsentOrNewer value is null");
         }
         CacheType cacheType = CacheType.fromSource(value);
         return doSetIfAbsentOrNewer(key, value, cacheType, newVersion, ttl.afterJitter());
@@ -39,10 +38,10 @@ public class VersionCacheWriter implements NegativeWriter {
             encoded = cacheEncoder.encode("", CacheType.NEGATIVE, 0L);
         } catch (CacheParseException e) {
             log.error("failed to encode negative cache, key: {}", key, e);
-            return Results.fail(CommonErrorCode.PARSE_CACHE_ERROR, "failed to encode negative cache, key: " + key);
+            return Result.failure(CacheErrorCode.PARSE_CACHE_ERROR, "failed to encode negative cache, key: " + key);
         }
         redissonClient.getBucket(key).setIfAbsent(encoded, ttl.afterJitter());
-        return Results.success();
+        return Result.success();
     }
 
     private <T> Result<Boolean> doSetIfAbsentOrNewer(String key, T value, CacheType cacheType, long newVersion, Duration ttl) {
@@ -51,7 +50,7 @@ public class VersionCacheWriter implements NegativeWriter {
             encoded = cacheEncoder.encode(value, cacheType, newVersion);
         } catch (CacheParseException e) {
             log.error("failed to encode value, key: {}, value: {}", key, value, e);
-            return Results.fail(CommonErrorCode.PARSE_CACHE_ERROR, "failed to encode value, key: " + key);
+            return Result.failure(CacheErrorCode.PARSE_CACHE_ERROR, "failed to encode value, key: " + key);
         }
 
         return scriptExecutor.setIfAbsentOrNewer(redissonClient, key, encoded, newVersion, ttl);

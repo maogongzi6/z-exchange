@@ -1,9 +1,9 @@
 package com.exchange.app.wallet.exception;
 
-import com.exchange.app.wallet.result.ErrorCode;
+import com.exchange.app.wallet.result.WalletServiceErrorCode;
 
 public class InvalidValueException extends CustomException {
     public InvalidValueException(String message) {
-        super(ErrorCode.INVALID_VALUE_ERROR, message);
+        super(WalletServiceErrorCode.INVALID_VALUE_ERROR, message);
     }
 }

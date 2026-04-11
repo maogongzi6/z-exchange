@@ -5,10 +5,11 @@ import com.exchange.app.ledger.dao.repository.AccountRepository;
 import com.exchange.app.ledger.dao.mapper.AssetMapper;
 import com.exchange.app.ledger.po.account.Account;
 import com.exchange.app.ledger.po.asset.Asset;
-import com.exchange.app.ledger.result.ErrorCode;
+import com.exchange.app.ledger.result.LedgerBoundaryErrorMapper;
+import com.exchange.app.ledger.result.LedgerServiceErrorCode;
 import com.exchange.app.ledger.result.PbErrorBuilder;
-import com.exchange.app.ledger.result.Results;
-import com.exchange.common.utils.result.Result;
+import com.exchange.common.result.IResult;
+import com.exchange.common.result.Result;
 import com.exchange.proto.ledger.account.CreateAccountReplyPb;
 import com.exchange.proto.ledger.account.CreateAccountRequestPb;
 import com.exchange.app.ledger.utils.EnumMappers;
@@ -38,7 +39,7 @@ public class CreateAccountProcessor {
         OwnerType ownerType = EnumMappers.ownerTypePbMapper.to(req.getOwnerType());
 
         Result<Void> result = validateReq(req, serviceId, category, normalSide, ownerType);
-        if (!result.success()) {
+        if (!result.isSuccess()) {
             return replyError(result);
         }
 
@@ -48,7 +49,7 @@ public class CreateAccountProcessor {
         wrapper.clear();
 
         if (asset.isEmpty()) {
-            return replyError(ErrorCode.ASSET_NOT_FOUND, req.getAssetId());
+            return replyError(LedgerServiceErrorCode.ASSET_NOT_FOUND, req.getAssetId());
         }
 
         String accountId = IdGenerator.generateAccountId();
@@ -61,36 +62,41 @@ public class CreateAccountProcessor {
 
     private Result<Void> validateReq(CreateAccountRequestPb req, ServiceId serviceId, AccountCategory category, NormalSide normalSide, OwnerType ownerType) {
         if (serviceId == null || serviceId == ServiceId.UNKNOWN) {
-            return Results.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid_service_id: " + req.getServiceId());
+            return Result.failure(LedgerServiceErrorCode.INVALID_REQUEST_PARAMETER, "invalid_service_id: " + req.getServiceId());
         }
         if (category == null || category == AccountCategory.UNKNOWN) {
-            return Results.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid_category: " + req.getCategory());
+            return Result.failure(LedgerServiceErrorCode.INVALID_REQUEST_PARAMETER, "invalid_category: " + req.getCategory());
         }
         if (normalSide == null || normalSide == NormalSide.UNKNOWN) {
-            return Results.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid_normal_side: " + req.getNormalSide());
+            return Result.failure(LedgerServiceErrorCode.INVALID_REQUEST_PARAMETER, "invalid_normal_side: " + req.getNormalSide());
         }
         if (ownerType == null || ownerType == OwnerType.UNKNOWN) {
-            return Results.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid_owner_type: " + req.getOwnerType());
+            return Result.failure(LedgerServiceErrorCode.INVALID_REQUEST_PARAMETER, "invalid_owner_type: " + req.getOwnerType());
         }
 
         if (!ValidateHelper.validateNormalSideAndCategory(normalSide, category)) {
-            return Results.fail(ErrorCode.INVALID_REQUEST_PARAMETER, "invalid_normal_side_category_pair: " + req.getNormalSide());
+            return Result.failure(LedgerServiceErrorCode.INVALID_REQUEST_PARAMETER, "invalid_normal_side_category_pair: " + req.getNormalSide());
         }
 
-        return Results.success();
+        return Result.success();
     }
 
     private CreateAccountReplyPb replySuccess(String detail) {
-        return replyError(ErrorCode.SUCCESS, detail);
+        return CreateAccountReplyPb.newBuilder()
+                .setError(PbErrorBuilder.success(detail))
+                .build();
     }
 
-    private CreateAccountReplyPb replyError(ErrorCode errorCode, String detail) {
+    private CreateAccountReplyPb replyError(LedgerServiceErrorCode errorCode, String detail) {
         CreateAccountReplyPb.Builder builder = CreateAccountReplyPb.newBuilder();
         return builder.setError(PbErrorBuilder.build(errorCode, detail)).build();
     }
 
-    private CreateAccountReplyPb replyError(Result<?> result) {
+    private CreateAccountReplyPb replyError(IResult<?> result) {
         Objects.requireNonNull(result);
-        return replyError(Results.getErrorCode(result), result.errorDetail());
+        LedgerServiceErrorCode errorCode = LedgerBoundaryErrorMapper.toLedgerErrorCode(result);
+        return CreateAccountReplyPb.newBuilder()
+                .setError(PbErrorBuilder.build(errorCode, result.getDetail()))
+                .build();
     }
 }

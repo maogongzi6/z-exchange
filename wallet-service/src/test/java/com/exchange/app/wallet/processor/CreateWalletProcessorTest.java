@@ -4,7 +4,6 @@ import com.exchange.app.wallet.dao.mapper.WalletMapper;
 import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.enums.WalletStatus;
 import com.exchange.app.wallet.po.wallet.Wallet;
-import com.exchange.app.wallet.result.ErrorCode;
 import com.exchange.proto.common.error.ErrorCodePb;
 import com.exchange.proto.wallet.common.ServiceIdPb;
 import com.exchange.proto.wallet.common.OwnerTypePb;

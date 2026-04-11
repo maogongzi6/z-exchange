@@ -1,28 +1,33 @@
 package com.exchange.app.wallet.result;
 
-import com.exchange.common.utils.result.Result;
+import com.exchange.proto.common.error.ErrorCodePb;
 import com.exchange.proto.common.error.ErrorPb;
 
+import java.util.Objects;
+
 public class PbErrorBuilder {
-    static public ErrorPb build(Result<?> result) {
-        return build(Results.getErrorCode(result), result.errorDetail());
+    static public ErrorPb build(WalletServiceErrorCode errorCode) {
+        return build(errorCode, "");
     }
 
-    static public ErrorPb build(ErrorCode error) {
-        return build(error, "");
-    }
-
-    static public ErrorPb build(ErrorCode error, String errorDetail) {
-        ErrorPb.Builder builder = ErrorPb.newBuilder();
-        builder.setCode(error.protoCode).setMessage(error.getMessage()).setDetail(errorDetail);
-        return builder.build();
+    static public ErrorPb build(WalletServiceErrorCode errorCode, String errorDetail) {
+        Objects.requireNonNull(errorCode, "errorCode");
+        return build(ProtoErrorMapper.toProto(errorCode), errorCode.getMessage(), errorDetail);
     }
 
     static public ErrorPb success(String errorDetail) {
-        return build(ErrorCode.SUCCESS, errorDetail);
+        return build(ErrorCodePb.ERROR_OK, "success", errorDetail);
     }
 
     static public ErrorPb success() {
-        return build(ErrorCode.SUCCESS, "");
+        return success("");
+    }
+
+    private static ErrorPb build(ErrorCodePb errorCodePb, String message, String detail) {
+        ErrorPb.Builder builder = ErrorPb.newBuilder();
+        builder.setCode(errorCodePb)
+                .setMessage(message)
+                .setDetail(detail == null ? "" : detail);
+        return builder.build();
     }
 }

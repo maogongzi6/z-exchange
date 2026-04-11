@@ -1,7 +1,6 @@
 package com.exchange.common.redis.cache.component.support;
 
-import com.exchange.common.utils.result.Result;
-import com.exchange.common.utils.result.Results;
+import com.exchange.common.result.Result;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RScript;
@@ -46,6 +45,6 @@ public class ScriptExecutor {
                 value,
                 newVersion,
                 ttl.toMillis());
-        return Results.success(success);
+        return Result.success(success);
     }
 }

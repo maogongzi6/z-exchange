@@ -14,7 +14,7 @@ import com.exchange.app.ledger.po.ledger.LedgerTxn;
 import com.exchange.app.ledger.processor.post.GetLedgerTxnProcessor;
 import com.exchange.app.ledger.processor.post.PostLedgerProcessor;
 import com.exchange.app.ledger.po.ledger.LedgerEntry;
-import com.exchange.app.ledger.result.ErrorCode;
+import com.exchange.app.ledger.result.LedgerServiceErrorCode;
 import com.exchange.proto.common.error.ErrorCodePb;
 import com.exchange.proto.ledger.common.LedgerDirectionPb;
 import com.exchange.proto.ledger.post.LedgerEntryPb;
@@ -61,9 +61,9 @@ public class PostLedgerProcessorTest {
         var result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.REF_ID, refId, false);
         // Assert not found
         assertThat(result).isNotNull();
-        assertThat(result.success()).isFalse();
-        assertThat(result.errorCode()).isEqualTo(ErrorCode.LEDGER_NOT_FOUND);
-        assertThat(result.value()).isNull();
+        assertThat(result.isSuccess()).isFalse();
+        assertThat(result.getErrorCode()).isEqualTo(LedgerServiceErrorCode.LEDGER_NOT_FOUND);
+        assertThat(result.getValue()).isNull();
 
         PostTransactionRequestPb request = PostTransactionRequestPb.newBuilder().setReferenceId(refId).setDescription("description").addAllEntries(List.of(
                 LedgerEntryPb.newBuilder().setAccountRef(accountRef).setDirection(LedgerDirectionPb.LedgerDirection_Debit).setAmount(100).setAssetId("asset-1").build(),

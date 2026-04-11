@@ -9,12 +9,10 @@ import com.exchange.app.wallet.po.transaction.WalletAction;
 import com.exchange.app.wallet.po.transaction.WalletReservation;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
 import com.exchange.app.wallet.po.wallet.WalletAccountMapping;
-import com.exchange.app.wallet.result.ErrorCode;
-import com.exchange.app.wallet.result.Results;
 import com.exchange.app.wallet.utils.IdGenerator;
 import com.exchange.app.wallet.utils.OutboxHelper;
 import com.exchange.common.outbox.po.Outbox;
-import com.exchange.common.utils.result.Result;
+import com.exchange.common.result.Result;
 import com.exchange.proto.ledger.common.LedgerDirectionPb;
 import com.exchange.proto.ledger.post.LedgerEntryPb;
 import com.exchange.proto.ledger.post.PostTransactionRequestPb;
@@ -143,6 +141,6 @@ public class ObjectBuilder {
                 .setReferenceId(txn.getTxnId())
                 .addAllEntries(entries).build();
         Outbox outbox = OutboxHelper.fromPostTransactionRequest(req, txn);
-        return Results.success(outbox);
+        return Result.success(outbox);
     }
 }

@@ -5,9 +5,8 @@ import com.exchange.app.wallet.exception.RetriableException;
 import com.exchange.app.wallet.kafka.constant.WalletTopic;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
 import com.exchange.app.wallet.processor.transaction.step.AfterPostLedgerProcessor;
-import com.exchange.app.wallet.processor.transaction.step.BeforePostLedgerProcessor;
-import com.exchange.app.wallet.result.ErrorCode;
-import com.exchange.common.utils.result.Result;
+import com.exchange.app.wallet.result.WalletServiceErrorCode;
+import com.exchange.common.result.Result;
 import com.exchange.proto.common.event.EventEnvelopePb;
 import com.exchange.proto.ledger.post.PostTransactionReplyPb;
 import com.exchange.proto.ledger.post.PostTransactionRequestPb;
@@ -37,7 +36,7 @@ public class DefaultListener {
             ack.acknowledge();
         } catch (InvalidProtocolBufferException e) {
             log.error("Error parsing envelope", e);
-            throw new AbnormalProtoDataException(ErrorCode.SERIALIZE_ERROR, "Error parsing envelope", e);
+            throw new AbnormalProtoDataException(WalletServiceErrorCode.SERIALIZE_ERROR, "Error parsing envelope", e);
         }
     }
 
@@ -48,7 +47,7 @@ public class DefaultListener {
                 handlePostLedgerReply(envelope);
                 break;
             default:
-                throw new AbnormalProtoDataException(ErrorCode.INVALID_ENUM_ERROR, "invalid event type" + envelope.getEventType());
+                throw new AbnormalProtoDataException(WalletServiceErrorCode.INVALID_ENUM_ERROR, "invalid event type" + envelope.getEventType());
         }
     }
 
@@ -59,7 +58,7 @@ public class DefaultListener {
         // TODO retry base on error
         if (result.isFailed()) {
             log.error("wait for retry: {}", reply.getError());
-            throw new RetriableException(ErrorCode.SERVER_ERROR, "internal error, wait for retry," + reply.getError());
+            throw new RetriableException(WalletServiceErrorCode.SERVER_ERROR, "internal error, wait for retry," + reply.getError());
         }
     }
 }

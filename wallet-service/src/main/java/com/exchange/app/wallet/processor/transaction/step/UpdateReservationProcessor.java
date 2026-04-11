@@ -2,9 +2,8 @@ package com.exchange.app.wallet.processor.transaction.step;
 
 import com.exchange.app.wallet.dao.repository.*;
 import com.exchange.app.wallet.po.transaction.WalletReservation;
-import com.exchange.app.wallet.result.ErrorCode;
-import com.exchange.app.wallet.result.Results;
-import com.exchange.common.utils.result.Result;
+import com.exchange.app.wallet.result.WalletServiceErrorCode;
+import com.exchange.common.result.Result;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -24,13 +23,13 @@ public class UpdateReservationProcessor {
 
     public Result<Void> updateReservations(List<WalletReservation> reservations, Function<WalletReservation, Result<WalletReservation>> function) {
         if (reservations.isEmpty()) {
-            return Results.success();
+            return Result.success();
         }
         List<Long> modifyReservationIds = reservations.stream().map(WalletReservation::getId).collect(Collectors.toList());
         // select for update to lock the rows in PK order
         var reservationFromDb = walletReservationManager.selectInIdForUpdate(modifyReservationIds);
         if (reservationFromDb.size() != modifyReservationIds.size()) {
-            return Results.fail(ErrorCode.WALLET_RESERVATION_NOT_FOUND, String.format("wallet_reservation_not_found, ids: %s, reservationFromDb: %s", modifyReservationIds, reservationFromDb));
+            return Result.failure(WalletServiceErrorCode.WALLET_RESERVATION_NOT_FOUND, String.format("wallet_reservation_not_found, ids: %s, reservationFromDb: %s", modifyReservationIds, reservationFromDb));
         }
 
         for (WalletReservation reservation : reservationFromDb) {
@@ -38,16 +37,16 @@ public class UpdateReservationProcessor {
             BeanUtils.copyProperties(reservation, copy);
             Result<WalletReservation> result = function.apply(reservation);
             if (result.isFailed()) {
-                return Results.fail(result);
+                return Result.failure(result);
             }
-            reservation = result.value();
+            reservation = result.getValue();
 
             if (!Objects.equals(reservation, copy)) {
                 if (walletReservationManager.updateWithOptimisticLock(reservation, copy) != 1) {
-                    return Results.fail(ErrorCode.WALLET_RESERVATION_UPDATE_FAILED, String.format("failed to update reservation, reservation: %s, copy: %s", reservation, copy));
+                    return Result.failure(WalletServiceErrorCode.WALLET_RESERVATION_UPDATE_FAILED, String.format("failed to update reservation, reservation: %s, copy: %s", reservation, copy));
                 }
             }
         }
-        return Results.success();
+        return Result.success();
     }
 }

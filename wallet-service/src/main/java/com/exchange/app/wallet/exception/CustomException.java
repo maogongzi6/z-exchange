@@ -1,6 +1,6 @@
 package com.exchange.app.wallet.exception;
 
-import com.exchange.app.wallet.result.ErrorCode;
+import com.exchange.common.result.error.ErrorCode;
 
 public abstract class CustomException extends CustomThrowable {
     public CustomException(ErrorCode errorCode) {

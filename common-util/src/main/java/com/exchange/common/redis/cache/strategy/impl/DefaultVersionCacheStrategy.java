@@ -4,13 +4,12 @@ import com.exchange.common.redis.cache.component.codec.impl.VersionCodec;
 import com.exchange.common.redis.cache.component.support.DefaultCacheReader;
 import com.exchange.common.redis.cache.component.support.VersionCacheWriter;
 import com.exchange.common.redis.cache.model.CacheValueInfo;
+import com.exchange.common.result.Result;
+import com.exchange.common.result.error.CacheErrorCode;
 import com.exchange.common.redis.cache.strategy.model.CacheDescriptor;
 import com.exchange.common.redis.cache.strategy.model.VersionStrategyConfig;
 import com.exchange.common.redis.cache.strategy.VersionCacheStrategy;
 import com.exchange.common.redis.cache.strategy.model.StrategyType;
-import com.exchange.common.utils.result.CommonErrorCode;
-import com.exchange.common.utils.result.Result;
-import com.exchange.common.utils.result.Results;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -36,7 +35,7 @@ public class DefaultVersionCacheStrategy<T> implements VersionCacheStrategy<T> {
     public Result<CacheValueInfo<T>> get(String id) {
         String key = descriptor.buildCacheKey(id);
         Result<CacheValueInfo<T>> result = cacheReader.get(key, descriptor.getClazz());
-        if (!result.success() && Results.is(result, CommonErrorCode.PARSE_CACHE_ERROR)) {
+        if (!result.isSuccess() && Result.is(result, CacheErrorCode.PARSE_CACHE_ERROR)) {
             // ignore recover error
             config.selfRecoverFeature().recover(key);
         }
@@ -53,7 +52,7 @@ public class DefaultVersionCacheStrategy<T> implements VersionCacheStrategy<T> {
     public Result<Boolean> afterDbMiss(String id) {
         String key = descriptor.buildCacheKey(id);
         Result<Void> result = config.negativeCacheFeature().set(key, config.ttlConfig().negativeTtl());
-        return Results.result(Boolean.TRUE, result);
+        return Result.from(Boolean.TRUE, result);
     }
 
     @Override

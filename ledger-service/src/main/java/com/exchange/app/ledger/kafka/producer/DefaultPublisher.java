@@ -1,11 +1,10 @@
 package com.exchange.app.ledger.kafka.producer;
 
-import com.exchange.app.ledger.result.ErrorCode;
-import com.exchange.app.ledger.result.Results;
+import com.exchange.app.ledger.result.LedgerServiceErrorCode;
 import com.exchange.app.ledger.utils.OutboxHelper;
 import com.exchange.common.kafka.producer.IPublisher;
 import com.exchange.common.outbox.po.Outbox;
-import com.exchange.common.utils.result.Result;
+import com.exchange.common.result.Result;
 import com.exchange.proto.common.event.EventEnvelopePb;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,15 +22,16 @@ public class DefaultPublisher implements IPublisher {
 
     public Result<Void> publish(Outbox outbox) {
         Result<EventEnvelopePb> result = OutboxHelper.toEventEnvelope(outbox);
-        if (!result.success()) {
+        if (!result.isSuccess()) {
             log.error("outbox to event envelope failed: {}", outbox);
-            return Results.fail(result);
+            return Result.failure(result);
         }
         try {
-            kafkaTemplate.send(outbox.getDestination(), outbox.getPartitionKey(), result.value().toByteArray()).get(3, TimeUnit.SECONDS);
+            kafkaTemplate.send(outbox.getDestination(), outbox.getPartitionKey(), result.getValue().toByteArray()).get(3, TimeUnit.SECONDS);
         } catch (Exception e) {
-            log.error("publish event failed, outbox: {}, event: {}, exception: {}", outbox, result.value(), e.toString());
-            return Results.fail(ErrorCode.PUBLISH_KAFKA_ERROR, outbox.getCommandId());
+            log.error("publish event failed, outbox: {}, event: {}, exception: {}", outbox, result.getValue(), e.toString());
+            return Result.failure(LedgerServiceErrorCode.PUBLISH_KAFKA_ERROR, outbox.getCommandId());
         }
-        return Results.success();
-    }}
+        return Result.success();
+    }
+}

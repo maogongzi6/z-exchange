@@ -1,6 +1,6 @@
 package com.exchange.app.wallet.exception;
 
-import com.exchange.app.wallet.result.ErrorCode;
+import com.exchange.common.result.error.ErrorCode;
 
 public class AbnormalProtoDataException extends CustomException {
     public AbnormalProtoDataException(ErrorCode code, String message, Throwable cause) {

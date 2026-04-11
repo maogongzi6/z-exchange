@@ -1,9 +1,9 @@
 package com.exchange.app.wallet.exception;
 
-import com.exchange.app.wallet.result.ErrorCode;
+import com.exchange.app.wallet.result.WalletServiceErrorCode;
 
 public class InvalidEnumException extends CustomException {
     public InvalidEnumException(String message) {
-        super(ErrorCode.INVALID_ENUM_ERROR, message);
+        super(WalletServiceErrorCode.INVALID_ENUM_ERROR, message);
     }
 }

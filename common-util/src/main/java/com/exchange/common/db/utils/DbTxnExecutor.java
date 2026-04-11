@@ -1,6 +1,6 @@
 package com.exchange.common.db.utils;
 
-import com.exchange.common.utils.result.Result;
+import com.exchange.common.result.Result;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.PlatformTransactionManager;
