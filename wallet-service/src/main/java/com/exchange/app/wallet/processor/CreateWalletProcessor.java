@@ -54,7 +54,7 @@ public class CreateWalletProcessor {
 
         Wallet walletInDb = walletMapper.selectByReferenceId(serviceId, req.getReferenceId());
         if (walletInDb != null && walletInDb.getWalletStatus().hasInitiated()) {
-            balanceSnapshotStore.postInsert(walletInDb.getWalletId(), walletInDb.getReferenceId(), walletInDb.getOwnerType());
+            balanceSnapshotStore.postInsert(walletInDb.getWalletId(), walletInDb.getServiceId(), walletInDb.getReferenceId(), walletInDb.getOwnerType());
             return replySuccess("wallet has been created");
         } else if (walletInDb == null) {
             Result<Wallet> walletResult = createWalletInDb(req, serviceId, ownerType);

@@ -7,8 +7,13 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class PromotionClassifierRegister {
-    @Bean("hotBalanceSnapshotClassifier")
-    public PromotionClassifier hotBalanceSnapshotClassifier() {
+    @Bean("hotBalanceClassifier")
+    public PromotionClassifier hotBalanceClassifier() {
+        return new DefaultPromotionClassifier();
+    }
+
+    @Bean("hotBalanceRefClassifier")
+    public PromotionClassifier hotBalanceRefClassifier() {
         return new DefaultPromotionClassifier();
     }
 }

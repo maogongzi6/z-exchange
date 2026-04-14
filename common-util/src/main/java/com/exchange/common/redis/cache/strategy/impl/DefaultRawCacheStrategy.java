@@ -71,7 +71,10 @@ public class DefaultRawCacheStrategy<T> implements RawCacheStrategy<T> {
     @Override
     public Result<Boolean> afterInsert(String id, T value) {
         String key = descriptor.buildCacheKey(id);
-        return config.negativeCacheFeature().clear(key);
+        return switch (config.strategyType()) {
+            case CACHE_ASIDE -> config.negativeCacheFeature().clear(key);
+            case POST_REFRESH -> afterDbHit(id, value);
+        };
     }
 
     private boolean isSelfRecoverableReadError(CacheException e) {

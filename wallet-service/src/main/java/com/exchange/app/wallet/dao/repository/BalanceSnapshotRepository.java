@@ -33,8 +33,10 @@ public class BalanceSnapshotRepository extends DbBaseRepository<BalanceSnapshot,
         return mapper.selectOne(query);
     }
 
-    public BalanceSnapshot getByWalletReferenceId(String walletReferenceId) {
-        var query = Wrappers.<BalanceSnapshot>lambdaQuery().eq(BalanceSnapshot::getWalletReferenceId, walletReferenceId);
+    public BalanceSnapshot getByWalletReferenceId(ServiceId serviceId, String walletReferenceId) {
+        var query = Wrappers.<BalanceSnapshot>lambdaQuery()
+                .eq(BalanceSnapshot::getServiceId, serviceId)
+                .eq(BalanceSnapshot::getWalletReferenceId, walletReferenceId);
         return mapper.selectOne(query);
     }
 

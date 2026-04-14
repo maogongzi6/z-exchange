@@ -52,10 +52,10 @@ public class QueryBalanceTest {
         String id = "test-query-system-ref-" + RandomString.make();
         var r = createBalanceSnapshot(id, OwnerType.SYSTEM);
         repository.insertIgnore(r);
-        Result<BalanceSnapshot> balanceSnapshotResult = getBalanceSnapshotProcessor.getBalanceSnapshot(GetBalanceSnapshotProcessor.LookupType.REF_ID, id);
+        Result<BalanceSnapshot> balanceSnapshotResult = getBalanceSnapshotProcessor.getBalanceSnapshot(GetBalanceSnapshotProcessor.LookupType.REF_ID, ServiceId.SYSTEM, id);
         Assert.assertTrue(balanceSnapshotResult.isSuccess());
         Assert.assertNotNull(balanceSnapshotResult.getValue());
-        balanceSnapshotResult = getBalanceSnapshotProcessor.getBalanceSnapshot(GetBalanceSnapshotProcessor.LookupType.REF_ID, id);
+        balanceSnapshotResult = getBalanceSnapshotProcessor.getBalanceSnapshot(GetBalanceSnapshotProcessor.LookupType.REF_ID, ServiceId.SYSTEM, id);
     }
 
     private BalanceSnapshot createBalanceSnapshot(String walletId, OwnerType ownerType) {

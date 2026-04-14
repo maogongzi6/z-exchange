@@ -26,8 +26,8 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class BalanceSnapshotCacheRegister {
-    @Bean(name = "balanceSnapshotRefCache")
-    public RawCacheStrategy<String> balanceSnapshotRefCache(
+    @Bean(name = "balanceRefCache")
+    public RawCacheStrategy<String> balanceRefCache(
             @Qualifier("defaultRawCacheReader") DefaultCacheReader<ValueCodec> cacheReader,
             RawCacheWriter cacheWriter,
             RawCacheDeleter cacheDeleter,
@@ -48,8 +48,30 @@ public class BalanceSnapshotCacheRegister {
         return factory.buildRawCacheSuppressExceptionStrategy(descriptor, cacheReader, cacheWriter, strategyConfig);
     }
 
-    @Bean("normalSnapshotCache")
-    public VersionCacheStrategy<BalanceSnapshot> normalSnapshotCache(
+    @Bean("hotBalanceRefCache")
+    public RawCacheStrategy<String> hotBalanceRefCache(
+            @Qualifier("clientSideRawCacheReader") DefaultCacheReader<ValueCodec> cacheReader,
+            RawCacheWriter cacheWriter,
+            RawCacheDeleter cacheDeleter,
+            StrategyFactory factory,
+            CacheTtlConfig config) {
+        CacheDescriptor<String> descriptor = new CacheDescriptor<>(String.class, CacheScope::balanceSnapshotRefIdKey);
+        var ttlConfig = new RawStrategyConfig.TtlConfig(
+                config.getDefaultRefStrategy(),
+                config.getNegativeStrategy());
+        SelfRecoverFeature selfRecoverFeature = new RawDeleteSelfRecoverFeature(cacheDeleter);
+        NegativeCacheFeature negativeCacheFeature = new DefaultNegativeCacheFeature(cacheWriter, cacheDeleter);
+        RawStrategyConfig strategyConfig = new RawStrategyConfig(
+                StrategyType.POST_REFRESH,
+                ttlConfig,
+                selfRecoverFeature,
+                negativeCacheFeature);
+
+        return factory.buildRawCacheSuppressExceptionStrategy(descriptor, cacheReader, cacheWriter, strategyConfig);
+    }
+
+    @Bean("normalBalanceCache")
+    public VersionCacheStrategy<BalanceSnapshot> normalBalanceCache(
             @Qualifier("defaultVersionCacheReader") DefaultCacheReader<VersionCodec> cacheReader,
             VersionCacheWriter cacheWriter,
             RawCacheDeleter cacheDeleter,
@@ -69,8 +91,8 @@ public class BalanceSnapshotCacheRegister {
         return factory.buildVersionCacheSuppressExceptionStrategy(descriptor, cacheReader, cacheWriter, versionStrategyConfig);
     }
 
-    @Bean("hotSnapshotCache")
-    public VersionCacheStrategy<BalanceSnapshot> hotSnapshotCache(
+    @Bean("hotBalanceCache")
+    public VersionCacheStrategy<BalanceSnapshot> hotBalanceCache(
             @Qualifier("clientSideVersionCacheReader") DefaultCacheReader<VersionCodec> cacheReader,
             VersionCacheWriter cacheWriter,
             RawCacheDeleter cacheDeleter,

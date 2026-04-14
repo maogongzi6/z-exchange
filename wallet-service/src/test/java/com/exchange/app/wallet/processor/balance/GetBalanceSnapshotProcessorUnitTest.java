@@ -12,6 +12,7 @@ import org.junit.Test;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 public class GetBalanceSnapshotProcessorUnitTest {
@@ -35,12 +36,24 @@ public class GetBalanceSnapshotProcessorUnitTest {
         BalanceSnapshotStore balanceSnapshotStore = mock(BalanceSnapshotStore.class);
         GetBalanceSnapshotProcessor processor = new GetBalanceSnapshotProcessor(balanceSnapshotStore);
 
-        when(balanceSnapshotStore.getByRefId("ref-miss")).thenReturn(Result.success(null));
+        when(balanceSnapshotStore.getByRefId(ServiceId.USER, "ref-miss")).thenReturn(Result.success(null));
 
-        Result<BalanceSnapshot> result = processor.getBalanceSnapshot(GetBalanceSnapshotProcessor.LookupType.REF_ID, "ref-miss");
+        Result<BalanceSnapshot> result = processor.getBalanceSnapshot(GetBalanceSnapshotProcessor.LookupType.REF_ID, ServiceId.USER, "ref-miss");
 
         Assert.assertFalse(result.isSuccess());
         Assert.assertEquals(WalletServiceErrorCode.BALANCE_SNAPSHOT_NOT_FOUND, result.getErrorCode());
-        verify(balanceSnapshotStore).getByRefId("ref-miss");
+        verify(balanceSnapshotStore).getByRefId(ServiceId.USER, "ref-miss");
+    }
+
+    @Test
+    public void getBalanceSnapshotShouldRejectUnknownServiceIdForRefLookup() {
+        BalanceSnapshotStore balanceSnapshotStore = mock(BalanceSnapshotStore.class);
+        GetBalanceSnapshotProcessor processor = new GetBalanceSnapshotProcessor(balanceSnapshotStore);
+
+        Result<BalanceSnapshot> result = processor.getBalanceSnapshot(GetBalanceSnapshotProcessor.LookupType.REF_ID, ServiceId.UNKNOWN, "ref-1");
+
+        Assert.assertFalse(result.isSuccess());
+        Assert.assertEquals(WalletServiceErrorCode.INVALID_REQUEST_PARAMETER, result.getErrorCode());
+        verifyNoInteractions(balanceSnapshotStore);
     }
 }

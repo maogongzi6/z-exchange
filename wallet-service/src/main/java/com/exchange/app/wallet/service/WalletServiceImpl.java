@@ -1,5 +1,6 @@
 package com.exchange.app.wallet.service;
 
+import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.processor.transaction.ApplyReservationTransactionProcessor;
 import com.exchange.app.wallet.processor.transaction.AtomicTransactionProcessor;
 import com.exchange.app.wallet.processor.CreateWalletProcessor;
@@ -8,6 +9,7 @@ import com.exchange.app.wallet.processor.transaction.ReserveTransactionProcessor
 import com.exchange.app.wallet.result.WalletBoundaryErrorMapper;
 import com.exchange.app.wallet.result.PbErrorBuilder;
 import com.exchange.app.wallet.result.WalletServiceErrorCode;
+import com.exchange.app.wallet.utils.EnumPbMappers;
 import com.exchange.app.wallet.utils.PbConverter;
 import com.exchange.common.result.Result;
 import com.exchange.proto.wallet.wallet.*;
@@ -82,19 +84,21 @@ public class WalletServiceImpl extends WalletServiceGrpc.WalletServiceImplBase {
 
     @Override
     public void getSnapshotByWalletId(GetSnapshotByIdRequestPb request, StreamObserver<GetSnapshotReplyPb> responseObserver) {
-        handleSnapshotRequest(GetBalanceSnapshotProcessor.LookupType.WALLET_ID, request.getWalletId(), responseObserver);
+        handleSnapshotRequest(GetBalanceSnapshotProcessor.LookupType.WALLET_ID, null, request.getWalletId(), responseObserver);
     }
 
     @Override
     public void getSnapshotByRefId(GetSnapshotByRefIdRequestPb request, StreamObserver<GetSnapshotReplyPb> responseObserver) {
-        handleSnapshotRequest(GetBalanceSnapshotProcessor.LookupType.REF_ID, request.getReferenceId(), responseObserver);
+        ServiceId serviceId = EnumPbMappers.serviceIdPbMapper.to(request.getServiceId());
+        handleSnapshotRequest(GetBalanceSnapshotProcessor.LookupType.REF_ID, serviceId, request.getReferenceId(), responseObserver);
     }
 
     private void handleSnapshotRequest(GetBalanceSnapshotProcessor.LookupType lookupType,
+                                       ServiceId serviceId,
                                        String lookupValue,
                                        StreamObserver<GetSnapshotReplyPb> responseObserver) {
         try {
-            Result<com.exchange.app.wallet.po.wallet.BalanceSnapshot> result = getBalanceSnapshotProcessor.getBalanceSnapshot(lookupType, lookupValue);
+            Result<com.exchange.app.wallet.po.wallet.BalanceSnapshot> result = getBalanceSnapshotProcessor.getBalanceSnapshot(lookupType, serviceId, lookupValue);
             if (result.isSuccess()) {
                 responseObserver.onNext(GetSnapshotReplyPb.newBuilder()
                         .setTransaction(PbConverter.convertToBalanceSnapshotPb(result.getValue()))

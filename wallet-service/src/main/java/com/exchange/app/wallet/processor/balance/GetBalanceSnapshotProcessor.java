@@ -1,6 +1,7 @@
 package com.exchange.app.wallet.processor.balance;
 
 import com.exchange.app.wallet.dao.store.BalanceSnapshotStore;
+import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.wallet.BalanceSnapshot;
 import com.exchange.app.wallet.result.WalletServiceErrorCode;
 import com.exchange.common.result.Result;
@@ -21,6 +22,10 @@ public class GetBalanceSnapshotProcessor {
     }
 
     public Result<BalanceSnapshot> getBalanceSnapshot(LookupType type, String lookupValue) {
+        return getBalanceSnapshot(type, null, lookupValue);
+    }
+
+    public Result<BalanceSnapshot> getBalanceSnapshot(LookupType type, ServiceId serviceId, String lookupValue) {
         if (Strings.isEmpty(lookupValue)) {
             log.error("lookup_value is required");
             return Result.failure(WalletServiceErrorCode.INVALID_REQUEST_PARAMETER, "lookup_value is required");
@@ -29,6 +34,10 @@ public class GetBalanceSnapshotProcessor {
             log.error("lookup_type is required");
             return Result.failure(WalletServiceErrorCode.INVALID_REQUEST_PARAMETER, "lookup_type is required");
         }
+        if (type == LookupType.REF_ID && (serviceId == null || serviceId == ServiceId.UNKNOWN)) {
+            log.error("service_id is required for ref lookup, serviceId: {}", serviceId);
+            return Result.failure(WalletServiceErrorCode.INVALID_REQUEST_PARAMETER, "invalid service id: " + serviceId);
+        }
 
         Result<BalanceSnapshot> snapshotResult;
         switch (type) {
@@ -36,7 +45,7 @@ public class GetBalanceSnapshotProcessor {
                 snapshotResult = balanceSnapshotStore.getByWalletId(lookupValue);
                 break;
             case REF_ID:
-                snapshotResult = balanceSnapshotStore.getByRefId(lookupValue);
+                snapshotResult = balanceSnapshotStore.getByRefId(serviceId, lookupValue);
                 break;
             default:
                 log.error("invalid lookup type: {}", type);
