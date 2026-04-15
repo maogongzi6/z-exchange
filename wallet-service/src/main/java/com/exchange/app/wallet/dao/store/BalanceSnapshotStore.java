@@ -61,6 +61,14 @@ public class BalanceSnapshotStore {
         }
     }
 
+    public void postDbUpdate(BalanceSnapshot balanceSnapshot) {
+        Result<Boolean> result = determineBalanceStrategy(balanceSnapshot.getWalletId())
+                .afterUpdate(balanceSnapshot.getWalletId(), balanceSnapshot, balanceSnapshot.getVersion());
+        if (!result.isSuccess()) {
+            log.error("after_update, cache strategy failed: {}, snapshot: {}", result, balanceSnapshot);
+        }
+    }
+
     public Result<BalanceSnapshot> getByWalletId(String walletId) {
         var result = doGetByWalletId(walletId);
         if (result.isSuccess() && result.getValue() != null) {

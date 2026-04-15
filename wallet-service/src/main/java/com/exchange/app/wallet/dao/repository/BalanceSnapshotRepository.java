@@ -13,7 +13,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Slf4j
 @Component
@@ -38,6 +40,41 @@ public class BalanceSnapshotRepository extends DbBaseRepository<BalanceSnapshot,
                 .eq(BalanceSnapshot::getServiceId, serviceId)
                 .eq(BalanceSnapshot::getWalletReferenceId, walletReferenceId);
         return mapper.selectOne(query);
+    }
+
+    public List<BalanceSnapshot> selectInIdForUpdate(List<Long> ids) {
+        if (ids.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        LambdaQueryWrapper<BalanceSnapshot> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(BalanceSnapshot::getId, ids)
+                .orderByAsc(BalanceSnapshot::getId)
+                .last("for update");
+        return mapper.selectList(wrapper);
+    }
+
+    public int updateBalanceWithInOptimisticLock(BalanceSnapshot now, BalanceSnapshot old) {
+        BalanceSnapshot toUpdate = new BalanceSnapshot();
+        if (!Objects.equals(now.getAvailable(), old.getAvailable())) {
+            toUpdate.setAvailable(now.getAvailable());
+        }
+        if (!Objects.equals(now.getReserved(), old.getReserved())) {
+            toUpdate.setReserved(now.getReserved());
+        }
+        toUpdate.setVersion(old.getVersion());
+
+        var wrapper = updateLambdaWrapper().eq(BalanceSnapshot::getId, old.getId())
+                .eq(BalanceSnapshot::getWalletId, old.getWalletId())
+                .eq(BalanceSnapshot::getAssetId, old.getAssetId())
+                .eq(BalanceSnapshot::getWalletStatus, old.getWalletStatus())
+                .eq(BalanceSnapshot::getAvailable, old.getAvailable())
+                .eq(BalanceSnapshot::getReserved, old.getReserved());
+        int affected = mapper.update(toUpdate, wrapper);
+        if (affected == 1) {
+            now.setVersion(toUpdate.getVersion());
+        }
+        return affected;
     }
 
     public List<BalanceSnapshot> selectIdByRefs(ServiceId serviceId, List<String> walletRefs) {

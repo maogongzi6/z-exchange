@@ -2,6 +2,8 @@ package com.exchange.app.wallet.processor.transaction.step;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.exchange.app.wallet.dao.repository.*;
+import com.exchange.app.wallet.dao.store.BalanceSnapshotStore;
+import com.exchange.app.wallet.po.enums.WalletStatus;
 import com.exchange.app.wallet.po.enums.transaction.ActionType;
 import com.exchange.app.wallet.po.enums.transaction.ReservationStatus;
 import com.exchange.app.wallet.po.enums.transaction.TransactionStatus;
@@ -29,10 +31,12 @@ public class AfterPostLedgerProcessor {
     private final DbTxnExecutor dbTxnExecutor;
 
     private final BalanceSnapshotRepository balanceSnapshotManager;
+    private final BalanceSnapshotStore balanceSnapshotStore;
     private final WalletReservationRepository walletReservationManager;
     private final WalletTransactionRepository walletTransactionManager;
     private final WalletActionRepository walletActionManager;
     private final UpdateReservationProcessor updateReservationProcessor;
+    private final UpdateBalanceSnapshotProcessor updateBalanceSnapshotProcessor;
 
     public Result<WalletTransaction> afterPostLedger(String txnId) {
         Result<TransactionInfo> txnInfoResult = getTxnInfo(txnId);
@@ -49,28 +53,31 @@ public class AfterPostLedgerProcessor {
         List<BalanceSnapshot> snapshotIdsInOrder = txnInfo.snapshots.stream()
                 .sorted(Comparator.comparing(BalanceSnapshot::getId)).collect(Collectors.toList());
 
-        Result<Void> outResult = dbTxnExecutor.executeWithDefault(() -> {
+        Result<List<BalanceSnapshot>> outResult = dbTxnExecutor.executeWithDefault(() -> {
             // should update all reservations here
-            Result<Void> result = updateReservationProcessor.updateReservations(txnInfo.reservations,
+            Result<Void> reservationResult = updateReservationProcessor.updateReservations(txnInfo.reservations,
                     (reservation) -> updateReservationAfterPosting(reservation, txnInfo.walletIdToPostActions));
-            if (result.isFailed()) {
-                return Result.failure(result);
+            if (reservationResult.isFailed()) {
+                return Result.failure(reservationResult);
             }
 
-            result = updateSnapshotsAfterPosting(txnInfo.walletIdToPostActions, snapshotIdsInOrder);
-            if (result.isFailed()) {
-                return Result.failure(result);
+            Result<List<BalanceSnapshot>> snapshotResult = updateSnapshotsAfterPosting(txnInfo.walletIdToPostActions, snapshotIdsInOrder);
+            if (snapshotResult.isFailed()) {
+                return Result.failure(snapshotResult);
             }
             if (walletTransactionManager.updateTransactionStatus(txnInfo.walletTxn, txnInfo.walletTxn.getId(), TransactionStatus.COMPLETED)
                     != 1) {
                 log.error("wallet_transaction_update_failed, transaction: {}", txnInfo.walletTxn);
                 return Result.failure(WalletServiceErrorCode.WALLET_TRANSACTION_UPDATE_FAILED, "transaction_update_failed");
             }
-            return Result.success();
+            return Result.success(snapshotResult.getValue());
         });
         if (outResult.isFailed()) {
             return Result.failure(outResult);
         }
+        // Cache refresh is best effort and must run only after the DB transaction commits.
+        postDbUpdateSnapshots(outResult.getValue());
+
         WalletTransaction txn = walletTransactionManager.selectById(txnInfo.walletTxn.getId());
         if (txn == null) {
             log.error("wallet_transaction_not_found, transaction: {}", txnInfo.walletTxn);
@@ -119,30 +126,58 @@ public class AfterPostLedgerProcessor {
         return Result.success(transactionInfo);
     }
 
-    private Result<Void> updateSnapshotsAfterPosting(Map<String, List<WalletAction>> walletIdToActions, List<BalanceSnapshot> snapshots) {
+    private Result<List<BalanceSnapshot>> updateSnapshotsAfterPosting(Map<String, List<WalletAction>> walletIdToActions, List<BalanceSnapshot> snapshots) {
         List<BalanceSnapshot> snapshotInOrder = snapshots.stream().sorted(Comparator.comparing(BalanceSnapshot::getId)).collect(Collectors.toList());
-        for (BalanceSnapshot snapshot : snapshotInOrder) {
-            // TODO maybe combine update in the future
-            for (WalletAction action : walletIdToActions.get(snapshot.getWalletId())) {
-                switch (action.getActionType()) {
-                    case TRANSFER_OUT:
-                        if (balanceSnapshotManager.transferOutFromWalletId(snapshot.getId(), action.getWalletId(), action.getAssetId(), action.getAmount())
-                                != 1) {
-                            log.error("failed to update snapshot to transfer out amount, reservation: {}, action: {}", snapshot, action);
-                            return Result.failure(WalletServiceErrorCode.BALANCE_SNAPSHOT_UPDATE_FAILED, "failed to update snapshot to transfer out amount");
-                        }
-                        break;
-                    case TRANSFER_IN:
-                        if (balanceSnapshotManager.transferInToWalletId(snapshot.getId(), action.getWalletId(), action.getAssetId(), action.getAmount())
-                                != 1) {
-                            log.error("failed to update snapshot to transfer in amount, reservation: {}, action: {}", snapshot, action);
-                            return Result.failure(WalletServiceErrorCode.BALANCE_SNAPSHOT_UPDATE_FAILED, "failed to update snapshot to transfer in amount");
-                        }
-                        break;
-                }
+        return updateBalanceSnapshotProcessor.updateSnapshots(snapshotInOrder,
+                (snapshot) -> updateSnapshotAfterPosting(snapshot, walletIdToActions));
+    }
+
+    private Result<BalanceSnapshot> updateSnapshotAfterPosting(BalanceSnapshot snapshot, Map<String, List<WalletAction>> walletIdToActions) {
+        for (WalletAction action : walletIdToActions.getOrDefault(snapshot.getWalletId(), Collections.emptyList())) {
+            switch (action.getActionType()) {
+                case TRANSFER_OUT:
+                    Result<Void> outValidateResult = validateSnapshotForAction(snapshot, action);
+                    if (outValidateResult.isFailed()) {
+                        return Result.failure(outValidateResult);
+                    }
+                    if (snapshot.getReserved() < action.getAmount()) {
+                        return Result.failure(WalletServiceErrorCode.BALANCE_SNAPSHOT_UPDATE_FAILED,
+                                String.format("failed to transfer out amount, reserved not enough, snapshot: %s, action: %s", snapshot, action));
+                    }
+                    snapshot.setReserved(snapshot.getReserved() - action.getAmount());
+                    break;
+                case TRANSFER_IN:
+                    Result<Void> inValidateResult = validateSnapshotForAction(snapshot, action);
+                    if (inValidateResult.isFailed()) {
+                        return Result.failure(inValidateResult);
+                    }
+                    snapshot.setAvailable(snapshot.getAvailable() + action.getAmount());
+                    break;
             }
         }
+        return Result.success(snapshot);
+    }
+
+    private Result<Void> validateSnapshotForAction(BalanceSnapshot snapshot, WalletAction action) {
+        if (!Objects.equals(snapshot.getWalletId(), action.getWalletId()) || !Objects.equals(snapshot.getAssetId(), action.getAssetId())) {
+            return Result.failure(WalletServiceErrorCode.BALANCE_SNAPSHOT_MISMATCH,
+                    String.format("action snapshot mismatch, snapshot: %s, action: %s", snapshot, action));
+        }
+        if (snapshot.getWalletStatus() != WalletStatus.OPEN) {
+            return Result.failure(WalletServiceErrorCode.BALANCE_SNAPSHOT_UPDATE_FAILED,
+                    String.format("snapshot is not open, snapshot: %s, action: %s", snapshot, action));
+        }
+        if (action.getAmount() == null || action.getAmount() <= 0) {
+            return Result.failure(WalletServiceErrorCode.INVALID_REQUEST_PARAMETER,
+                    String.format("invalid action amount, snapshot: %s, action: %s", snapshot, action));
+        }
         return Result.success();
+    }
+
+    private void postDbUpdateSnapshots(List<BalanceSnapshot> updatedSnapshots) {
+        for (BalanceSnapshot snapshot : updatedSnapshots) {
+            balanceSnapshotStore.postDbUpdate(snapshot);
+        }
     }
 
     private Result<WalletReservation> updateReservationAfterPosting(WalletReservation reservation, Map<String, List<WalletAction>> walletIdToActions) {

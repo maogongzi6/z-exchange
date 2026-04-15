@@ -1,10 +1,13 @@
 package com.exchange.app.wallet.processor.transaction.step;
 
+import com.exchange.app.wallet.config.CustomCacheProperties;
 import com.exchange.app.wallet.cronjob.outbox.constant.OutboxConstant;
 import com.exchange.app.wallet.dao.repository.*;
+import com.exchange.app.wallet.dao.store.BalanceSnapshotStore;
 import com.exchange.app.wallet.kafka.producer.DefaultPublisher;
 import com.exchange.app.wallet.po.enums.BusinessType;
 import com.exchange.app.wallet.po.enums.ServiceId;
+import com.exchange.app.wallet.po.enums.WalletStatus;
 import com.exchange.app.wallet.po.enums.transaction.*;
 import com.exchange.app.wallet.po.transaction.WalletAction;
 import com.exchange.app.wallet.po.transaction.WalletReservation;
@@ -18,14 +21,13 @@ import com.exchange.app.wallet.processor.transaction.util.ObjectBuilder;
 import com.exchange.app.wallet.processor.transaction.util.ValidateHelper;
 import com.exchange.app.wallet.result.WalletServiceErrorCode;
 import com.exchange.app.wallet.utils.*;
-import com.exchange.common.redis.idemp.IdempRedisClient;
-import com.exchange.app.wallet.config.CustomCacheProperties;
-import com.exchange.common.redis.idemp.utils.CommonIdempHelper;
 import com.exchange.common.constant.GlobalServiceId;
 import com.exchange.common.db.utils.DbTxnExecutor;
 import com.exchange.common.outbox.dao.repository.OutboxRepository;
 import com.exchange.common.outbox.po.Outbox;
 import com.exchange.common.outbox.po.enums.OutboxStatus;
+import com.exchange.common.redis.idemp.IdempRedisClient;
+import com.exchange.common.redis.idemp.utils.CommonIdempHelper;
 import com.exchange.common.result.Result;
 import com.exchange.common.utils.time.LocalDateTimeHelper;
 import com.exchange.proto.wallet.wallet.TransactionLinePb;
@@ -50,6 +52,7 @@ public class BeforePostLedgerProcessor {
     private final CustomCacheProperties.Idemp idempConfig;
 
     private final BalanceSnapshotRepository balanceSnapshotManager;
+    private final BalanceSnapshotStore balanceSnapshotStore;
     private final WalletReservationRepository walletReservationManager;
     private final WalletTransactionRepository walletTransactionManager;
     private final WalletActionRepository walletActionManager;
@@ -57,6 +60,7 @@ public class BeforePostLedgerProcessor {
     private final OutboxRepository outboxManager;
     private final DefaultPublisher postLedgerPublisher;
     private final UpdateReservationProcessor updateReservationProcessor;
+    private final UpdateBalanceSnapshotProcessor updateBalanceSnapshotProcessor;
 
     // reserve -> snapshot: -available, +reserved
     // consume -> reservation: -remaining, +pending_settle
@@ -146,12 +150,15 @@ public class BeforePostLedgerProcessor {
         Outbox outbox = outboxResult.getValue();
 
 
-        result = updateDbToCreateTxn(walletTxn, actions, balanceSnapshots, reservationsInRequest, createdReservations, outbox);
-        if (result.isFailed()) {
-            log.error("updateDbToCreateTxn failed: {}", result);
+        Result<List<BalanceSnapshot>> updateResult = updateDbToCreateTxn(walletTxn, actions, balanceSnapshots, reservationsInRequest, createdReservations, outbox);
+        if (updateResult.isFailed()) {
+            log.error("updateDbToCreateTxn failed: {}", updateResult);
             releaseIdempBeforeReturnError(requestInfo.idempotenceKey, requestInfo.getStableHash(), requestInfo.token);
-            return Result.failure(result);
+            return Result.failure(updateResult);
         }
+        // Cache refresh is best effort and must run only after the DB transaction commits.
+        postDbUpdateSnapshots(updateResult.getValue());
+
         // set idemp to DONE when found wallet txn
         idempRedisClient.markIdempDone(GlobalServiceId.WALLET.code, Constant.SCOPE, requestInfo.idempotenceKey,
                 String.valueOf(requestInfo.getStableHash()), requestInfo.token, walletTxn.getTxnId(), idempConfig.getDoneTtl());
@@ -179,8 +186,8 @@ public class BeforePostLedgerProcessor {
         return ObjectBuilder.createTransaction(requestInfo.transactionType, requestInfo.referenceId, serviceId, requestInfo.idempotenceKey, businessType);
     }
 
-    private Result<Void> updateDbToCreateTxn(WalletTransaction walletTxn, List<WalletAction> actions, List<BalanceSnapshot> balanceSnapshots,
-                                              List<WalletReservation> reservationsInRequest, List<WalletReservation> createdReservations, Outbox outbox) {
+    private Result<List<BalanceSnapshot>> updateDbToCreateTxn(WalletTransaction walletTxn, List<WalletAction> actions, List<BalanceSnapshot> balanceSnapshots,
+                                                              List<WalletReservation> reservationsInRequest, List<WalletReservation> createdReservations, Outbox outbox) {
 
         Map<String, List<WalletAction>> walletIdToActions = new HashMap<>();
         for (WalletAction action : actions) {
@@ -190,46 +197,46 @@ public class BeforePostLedgerProcessor {
 
         // immediately claim the outbox and attempt to publish it right after update db
         return dbTxnExecutor.executeWithDefault(() -> {
-            Result<Void> result = updateReservationProcessor.updateReservations(reservationsInRequest,
+            Result<Void> reservationResult = updateReservationProcessor.updateReservations(reservationsInRequest,
                     (reservation) -> updateReservationBeforePosting(reservation, walletIdToActions));
-            if (result.isFailed()) {
-                log.error("update reservations failed, {}, {}", result, reservationsInRequest);
-                return Result.failure(result);
+            if (reservationResult.isFailed()) {
+                log.error("update reservations failed, {}, {}", reservationResult, reservationsInRequest);
+                return Result.failure(reservationResult);
             }
 
 
-            result = updateSnapshotsBeforePosting(walletIdToActions, balanceSnapshots);
-            if (result.isFailed()) {
-                log.error("update snapshots failed, {}, {}", result, balanceSnapshots);
-                return Result.failure(result);
+            Result<List<BalanceSnapshot>> snapshotResult = updateSnapshotsBeforePosting(walletIdToActions, balanceSnapshots);
+            if (snapshotResult.isFailed()) {
+                log.error("update snapshots failed, {}, {}", snapshotResult, balanceSnapshots);
+                return Result.failure(snapshotResult);
             }
 
             if (!createdReservations.isEmpty()) {
                 if (walletReservationManager.batchInsert(createdReservations) != createdReservations.size()) {
-                    log.error("insert reservations failed, {}, {}", result, createdReservations);
+                    log.error("insert reservations failed, {}, {}", snapshotResult, createdReservations);
                     return Result.failure(WalletServiceErrorCode.WALLET_RESERVATION_DUPLICATED, "unexpected reservation duplicated");
                 }
             }
 
             if (walletTransactionManager.insertIgnore(walletTxn) == 0) {
                 // TODO maybe get txn and return if info match
-                log.error("insert transaction failed, {}, {}", result, walletTxn);
+                log.error("insert transaction failed, {}, {}", snapshotResult, walletTxn);
                 return Result.failure(WalletServiceErrorCode.WALLET_TRANSACTION_DUPLICATED, "unexpected transaction duplicated");
             }
             if (walletActionManager.batchInsert(actions) != actions.size()) {
-                log.error("insert actions failed, {}, {}", result, actions);
+                log.error("insert actions failed, {}, {}", snapshotResult, actions);
                 return Result.failure(WalletServiceErrorCode.WALLET_ACTION_DUPLICATION, "unexpected action duplicated");
             }
             if (outbox != null) {
                 // immediately claim the outbox and attempt to publish it right after update db
                 if (outboxManager.insertWithClaim(outbox, LocalDateTimeHelper.nowAfterMs(OutboxConstant.BASE_ATTEMPT_INTERVAL_MS))
                         == 0) {
-                    log.error("insert outbox failed, {}, {}", result, outbox);
+                    log.error("insert outbox failed, {}, {}", snapshotResult, outbox);
                     return Result.failure(WalletServiceErrorCode.WALLET_OUTBOX_DUPLICATED, "unexpected outbox duplicated");
                 }
             }
 
-            return Result.success();
+            return Result.success(snapshotResult.getValue());
         });
     }
 
@@ -259,35 +266,64 @@ public class BeforePostLedgerProcessor {
         return Result.success(reservation);
     }
 
-    // TODO for db txn updates, uses select for update to lock records, then update it
-    //  this is safer in multi-instance scenario,
-    //  and also good for cache refreshing
-    private Result<Void> updateSnapshotsBeforePosting(Map<String, List<WalletAction>> walletIdToActions, List<BalanceSnapshot> snapshots) {
+    private Result<List<BalanceSnapshot>> updateSnapshotsBeforePosting(Map<String, List<WalletAction>> walletIdToActions, List<BalanceSnapshot> snapshots) {
         List<BalanceSnapshot> snapshotInOrder = snapshots.stream().sorted(Comparator.comparing(BalanceSnapshot::getId)).collect(Collectors.toList());
-        // update snapshot to reserve/release money by id order
-        // snapshotInOrder is memory cache, not real time data, only use wallet_id and id here
-        for (BalanceSnapshot snapshot : snapshotInOrder) {
-            // no need to combine update for one snapshot, basically there should only be one RESERVE or RELEASE for one snapshot for now
-            // TODO maybe combine update in the future
-            for (WalletAction action : walletIdToActions.get(snapshot.getWalletId())) {
-                switch (action.getActionType()) {
-                    case RESERVE:
-                        if (balanceSnapshotManager.reserveFromWalletId(snapshot.getId(), action.getWalletId(), action.getAssetId(), action.getAmount())
-                                != 1) {
-                            log.error("failed to update snapshot to reserve amount, reservation: {}, action: {}", snapshot, action);
-                            return Result.failure(WalletServiceErrorCode.BALANCE_SNAPSHOT_UPDATE_FAILED, "failed to update snapshot to reserve amount");
-                        }
-                        break;
-                    case RELEASE:
-                        if (balanceSnapshotManager.releaseFromWalletId(snapshot.getId(), action.getWalletId(), action.getAssetId(), action.getAmount())
-                                != 1) {
-                            log.error("failed to update snapshot to release amount, reservation: {}, action: {}", snapshot, action);
-                            return Result.failure(WalletServiceErrorCode.BALANCE_SNAPSHOT_UPDATE_FAILED, "failed to update snapshot to release amount");
-                        }
-                }
+        return updateBalanceSnapshotProcessor.updateSnapshots(snapshotInOrder,
+                (snapshot) -> updateSnapshotBeforePosting(snapshot, walletIdToActions));
+    }
+
+    private Result<BalanceSnapshot> updateSnapshotBeforePosting(BalanceSnapshot snapshot, Map<String, List<WalletAction>> walletIdToActions) {
+        for (WalletAction action : walletIdToActions.getOrDefault(snapshot.getWalletId(), Collections.emptyList())) {
+            switch (action.getActionType()) {
+                case RESERVE:
+                    Result<Void> reserveValidateResult = validateSnapshotForAction(snapshot, action);
+                    if (reserveValidateResult.isFailed()) {
+                        return Result.failure(reserveValidateResult);
+                    }
+                    if (snapshot.getAvailable() < action.getAmount()) {
+                        return Result.failure(WalletServiceErrorCode.BALANCE_SNAPSHOT_UPDATE_FAILED,
+                                String.format("failed to reserve amount, available not enough, snapshot: %s, action: %s", snapshot, action));
+                    }
+                    snapshot.setAvailable(snapshot.getAvailable() - action.getAmount());
+                    snapshot.setReserved(snapshot.getReserved() + action.getAmount());
+                    break;
+                case RELEASE:
+                    Result<Void> releaseValidateResult = validateSnapshotForAction(snapshot, action);
+                    if (releaseValidateResult.isFailed()) {
+                        return Result.failure(releaseValidateResult);
+                    }
+                    if (snapshot.getReserved() < action.getAmount()) {
+                        return Result.failure(WalletServiceErrorCode.BALANCE_SNAPSHOT_UPDATE_FAILED,
+                                String.format("failed to release amount, reserved not enough, snapshot: %s, action: %s", snapshot, action));
+                    }
+                    snapshot.setAvailable(snapshot.getAvailable() + action.getAmount());
+                    snapshot.setReserved(snapshot.getReserved() - action.getAmount());
+                    break;
             }
         }
+        return Result.success(snapshot);
+    }
+
+    private Result<Void> validateSnapshotForAction(BalanceSnapshot snapshot, WalletAction action) {
+        if (!Objects.equals(snapshot.getWalletId(), action.getWalletId()) || !Objects.equals(snapshot.getAssetId(), action.getAssetId())) {
+            return Result.failure(WalletServiceErrorCode.BALANCE_SNAPSHOT_MISMATCH,
+                    String.format("action snapshot mismatch, snapshot: %s, action: %s", snapshot, action));
+        }
+        if (snapshot.getWalletStatus() != WalletStatus.OPEN) {
+            return Result.failure(WalletServiceErrorCode.BALANCE_SNAPSHOT_UPDATE_FAILED,
+                    String.format("snapshot is not open, snapshot: %s, action: %s", snapshot, action));
+        }
+        if (action.getAmount() == null || action.getAmount() <= 0) {
+            return Result.failure(WalletServiceErrorCode.INVALID_REQUEST_PARAMETER,
+                    String.format("invalid action amount, snapshot: %s, action: %s", snapshot, action));
+        }
         return Result.success();
+    }
+
+    private void postDbUpdateSnapshots(List<BalanceSnapshot> updatedSnapshots) {
+        for (BalanceSnapshot snapshot : updatedSnapshots) {
+            balanceSnapshotStore.postDbUpdate(snapshot);
+        }
     }
 
     private Result<Outbox> createOutboxIfNeeded(WalletTransaction walletTxn, List<WalletAction> actions, RequestInfo requestInfo, boolean needPostLedger) {
