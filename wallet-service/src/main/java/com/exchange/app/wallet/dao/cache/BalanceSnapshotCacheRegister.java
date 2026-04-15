@@ -36,7 +36,8 @@ public class BalanceSnapshotCacheRegister {
         CacheDescriptor<String> descriptor = new CacheDescriptor<>(String.class, CacheScope::balanceSnapshotRefIdKey);
         var ttlConfig = new RawStrategyConfig.TtlConfig(
                 config.getDefaultRefStrategy(),
-                config.getNegativeStrategy());
+                config.getNegativeStrategy(),
+                config.getTombstoneStrategy());
         SelfRecoverFeature selfRecoverFeature = new RawDeleteSelfRecoverFeature(cacheDeleter);
         NegativeCacheFeature negativeCacheFeature = new DefaultNegativeCacheFeature(cacheWriter, cacheDeleter);
         RawStrategyConfig strategyConfig = new RawStrategyConfig(
@@ -58,7 +59,8 @@ public class BalanceSnapshotCacheRegister {
         CacheDescriptor<String> descriptor = new CacheDescriptor<>(String.class, CacheScope::balanceSnapshotRefIdKey);
         var ttlConfig = new RawStrategyConfig.TtlConfig(
                 config.getDefaultRefStrategy(),
-                config.getNegativeStrategy());
+                config.getNegativeStrategy(),
+                config.getTombstoneStrategy());
         SelfRecoverFeature selfRecoverFeature = new RawDeleteSelfRecoverFeature(cacheDeleter);
         NegativeCacheFeature negativeCacheFeature = new DefaultNegativeCacheFeature(cacheWriter, cacheDeleter);
         RawStrategyConfig strategyConfig = new RawStrategyConfig(

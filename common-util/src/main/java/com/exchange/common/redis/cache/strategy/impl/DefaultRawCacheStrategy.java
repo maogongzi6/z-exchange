@@ -71,8 +71,15 @@ public class DefaultRawCacheStrategy<T> implements RawCacheStrategy<T> {
     @Override
     public Result<Boolean> afterInsert(String id, T value) {
         String key = descriptor.buildCacheKey(id);
+
         return switch (config.strategyType()) {
-            case CACHE_ASIDE -> config.negativeCacheFeature().clear(key);
+            // set tombstone to prevent possible negative overwrite due to concurrent cache operation
+            case CACHE_ASIDE -> {
+                if (config.negativeCacheFeature().isEnabled()) {
+                    cacheWriter.setTombstone(key, config.ttlConfig().tombstoneTtl());
+                }
+                yield Result.success(Boolean.TRUE);
+            }
             case POST_REFRESH -> afterDbHit(id, value);
         };
     }

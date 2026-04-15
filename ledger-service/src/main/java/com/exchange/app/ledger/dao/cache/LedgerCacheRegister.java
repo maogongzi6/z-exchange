@@ -38,7 +38,8 @@ public class LedgerCacheRegister {
         NegativeCacheFeature negativeCacheFeature = new DefaultNegativeCacheFeature(cacheWriter, cacheDeleter);
         var ttlConfig = new RawStrategyConfig.TtlConfig(
                 config.getDefaultRefStrategy(),
-                config.getNegativeStrategy());
+                config.getNegativeStrategy(),
+                config.getTombstoneStrategy());
         RawStrategyConfig strategyConfig = new RawStrategyConfig(
                 StrategyType.CACHE_ASIDE,
                 ttlConfig,

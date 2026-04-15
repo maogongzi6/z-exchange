@@ -6,6 +6,7 @@ import com.exchange.common.utils.TtlStrategy;
 public interface NegativeCacheFeature {
     Result<Void> set(String key, TtlStrategy ttlStrategy);
     Result<Boolean> clear(String key);
+    boolean isEnabled();
 
     static NegativeCacheFeature disable() {
         return new NegativeCacheFeature() {
@@ -17,6 +18,11 @@ public interface NegativeCacheFeature {
             @Override
             public Result<Boolean> clear(String key) {
                 return Result.success(true);
+            }
+
+            @Override
+            public boolean isEnabled() {
+                return false;
             }
         };
     }

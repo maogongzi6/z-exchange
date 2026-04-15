@@ -27,9 +27,14 @@ public class RawCacheWriter implements NegativeWriter {
         baseRedisSupport.set(key, encoded, ttl.afterJitter());
     }
 
-    // conflict risk without version check
     public void setNegative(String key, TtlStrategy ttl) {
         String encoded = cacheEncoder.encode("", CacheType.NEGATIVE);
+        baseRedisSupport.setIfAbsent(key, encoded, ttl.afterJitter());
+    }
+
+    public void setTombstone(String key, TtlStrategy ttl) {
+        String encoded = cacheEncoder.encode("", CacheType.TOMBSTONE);
         baseRedisSupport.set(key, encoded, ttl.afterJitter());
     }
+
 }

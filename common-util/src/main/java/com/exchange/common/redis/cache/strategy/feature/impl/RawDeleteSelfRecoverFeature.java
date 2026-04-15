@@ -22,4 +22,9 @@ public class RawDeleteSelfRecoverFeature implements SelfRecoverFeature {
             log.error("cache delete failed during self recover, key: {}, errorCode: {}", key, e.getErrorCode(), e);
         }
     }
+
+    @Override
+    public boolean isEnabled() {
+        return true;
+    }
 }

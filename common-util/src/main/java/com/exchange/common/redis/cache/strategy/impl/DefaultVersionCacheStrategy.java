@@ -72,7 +72,11 @@ public class DefaultVersionCacheStrategy<T> implements VersionCacheStrategy<T> {
     public Result<Boolean> afterInsert(String id, T value, long newVersion) {
         if (config.strategyType() == StrategyType.CACHE_ASIDE) {
             String key = descriptor.buildCacheKey(id);
-            return config.negativeCacheFeature().clear(key);
+            // set tombstone to prevent possible negative overwrite due to concurrent cache operation
+            if (config.negativeCacheFeature().isEnabled()) {
+                return Result.success(cacheWriter.setTombstone(key, newVersion, config.ttlConfig().tombstoneTtl()));
+            }
+            return Result.success(Boolean.TRUE);
         } else {
             return afterDbHit(id, value, newVersion);
         }

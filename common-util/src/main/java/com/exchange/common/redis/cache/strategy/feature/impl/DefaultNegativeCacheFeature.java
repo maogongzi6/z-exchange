@@ -24,4 +24,9 @@ public class DefaultNegativeCacheFeature implements NegativeCacheFeature {
     public Result<Boolean> clear(String key) {
         return Result.success(rawCacheDeleter.delete(key));
     }
+
+    @Override
+    public boolean isEnabled() {
+        return true;
+    }
 }
