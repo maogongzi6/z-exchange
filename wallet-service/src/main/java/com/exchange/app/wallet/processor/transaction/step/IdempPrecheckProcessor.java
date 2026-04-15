@@ -6,7 +6,7 @@ import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
 import com.exchange.app.wallet.processor.transaction.model.RequestInfo;
 import com.exchange.app.wallet.processor.transaction.util.Constant;
-import com.exchange.app.wallet.processor.transaction.util.ValidateHelper;
+import com.exchange.app.wallet.processor.transaction.util.TransactionValidateHelper;
 import com.exchange.app.wallet.result.WalletServiceErrorCode;
 import com.exchange.app.wallet.utils.EnumPbMappers;
 import com.exchange.common.redis.idemp.IdempRedisClient;
@@ -38,7 +38,7 @@ public class IdempPrecheckProcessor {
     // return txn_id if exists
     // return null if not exists
     public Result<String> idempAndValidatePrecheck(RequestInfo requestInfo) {
-        Result<Void> precheckResult = ValidateHelper.requestPrecheck(requestInfo);
+        Result<Void> precheckResult = TransactionValidateHelper.requestPrecheck(requestInfo);
         if (precheckResult.isFailed()) {
             // fast fail before claim idemp
             return Result.failure(precheckResult);

@@ -24,7 +24,7 @@ public class UpdateBalanceSnapshotProcessor {
     private final BalanceSnapshotRepository balanceSnapshotManager;
 
     public Result<List<BalanceSnapshot>> updateSnapshots(List<BalanceSnapshot> snapshots,
-                                                          Function<BalanceSnapshot, Result<BalanceSnapshot>> function) {
+                                                          Function<BalanceSnapshot, Result<BalanceSnapshot>> modifySnapshotFunc) {
         if (snapshots.isEmpty()) {
             return Result.success(new ArrayList<>());
         }
@@ -46,7 +46,7 @@ public class UpdateBalanceSnapshotProcessor {
             BalanceSnapshot copy = new BalanceSnapshot();
             BeanUtils.copyProperties(snapshot, copy);
 
-            Result<BalanceSnapshot> result = function.apply(snapshot);
+            Result<BalanceSnapshot> result = modifySnapshotFunc.apply(snapshot);
             if (result.isFailed()) {
                 return Result.failure(result);
             }

@@ -2,6 +2,7 @@ package com.exchange.app.wallet.processor.transaction.util;
 
 import com.exchange.app.wallet.po.enums.BusinessType;
 import com.exchange.app.wallet.po.enums.ServiceId;
+import com.exchange.app.wallet.po.enums.WalletStatus;
 import com.exchange.app.wallet.po.enums.transaction.ActionType;
 import com.exchange.app.wallet.po.enums.transaction.TransactionType;
 import com.exchange.app.wallet.po.transaction.WalletAction;
@@ -21,7 +22,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class ValidateHelper {
+public class TransactionValidateHelper {
     // simply precheck, validate simple rules like enum and amount>0
     public static Result<Void> requestPrecheck(RequestInfo requestInfo) {
         ServiceId serviceId = EnumPbMappers.serviceIdPbMapper.to(requestInfo.serviceIdPb);
@@ -52,7 +53,7 @@ public class ValidateHelper {
         return Result.success();
     }
 
-    static public Result<Void> validateActionInfo(List<WalletAction> actions, List<BalanceSnapshot> snapshots, List<WalletReservation> reservations) {
+    public static Result<Void> validateActionInfo(List<WalletAction> actions, List<BalanceSnapshot> snapshots, List<WalletReservation> reservations) {
         Map<String, BalanceSnapshot> walletIdToSnapshot = Objects.requireNonNullElse(snapshots, new ArrayList<BalanceSnapshot>()).stream()
                 .collect(Collectors.toMap(BalanceSnapshot::getWalletId, snapshot -> snapshot));
         Map<String, WalletReservation> walletIdToReservation = Objects.requireNonNullElse(reservations, new ArrayList<WalletReservation>()).stream()
@@ -87,7 +88,7 @@ public class ValidateHelper {
         return Result.success();
     }
 
-    static public Result<Void> validateAssetInfo(List<WalletAction> actions) {
+    public static Result<Void> validateAssetInfo(List<WalletAction> actions) {
         Map<String, Long> inAssetToAmount = new HashMap<>(), outAssetToAmount = new HashMap<>();
         for (WalletAction action : actions) {
             if (action.isTransfer()) {
@@ -115,4 +116,21 @@ public class ValidateHelper {
         }
         return Result.success();
     }
+
+    public static Result<Void> validateSnapshotForAction(BalanceSnapshot snapshot, WalletAction action) {
+        if (!Objects.equals(snapshot.getWalletId(), action.getWalletId()) || !Objects.equals(snapshot.getAssetId(), action.getAssetId())) {
+            return Result.failure(WalletServiceErrorCode.BALANCE_SNAPSHOT_MISMATCH,
+                    String.format("action snapshot mismatch, snapshot: %s, action: %s", snapshot, action));
+        }
+        if (snapshot.getWalletStatus() != WalletStatus.OPEN) {
+            return Result.failure(WalletServiceErrorCode.BALANCE_SNAPSHOT_UPDATE_FAILED,
+                    String.format("snapshot is not open, snapshot: %s, action: %s", snapshot, action));
+        }
+        if (action.getAmount() == null || action.getAmount() <= 0) {
+            return Result.failure(WalletServiceErrorCode.INVALID_REQUEST_PARAMETER,
+                    String.format("invalid action amount, snapshot: %s, action: %s", snapshot, action));
+        }
+        return Result.success();
+    }
+
 }
