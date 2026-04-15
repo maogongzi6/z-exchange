@@ -53,6 +53,10 @@ public class UpdateBalanceSnapshotProcessor {
             snapshot = result.getValue();
 
             if (!Objects.equals(snapshot, copy)) {
+                Result<Void> invariantResult = validateBalanceInvariant(snapshot);
+                if (invariantResult.isFailed()) {
+                    return Result.failure(invariantResult);
+                }
                 if (balanceSnapshotManager.updateBalanceWithInOptimisticLock(snapshot, copy) != 1) {
                     return Result.failure(WalletServiceErrorCode.BALANCE_SNAPSHOT_UPDATE_FAILED,
                             String.format("failed to update balance snapshot, snapshot: %s, copy: %s", snapshot, copy));
@@ -61,5 +65,17 @@ public class UpdateBalanceSnapshotProcessor {
             }
         }
         return Result.success(updatedSnapshots);
+    }
+
+    private Result<Void> validateBalanceInvariant(BalanceSnapshot snapshot) {
+        if (snapshot.getAvailable() == null || snapshot.getReserved() == null) {
+            return Result.failure(WalletServiceErrorCode.BALANCE_SNAPSHOT_UPDATE_FAILED,
+                    "balance snapshot amount is null, snapshot: " + snapshot);
+        }
+        if (snapshot.getAvailable() < 0 || snapshot.getReserved() < 0) {
+            return Result.failure(WalletServiceErrorCode.BALANCE_SNAPSHOT_UPDATE_FAILED,
+                    "balance snapshot amount is negative, snapshot: " + snapshot);
+        }
+        return Result.success();
     }
 }
