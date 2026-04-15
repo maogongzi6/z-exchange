@@ -4,7 +4,7 @@ import com.exchange.common.exception.CacheException;
 import com.exchange.common.redis.cache.component.codec.impl.VersionCodec;
 import com.exchange.common.redis.cache.component.support.DefaultCacheReader;
 import com.exchange.common.redis.cache.component.support.VersionCacheWriter;
-import com.exchange.common.redis.cache.model.CacheValueInfo;
+import com.exchange.common.redis.cache.model.CacheReadResult;
 import com.exchange.common.result.Result;
 import com.exchange.common.result.error.CacheErrorCode;
 import com.exchange.common.redis.cache.strategy.model.CacheDescriptor;
@@ -33,7 +33,7 @@ public class DefaultVersionCacheStrategy<T> implements VersionCacheStrategy<T> {
     }
 
     @Override
-    public Result<CacheValueInfo<T>> get(String id) {
+    public Result<CacheReadResult<T>> get(String id) {
         String key = descriptor.buildCacheKey(id);
         try {
             return Result.success(cacheReader.get(key, descriptor.getClazz()));

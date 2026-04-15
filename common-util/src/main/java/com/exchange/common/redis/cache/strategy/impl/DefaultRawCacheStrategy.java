@@ -4,7 +4,7 @@ import com.exchange.common.exception.CacheException;
 import com.exchange.common.redis.cache.component.codec.impl.ValueCodec;
 import com.exchange.common.redis.cache.component.support.DefaultCacheReader;
 import com.exchange.common.redis.cache.component.support.RawCacheWriter;
-import com.exchange.common.redis.cache.model.CacheValueInfo;
+import com.exchange.common.redis.cache.model.CacheReadResult;
 import com.exchange.common.result.Result;
 import com.exchange.common.result.error.CacheErrorCode;
 import com.exchange.common.redis.cache.strategy.RawCacheStrategy;
@@ -33,7 +33,7 @@ public class DefaultRawCacheStrategy<T> implements RawCacheStrategy<T> {
 
 
     @Override
-    public Result<CacheValueInfo<T>> get(String id) {
+    public Result<CacheReadResult<T>> get(String id) {
         String key = descriptor.buildCacheKey(id);
         try {
             return Result.success(cacheReader.get(key, descriptor.getClazz()));

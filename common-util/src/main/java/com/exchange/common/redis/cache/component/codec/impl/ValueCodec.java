@@ -6,7 +6,7 @@ import com.exchange.common.redis.cache.component.codec.CacheDecoder;
 import com.exchange.common.redis.cache.component.codec.CacheEncoder;
 import com.exchange.common.component.JsonParser;
 import com.exchange.common.redis.cache.constant.CacheType;
-import com.exchange.common.redis.cache.model.CacheValueInfo;
+import com.exchange.common.redis.cache.model.CacheReadResult;
 import com.exchange.common.redis.cache.util.CacheContentValidator;
 import com.exchange.common.result.error.CacheErrorCode;
 import com.exchange.common.utils.StringHelper;
@@ -60,7 +60,7 @@ public class ValueCodec implements CacheEncoder, CacheDecoder {
     }
 
     @SuppressWarnings("unchecked")
-    public <T> CacheValueInfo<T> decode(String value, Class<T> clazz) {
+    public <T> CacheReadResult<T> decode(String value, Class<T> clazz) {
         if (ValidateHelper.isEmpty(value)) {
             log.error("decode exception, empty value");
             throw new CacheException(CacheErrorCode.MALFORMED_VALUE, "decode exception, empty value");
@@ -82,8 +82,9 @@ public class ValueCodec implements CacheEncoder, CacheDecoder {
 
         switch (cacheType) {
             case TOMBSTONE:
+                return CacheReadResult.tombstoneHit();
             case NEGATIVE:
-                return new CacheValueInfo<>(null, cacheType);
+                return CacheReadResult.negativeHit();
             case STRING:
                 if (clazz != String.class) {
                     log.error("invalid cache value, value: {}, target_class: {}, should be a String", value, clazz);
@@ -91,11 +92,11 @@ public class ValueCodec implements CacheEncoder, CacheDecoder {
                             "invalid cache value, value: " + value + ", target_class: " + clazz);
                 }
                 // safe cast, suppress the unchecked warning
-                return new CacheValueInfo<>((T) cacheContent, CacheType.STRING);
+                return CacheReadResult.valueHit((T) cacheContent);
             case JSON:
                 try {
                     T obj = jsonHelper.decode(cacheContent, clazz);
-                    return new CacheValueInfo<>(obj, CacheType.JSON);
+                    return CacheReadResult.valueHit(obj);
                 } catch (JsonParseException e) {
                     log.error("decode exception, parse json error: {}, class: {}", value, clazz, e);
                     throw new CacheException(CacheErrorCode.SERIALIZATION,
@@ -108,7 +109,7 @@ public class ValueCodec implements CacheEncoder, CacheDecoder {
         }
     }
 
-    public CacheValueInfo<String> decode(String value) {
+    public CacheReadResult<String> decode(String value) {
         return decode(value, String.class);
     }
 }

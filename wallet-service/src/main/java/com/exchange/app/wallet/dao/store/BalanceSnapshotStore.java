@@ -6,8 +6,7 @@ import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.wallet.BalanceSnapshot;
 import com.exchange.common.component.PromotionClassifier;
 import com.exchange.common.result.Result;
-import com.exchange.common.redis.cache.constant.CacheType;
-import com.exchange.common.redis.cache.model.CacheValueInfo;
+import com.exchange.common.redis.cache.model.CacheReadResult;
 import com.exchange.common.redis.cache.strategy.RawCacheStrategy;
 import com.exchange.common.redis.cache.strategy.VersionCacheStrategy;
 import lombok.extern.slf4j.Slf4j;
@@ -82,13 +81,13 @@ public class BalanceSnapshotStore {
     public Result<BalanceSnapshot> doGetByWalletId(String walletId) {
         var snapshotCache = determineBalanceStrategy(walletId);
 
-        Result<CacheValueInfo<BalanceSnapshot>> cacheResult = snapshotCache.get(walletId);
+        Result<CacheReadResult<BalanceSnapshot>> cacheResult = snapshotCache.get(walletId);
         if (!cacheResult.isSuccess()) {
             log.error("getByWalletId cache failed, walletId: {}, result: {}", walletId, cacheResult);
         } else {
-            CacheValueInfo<BalanceSnapshot> valueInfo = cacheResult.getValue();
-            if (CacheValueInfo.ifCacheHit(valueInfo)) {
-                return Result.success(valueInfo.value);
+            CacheReadResult<BalanceSnapshot> valueInfo = cacheResult.getValue();
+            if (valueInfo.isValueHit() || valueInfo.isNegativeHit()) {
+                return Result.success(valueInfo.value());
             }
         }
 
@@ -113,40 +112,41 @@ public class BalanceSnapshotStore {
     public Result<BalanceSnapshot> getByRefId(ServiceId serviceId, String refId) {
         String scopedRefId = buildRefCacheId(serviceId, refId);
         Result<BalanceSnapshot> snapshotResult = doGetByRefId(serviceId, refId, scopedRefId);
-        if (snapshotResult.isSuccess()) {
-            if (snapshotResult.getValue() == null) {
-                // TODO should not set negative if already hit a negative (this could infinitely renewal the negative ttl)
-                // set negative cache
-                Result<Boolean> result = determineRefStrategy(scopedRefId).afterDbMiss(scopedRefId);
-                if (!result.isSuccess()) {
-                    log.error("set negative result failed, serviceId: {}, ref_id: {}, result: {}", serviceId, refId, result);
-                }
-            } else {
-                // try to promote hot snapshot
-                BalanceSnapshot balanceSnapshot = snapshotResult.getValue();
-                String scopedSnapshotRefId = buildRefCacheId(balanceSnapshot.getServiceId(), balanceSnapshot.getWalletReferenceId());
-                promoteHotSnapshot(balanceSnapshot.getWalletId(), scopedSnapshotRefId, balanceSnapshot.getOwnerType());
-            }
-
+        if (snapshotResult.isSuccess() && snapshotResult.getValue() != null) {
+            // try to promote hot snapshot
+            BalanceSnapshot balanceSnapshot = snapshotResult.getValue();
+            String scopedSnapshotRefId = buildRefCacheId(balanceSnapshot.getServiceId(), balanceSnapshot.getWalletReferenceId());
+            promoteHotSnapshot(balanceSnapshot.getWalletId(), scopedSnapshotRefId, balanceSnapshot.getOwnerType());
         }
         return snapshotResult;
     }
 
     private Result<BalanceSnapshot> doGetByRefId(ServiceId serviceId, String refId, String scopedRefId) {
-        Result<CacheValueInfo<String>> refCacheResult = determineRefStrategy(scopedRefId).get(scopedRefId);
+        Result<CacheReadResult<String>> refCacheResult = determineRefStrategy(scopedRefId).get(scopedRefId);
         if (!refCacheResult.isSuccess()) {
             log.error("get cache failed, serviceId: {}, ref_id: {}, result: {}", serviceId, refId, refCacheResult);
         } else {
-            CacheValueInfo<String> cacheInfo = refCacheResult.getValue();
-            if (CacheValueInfo.ifCacheHit(cacheInfo)) {
-                String walletId = cacheInfo.value;
-                if (cacheInfo.cacheType == CacheType.NEGATIVE) {
-                    return Result.success(null);
+            CacheReadResult<String> cacheInfo = refCacheResult.getValue();
+            if (cacheInfo.isNegativeHit()) {
+                // Do not renew negative cache TTL on a negative-cache hit.
+                return Result.success(null);
+            }
+            if (cacheInfo.isValueHit()) {
+                String walletId = cacheInfo.value();
+                Result<BalanceSnapshot> snapshotResult = getByWalletId(walletId);
+                if (snapshotResult.isFailed() || snapshotResult.getValue() != null) {
+                    return snapshotResult;
                 }
-                return getByWalletId(walletId);
+
+                log.error("ref cache hit but balance snapshot not found, serviceId: {}, ref_id: {}, walletId: {}", serviceId, refId, walletId);
+                return loadByRefIdFromDb(serviceId, refId, scopedRefId);
             }
         }
 
+        return loadByRefIdFromDb(serviceId, refId, scopedRefId);
+    }
+
+    private Result<BalanceSnapshot> loadByRefIdFromDb(ServiceId serviceId, String refId, String scopedRefId) {
         BalanceSnapshot snapshot = balanceRepository.getByWalletReferenceId(serviceId, refId);
         if (snapshot != null) {
             Result<Boolean> setRefCacheResult = determineRefStrategy(scopedRefId).afterDbHit(scopedRefId, snapshot.getWalletId());
@@ -157,6 +157,11 @@ public class BalanceSnapshotStore {
             Result<Boolean> result = determineBalanceStrategy(snapshot.getWalletId()).afterDbHit(snapshot.getWalletId(), snapshot, snapshot.getVersion());
             if (!result.isSuccess()) {
                 log.error("doGetByRefId|afterDbHit cache failed, snapshot: {}, result: {}", snapshot, result);
+            }
+        } else {
+            Result<Boolean> result = determineRefStrategy(scopedRefId).afterDbMiss(scopedRefId);
+            if (!result.isSuccess()) {
+                log.error("set negative result failed, serviceId: {}, ref_id: {}, result: {}", serviceId, refId, result);
             }
         }
         return Result.success(snapshot);

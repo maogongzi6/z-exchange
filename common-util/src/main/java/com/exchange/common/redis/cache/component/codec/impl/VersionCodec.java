@@ -4,7 +4,7 @@ import com.exchange.common.exception.CacheException;
 import com.exchange.common.redis.cache.component.codec.CacheDecoder;
 import com.exchange.common.redis.cache.component.codec.VersionCacheEncoder;
 import com.exchange.common.redis.cache.constant.CacheType;
-import com.exchange.common.redis.cache.model.CacheValueInfo;
+import com.exchange.common.redis.cache.model.CacheReadResult;
 import com.exchange.common.redis.cache.util.CacheContentValidator;
 import com.exchange.common.result.error.CacheErrorCode;
 import com.exchange.common.utils.StringHelper;
@@ -36,11 +36,11 @@ public class VersionCodec implements VersionCacheEncoder, CacheDecoder {
         return String.format("%d|%s", version, encoded);
     }
 
-    public CacheValueInfo<String> decode(String value) {
+    public CacheReadResult<String> decode(String value) {
         return decode(value, String.class);
     }
 
-    public <T> CacheValueInfo<T> decode(String value, Class<T> clazz) {
+    public <T> CacheReadResult<T> decode(String value, Class<T> clazz) {
         if (ValidateHelper.isEmpty(value)) {
             log.error("decode exception, empty value");
             throw new CacheException(CacheErrorCode.MALFORMED_VALUE, "Empty value");
@@ -49,8 +49,8 @@ public class VersionCodec implements VersionCacheEncoder, CacheDecoder {
         Pair<String, Long> pair = divide(value);
         String content = pair.getFirst();
         long version = pair.getSecond();
-        CacheValueInfo<T> decoded = valueParseHelper.decode(content, clazz);
-        return new CacheValueInfo<>(decoded.value, decoded.cacheType, version);
+        CacheReadResult<T> decoded = valueParseHelper.decode(content, clazz);
+        return new CacheReadResult<>(decoded.value(), decoded.status(), version);
     }
 
     private Pair<String, Long> divide(String value) {

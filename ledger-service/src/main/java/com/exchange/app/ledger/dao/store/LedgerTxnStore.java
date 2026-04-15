@@ -2,8 +2,7 @@ package com.exchange.app.ledger.dao.store;
 
 import com.exchange.app.ledger.dao.repository.LedgerTxnRepository;
 import com.exchange.app.ledger.po.ledger.LedgerTxn;
-import com.exchange.common.redis.cache.constant.CacheType;
-import com.exchange.common.redis.cache.model.CacheValueInfo;
+import com.exchange.common.redis.cache.model.CacheReadResult;
 import com.exchange.common.redis.cache.strategy.RawCacheStrategy;
 import com.exchange.common.redis.cache.strategy.VersionCacheStrategy;
 import com.exchange.common.result.Result;
@@ -46,21 +45,21 @@ public class LedgerTxnStore {
     //    the cache miss is rare, and attack rick is low
     public Result<LedgerTxn> getByTxnId(String txnId) {
         // check cache
-        Result<CacheValueInfo<LedgerTxn>> cacheResult = ledgerTxnCache.get(txnId);
+        Result<CacheReadResult<LedgerTxn>> cacheResult = ledgerTxnCache.get(txnId);
 
         if (!cacheResult.isSuccess()) {
             // cache error does not block the main flow
             log.error("cache get failed, txn_id: {}, result: {}", txnId, cacheResult);
         } else {
-            CacheValueInfo<LedgerTxn> cacheInfo = cacheResult.getValue();
-            if (CacheValueInfo.ifCacheHit(cacheInfo)) {
-                // return target ledger txn if hit a cache
+            CacheReadResult<LedgerTxn> cacheInfo = cacheResult.getValue();
+            if (cacheInfo.isValueHit() || cacheInfo.isNegativeHit()) {
+                // return target ledger txn if hit a value cache
                 // return null to end the query fast if hit a negative cache
-                return Result.success(cacheInfo.value);
+                return Result.success(cacheInfo.value());
             }
         }
 
-        // cache miss, query db
+        // cache miss or tombstone, query db
         LedgerTxn ledgerTxn = ledgerTxnRepository.getByTxnId(txnId);
 
         // update cache
@@ -83,38 +82,35 @@ public class LedgerTxnStore {
     // negative value for cache miss, key -> NULL
     // sometimes querying by ref id is external api call,
     // need to protect external api from random query attack and massive query miss
-    public Result<LedgerTxn> getByRefId(String refId) {
-        Result<LedgerTxn> txnResult = doGetByRefId(refId);
-        if (txnResult.isSuccess() && txnResult.getValue() == null) {
-            // TODO should not set negative if already hit a negative (this could infinitely renewal the negative ttl)
-            Result<Boolean> result = ledgerRefCache.afterDbMiss(refId);
-            if (!result.isSuccess()) {
-                log.error("set negative result failed, ref_id: {}, result: {}", refId, result);
-            }
-        }
-        return txnResult;
-    }
-
     // no race condition for ref_id -> txn_id cache, since ref_id is stable in our system
-    private Result<LedgerTxn> doGetByRefId(String refId) {
-        Result<CacheValueInfo<String>> refCacheResult = ledgerRefCache.get(refId);
+    public Result<LedgerTxn> getByRefId(String refId) {
+        Result<CacheReadResult<String>> refCacheResult = ledgerRefCache.get(refId);
 
         if (!refCacheResult.isSuccess()) {
             // cache error does not block the main flow
             log.error("get cache failed, ref_id: {}, result: {}", refId, refCacheResult);
         } else {
-            CacheValueInfo<String> cacheInfo = refCacheResult.getValue();
-            // return result if cache hit
-            if (CacheValueInfo.ifCacheHit(cacheInfo)) {
-                String txnId = cacheInfo.value;
-                if (cacheInfo.cacheType == CacheType.NEGATIVE) {
-                    // return null to end the query fast if hit a negative cache
-                    return Result.success(null);
+            CacheReadResult<String> cacheInfo = refCacheResult.getValue();
+            if (cacheInfo.isNegativeHit()) {
+                // Do not renew negative cache TTL on a negative-cache hit.
+                return Result.success(null);
+            }
+            if (cacheInfo.isValueHit()) {
+                String txnId = cacheInfo.value();
+                Result<LedgerTxn> txnResult = getByTxnId(txnId);
+                if (txnResult.isFailed() || txnResult.getValue() != null) {
+                    return txnResult;
                 }
-                return getByTxnId(txnId);
+
+                log.warn("ref cache hit but txn not found, ref_id: {}, txn_id: {}", refId, txnId);
+                return loadByRefIdFromDb(refId);
             }
         }
 
+        return loadByRefIdFromDb(refId);
+    }
+
+    private Result<LedgerTxn> loadByRefIdFromDb(String refId) {
         LedgerTxn txn = ledgerTxnRepository.getByRefId(refId);
         if (txn != null) {
             Result<Boolean> setRefCacheResult = ledgerRefCache.afterDbHit(refId, txn.getTxnId());
@@ -125,6 +121,11 @@ public class LedgerTxnStore {
             Result<Boolean> setCacheResult = ledgerTxnCache.afterDbHit(txn.getTxnId(), txn, txn.getVersion());
             if (!setCacheResult.isSuccess()) {
                 log.error("cache set failed, ref_id: {}, txn_id: {}, txn: {}, result: {}", refId, txn.getTxnId(), txn, setCacheResult);
+            }
+        } else {
+            Result<Boolean> result = ledgerRefCache.afterDbMiss(refId);
+            if (!result.isSuccess()) {
+                log.error("set negative result failed, ref_id: {}, result: {}", refId, result);
             }
         }
         return Result.success(txn);

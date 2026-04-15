@@ -6,7 +6,7 @@ import com.exchange.common.redis.cache.component.codec.impl.VersionCodec;
 import com.exchange.common.redis.cache.component.support.DefaultCacheReader;
 import com.exchange.common.redis.cache.component.support.RawCacheWriter;
 import com.exchange.common.redis.cache.component.support.VersionCacheWriter;
-import com.exchange.common.redis.cache.model.CacheValueInfo;
+import com.exchange.common.redis.cache.model.CacheReadResult;
 import com.exchange.common.redis.cache.strategy.model.CacheDescriptor;
 import com.exchange.common.redis.cache.strategy.model.RawStrategyConfig;
 import com.exchange.common.redis.cache.strategy.model.VersionStrategyConfig;
@@ -56,7 +56,7 @@ public final class StrategyFactory {
     private static <T> RawCacheStrategy<T> suppressCacheException(RawCacheStrategy<T> delegate) {
         return new RawCacheStrategy<>() {
             @Override
-            public Result<CacheValueInfo<T>> get(String id) {
+            public Result<CacheReadResult<T>> get(String id) {
                 return downgrade(() -> delegate.get(id));
             }
 
@@ -85,7 +85,7 @@ public final class StrategyFactory {
     private static <T> VersionCacheStrategy<T> suppressCacheException(VersionCacheStrategy<T> delegate) {
         return new VersionCacheStrategy<>() {
             @Override
-            public Result<CacheValueInfo<T>> get(String id) {
+            public Result<CacheReadResult<T>> get(String id) {
                 return downgrade(() -> delegate.get(id));
             }
 

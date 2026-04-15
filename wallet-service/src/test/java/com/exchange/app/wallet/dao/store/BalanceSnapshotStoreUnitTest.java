@@ -7,7 +7,7 @@
 //import com.exchange.app.wallet.po.enums.WalletStatus;
 //import com.exchange.app.wallet.po.wallet.BalanceSnapshot;
 //import com.exchange.common.redis.cache.constant.CacheType;
-//import com.exchange.common.redis.cache.model.CacheValueInfo;
+//import com.exchange.common.redis.cache.model.CacheReadResult;
 //import com.exchange.common.redis.cache.strategy.StableCacheStrategy;
 //import com.exchange.common.utils.TtlStrategy;
 //import org.junit.Assert;
@@ -29,7 +29,7 @@
 //
 //        BalanceSnapshot snapshot = BalanceSnapshot.create("wallet-1", ServiceId.USER, "ref-1", "asset-1", WalletStatus.OPEN, OwnerType.USER, "owner-1", 100L, 20L);
 //        when(balanceSnapshotRefCache.get("ref-1"))
-//                .thenReturn(com.exchange.common.result.Result.success(new CacheValueInfo<>("wallet-1", CacheType.STRING)));
+//                .thenReturn(com.exchange.common.result.Result.success(CacheReadResult.valueHit("wallet-1")));
 //        when(repository.getByWalletId("wallet-1")).thenReturn(snapshot);
 //
 //        com.exchange.common.result.Result<BalanceSnapshot> result = store.getByRefId("ref-1");
