@@ -4,8 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.exchange.app.wallet.dao.mapper.WalletReservationMapper;
 import com.exchange.app.wallet.exception.DbException;
-import com.exchange.app.wallet.po.enums.transaction.ReservationOutcome;
-import com.exchange.app.wallet.po.enums.transaction.ReservationStatus;
 import com.exchange.app.wallet.po.transaction.WalletReservation;
 import com.exchange.common.db.manager.DbBaseRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -70,7 +68,7 @@ public class WalletReservationRepository extends DbBaseRepository<WalletReservat
 
     // update with optimistic lock of amount and status
     // update with all fields of now
-    public int updateWithOptimisticLock(WalletReservation now, WalletReservation old) {
+    public int updateWithInOptimisticLock(WalletReservation now, WalletReservation old) {
         var wrapper = updateLambdaWrapper().eq(WalletReservation::getId, now.getId())
                 .eq(WalletReservation::getReservationStatus, old.getReservationStatus())
                 .eq(WalletReservation::getRemaining, old.getRemaining())

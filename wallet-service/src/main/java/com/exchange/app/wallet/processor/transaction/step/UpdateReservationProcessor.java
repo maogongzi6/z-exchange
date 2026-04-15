@@ -42,7 +42,7 @@ public class UpdateReservationProcessor {
             reservation = result.getValue();
 
             if (!Objects.equals(reservation, copy)) {
-                if (walletReservationManager.updateWithOptimisticLock(reservation, copy) != 1) {
+                if (walletReservationManager.updateWithInOptimisticLock(reservation, copy) != 1) {
                     return Result.failure(WalletServiceErrorCode.WALLET_RESERVATION_UPDATE_FAILED, String.format("failed to update reservation, reservation: %s, copy: %s", reservation, copy));
                 }
             }
