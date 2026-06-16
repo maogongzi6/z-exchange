@@ -7,7 +7,7 @@ grpc:
     GLOBAL:
       enable-keep-alive: true
       negotiation-type: plaintext
-      address: static://127.0.0.1:9091
+      address: static://127.0.0.1:9191
 
 
 spring:

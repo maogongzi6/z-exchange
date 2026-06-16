@@ -42,7 +42,7 @@ server:
 
 grpc:
   server:
-    port: 9092
+    port: 9192
 
   client:
     GLOBAL:
@@ -50,10 +50,10 @@ grpc:
       negotiation-type: plaintext
 
     ledger-client:
-      address: static://127.0.0.1:9091
+      address: static://127.0.0.1:9191
 
     account-client:
-      address: static://127.0.0.1:9091
+      address: static://127.0.0.1:9191
 
 
 app:
