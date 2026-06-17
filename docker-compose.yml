@@ -31,7 +31,7 @@ services:
     image: prom/prometheus:latest
     container_name: prometheus
     ports:
-      - "9190:9190"
+      - "9290:9290"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus
