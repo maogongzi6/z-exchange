@@ -8,11 +8,11 @@ spring:
   cache:
     type: redis
   redis:
-    host: 192.168.52.100
+    host: 34.229.174.30
     port: 6379
 
   kafka:
-    bootstrap-servers: 192.168.52.100:9092
+    bootstrap-servers: 34.229.174.30:19092
 
     consumer:
       auto-offset-reset: latest
@@ -60,6 +60,9 @@ management:
     web:
       exposure:
         include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
   metrics:
     tags:
       application: ${spring.application.name}
