@@ -6,8 +6,12 @@ import com.exchange.app.ledger.exception.AbnormalProtoDataException;
 import com.exchange.app.ledger.exception.RetriableException;
 import com.exchange.app.ledger.kafka.constant.LedgerTopic;
 import com.exchange.app.ledger.kafka.producer.DefaultPublisher;
+import com.exchange.app.ledger.metrics.LedgerBusinessMetrics;
+import com.exchange.app.ledger.metrics.LedgerMetricTagValues;
 import com.exchange.app.ledger.processor.post.PostLedgerProcessor;
 import com.exchange.app.ledger.result.LedgerServiceErrorCode;
+import com.exchange.app.ledger.result.PostTransactionResult;
+import com.exchange.app.ledger.result.PostTransactionResultConverter;
 import com.exchange.app.ledger.utils.OutboxHelper;
 import com.exchange.common.outbox.dao.repository.OutboxRepository;
 import com.exchange.common.outbox.po.Outbox;
@@ -32,6 +36,7 @@ public class DefaultListener {
     private final PostLedgerProcessor postLedgerProcessor;
     private final OutboxRepository outboxManager;
     private final DefaultPublisher replyWalletPublisher;
+    private final LedgerBusinessMetrics ledgerBusinessMetrics;
 
     @KafkaListener(
             topics = LedgerTopic.WALLET_POST,
@@ -73,7 +78,11 @@ public class DefaultListener {
     private Outbox handlePostLedger(EventEnvelopePb envelope) throws InvalidProtocolBufferException {
         var req = PostTransactionRequestPb.parseFrom(envelope.getPayload());
         log.info("handlePostLedger: {}", req);
-        var reply = postLedgerProcessor.postTransaction(req);
+        PostTransactionResult result = ledgerBusinessMetrics.recordPostTransaction(
+                LedgerMetricTagValues.Ingress.KAFKA,
+                () -> postLedgerProcessor.postTransaction(req)
+        );
+        var reply = PostTransactionResultConverter.toProto(result);
         // TODO retriable error, redesign the error logic, how to specify retriable error?
         if (reply.getError().getCode() != ErrorCodePb.ERROR_OK) {
             if (reply.getError().getCode() != ErrorCodePb.ERROR_INTERNAL) {
@@ -85,7 +94,7 @@ public class DefaultListener {
                 throw new AbnormalProtoDataException(LedgerServiceErrorCode.SERVER_ERROR, "non retriable, queue dlq");
             }
         }
-        return OutboxHelper.fromPostTransactionReply(reply, envelope.getCommandId());
+        return OutboxHelper.fromPostTransactionResult(result, envelope.getCommandId());
     }
 
     private void tryToPublishReply(Outbox replyOutbox) {

@@ -1,0 +1,102 @@
+package com.exchange.app.ledger.result;
+
+import com.exchange.common.utils.ValidateHelper;
+
+import java.util.Objects;
+
+public record PostTransactionResult(
+        String referenceId,
+        String ledgerTxnId,
+        LedgerServiceErrorCode errorCode,
+        String detail,
+        Kind kind,
+        int entryCount,
+        IdempotentSource idempotentSource
+) {
+    public PostTransactionResult {
+        Objects.requireNonNull(kind, "kind");
+        if (kind == Kind.ERROR) {
+            Objects.requireNonNull(errorCode, "errorCode");
+        } else {
+            if (errorCode != null) {
+                throw new IllegalArgumentException("successful post result should not have errorCode");
+            }
+            if (ValidateHelper.isBlank(referenceId)) {
+                throw new IllegalArgumentException("successful post result requires referenceId");
+            }
+            if (ValidateHelper.isBlank(ledgerTxnId)) {
+                throw new IllegalArgumentException("successful post result requires ledgerTxnId");
+            }
+        }
+        if (kind == Kind.CREATED && entryCount <= 0) {
+            throw new IllegalArgumentException("created post result requires positive entryCount");
+        }
+        if (kind == Kind.IDEMPOTENT_REPLAY) {
+            Objects.requireNonNull(idempotentSource, "idempotentSource");
+        }
+    }
+
+    public static PostTransactionResult created(String referenceId, String ledgerTxnId, String detail, int entryCount) {
+        return new PostTransactionResult(
+                referenceId,
+                ledgerTxnId,
+                null,
+                detail,
+                Kind.CREATED,
+                entryCount,
+                null
+        );
+    }
+
+    public static PostTransactionResult idempotentReplay(
+            String referenceId,
+            String ledgerTxnId,
+            String detail,
+            IdempotentSource source
+    ) {
+        return new PostTransactionResult(
+                referenceId,
+                ledgerTxnId,
+                null,
+                detail,
+                Kind.IDEMPOTENT_REPLAY,
+                0,
+                source
+        );
+    }
+
+    public static PostTransactionResult failure(LedgerServiceErrorCode errorCode, String detail) {
+        return new PostTransactionResult(
+                "",
+                "",
+                errorCode,
+                detail,
+                Kind.ERROR,
+                0,
+                null
+        );
+    }
+
+    public boolean isSuccess() {
+        return kind != Kind.ERROR;
+    }
+
+    public boolean isCreated() {
+        return kind == Kind.CREATED;
+    }
+
+    public boolean isIdempotentReplay() {
+        return kind == Kind.IDEMPOTENT_REPLAY;
+    }
+
+    public enum Kind {
+        CREATED,
+        IDEMPOTENT_REPLAY,
+        ERROR
+    }
+
+    public enum IdempotentSource {
+        REDIS,
+        DB
+    }
+}

@@ -11,7 +11,7 @@ import com.exchange.app.ledger.po.ledger.LedgerEntry;
 import com.exchange.app.ledger.po.ledger.LedgerTxn;
 import com.exchange.app.ledger.result.LedgerBoundaryErrorMapper;
 import com.exchange.app.ledger.result.LedgerServiceErrorCode;
-import com.exchange.app.ledger.result.PbErrorBuilder;
+import com.exchange.app.ledger.result.PostTransactionResult;
 import com.exchange.common.redis.idemp.IdempRedisClient;
 import com.exchange.common.redis.idemp.utils.CommonIdempHelper;
 import com.exchange.common.redis.idemp.utils.IdempValue;
@@ -23,13 +23,11 @@ import com.exchange.common.utils.JitterHelper;
 import com.exchange.common.utils.StableHashHelper;
 import com.exchange.common.utils.TokenHelper;
 import com.exchange.proto.ledger.post.LedgerEntryPb;
-import com.exchange.proto.ledger.post.PostTransactionReplyPb;
 import com.exchange.proto.ledger.post.PostTransactionRequestPb;
 import com.exchange.app.ledger.utils.EnumMappers;
 import com.exchange.app.ledger.utils.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -55,15 +53,23 @@ public class PostLedgerProcessor {
     final private DbTxnExecutor dbTxnExecutor;
     private final LedgerTxnStore ledgerTxnStore;
 
-    public PostTransactionReplyPb postTransaction(PostTransactionRequestPb req) {
+    public PostTransactionResult postTransaction(PostTransactionRequestPb req) {
         String token = TokenHelper.generateToken(GlobalServiceId.LEDGER.name());
 
-        Result<String> txnIdResult = idempClaimAndReqValidate(req, token);
-        if (txnIdResult.isFailed()) {
+        Result<IdempDecision> idempResult = idempClaimAndReqValidate(req, token);
+        if (idempResult.isFailed()) {
             // TODO no need to release claimed key here, since there should not be a key in cache with given token
-            return onError(req, token, txnIdResult);
-        } else if (!Strings.isEmpty(txnIdResult.getValue())) {
-            return onSuccess(req.getReferenceId(), txnIdResult.getValue(), "already exists");
+            return onError(req, token, idempResult);
+        }
+
+        IdempDecision idempDecision = idempResult.getValue();
+        if (idempDecision.isReplay()) {
+            return PostTransactionResult.idempotentReplay(
+                    req.getReferenceId(),
+                    idempDecision.txnId(),
+                    "already exists",
+                    idempDecision.source()
+            );
         }
 
         String txnId = IdGenerator.generateLedgerTxnId();
@@ -103,10 +109,10 @@ public class PostLedgerProcessor {
         idempRedisClient.markIdempDone(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(), getReqStableHash(req),
                 token, txnId, JitterHelper.jitter(idempConfig.getDoneTtl(), idempConfig.getJitterMs()));
 
-        return onSuccess(req.getReferenceId(), txnId, "success");
+        return PostTransactionResult.created(req.getReferenceId(), txnId, "success", entries.size());
     }
 
-    private Result<String> idempClaimAndReqValidate(PostTransactionRequestPb req, String token) {
+    private Result<IdempDecision> idempClaimAndReqValidate(PostTransactionRequestPb req, String token) {
         Result<Void> precheckResult = reqPrecheck(req);
         if (precheckResult.isFailed()) {
             return Result.failure(precheckResult);
@@ -126,7 +132,7 @@ public class PostLedgerProcessor {
                     return Result.failure(LedgerServiceErrorCode.REQUEST_IN_PROCESSING, "request still processing");
                 case ACCEPTED:
                     log.info("request accepted, idempValue:{}", idempValue);
-                    return Result.success(idempValue.content);
+                    return Result.success(IdempDecision.replay(idempValue.content, PostTransactionResult.IdempotentSource.REDIS));
                 default:
                     log.error("unknown idemp state:{}", idempValue);
                     return Result.failure(LedgerServiceErrorCode.INTERNAL_ERROR, "unknown idemp state");
@@ -139,9 +145,9 @@ public class PostLedgerProcessor {
             idempRedisClient.markIdempDone(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(), getReqStableHash(req),
                     token, txn.getTxnId(), JitterHelper.jitter(idempConfig.getDoneTtl(), idempConfig.getJitterMs()));
             log.info("ledger txn already exists, {}", txn);
-            return Result.success(txn.getTxnId());
+            return Result.success(IdempDecision.replay(txn.getTxnId(), PostTransactionResult.IdempotentSource.DB));
         }
-        return Result.success();
+        return Result.success(IdempDecision.newTransaction());
     }
 
     private Result<IdempValue> claimIdempCacheIfAbsent(PostTransactionRequestPb req, String token) {
@@ -224,22 +230,14 @@ public class PostLedgerProcessor {
         );
     }
 
-    private PostTransactionReplyPb onSuccess(String walletReferenceId, String ledgerTxnId, String detail) {
-        PostTransactionReplyPb.Builder builder = PostTransactionReplyPb.newBuilder();
-        return builder.setReferenceId(walletReferenceId)
-                .setLedgerTxnId(ledgerTxnId)
-                .setError(PbErrorBuilder.success(detail)).build();
-    }
-
     // release the owned idemp key if txn not persisted in db when an error occurs. this can help idemp check recover from error
-    private PostTransactionReplyPb onError(PostTransactionRequestPb req, String token, LedgerServiceErrorCode errorCode, String detail) {
+    private PostTransactionResult onError(PostTransactionRequestPb req, String token, LedgerServiceErrorCode errorCode, String detail) {
         releaseIdempIfOwned(req.getReferenceId(), getReqStableHash(req), token);
 
-        PostTransactionReplyPb.Builder builder = PostTransactionReplyPb.newBuilder();
-        return builder.setError(PbErrorBuilder.build(errorCode, detail)).build();
+        return PostTransactionResult.failure(errorCode, detail);
     }
 
-    private PostTransactionReplyPb onError(PostTransactionRequestPb req, String token, IResult<?> result) {
+    private PostTransactionResult onError(PostTransactionRequestPb req, String token, IResult<?> result) {
         Objects.requireNonNull(result, "result");
         return onError(req, token, LedgerBoundaryErrorMapper.toLedgerErrorCode(result), result.getDetail());
     }
@@ -269,5 +267,19 @@ public class PostLedgerProcessor {
                     .append(entry.getAssetId()).append("|");
         }
         return StableHashHelper.stableHash(sb.toString());
+    }
+
+    private record IdempDecision(boolean replay, String txnId, PostTransactionResult.IdempotentSource source) {
+        static IdempDecision newTransaction() {
+            return new IdempDecision(false, null, null);
+        }
+
+        static IdempDecision replay(String txnId, PostTransactionResult.IdempotentSource source) {
+            return new IdempDecision(true, txnId, source);
+        }
+
+        boolean isReplay() {
+            return replay;
+        }
     }
 }

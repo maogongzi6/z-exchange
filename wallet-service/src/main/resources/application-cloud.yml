@@ -1,0 +1,6 @@
+spring:
+  redis:
+    host: 34.229.174.30
+
+  kafka:
+    bootstrap-servers: 34.229.174.30:19092

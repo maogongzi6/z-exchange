@@ -4,6 +4,8 @@ import com.exchange.app.ledger.constant.EventType;
 import com.exchange.app.ledger.kafka.constant.LedgerTopic;
 import com.exchange.app.ledger.po.enums.outbox.OutboxEventType;
 import com.exchange.app.ledger.result.LedgerServiceErrorCode;
+import com.exchange.app.ledger.result.PostTransactionResult;
+import com.exchange.app.ledger.result.PostTransactionResultConverter;
 import com.exchange.common.outbox.po.Outbox;
 import com.exchange.common.outbox.po.enums.OutboxStatus;
 import com.exchange.common.result.Result;
@@ -11,7 +13,6 @@ import com.exchange.common.utils.enums.EnumMapper;
 import com.exchange.common.utils.time.LongTimeHelper;
 import com.exchange.proto.common.event.EventEnvelopePb;
 import com.exchange.proto.ledger.post.PostTransactionReplyPb;
-import com.exchange.proto.ledger.post.PostTransactionRequestPb;
 import com.google.protobuf.ByteString;
 import org.apache.logging.log4j.util.Strings;
 
@@ -46,7 +47,11 @@ public class OutboxHelper {
             }}
     );
 
-    public static Outbox fromPostTransactionReply(PostTransactionReplyPb replyPb, String commandId) {
+    public static Outbox fromPostTransactionResult(PostTransactionResult result, String commandId) {
+        return fromPostTransactionReply(PostTransactionResultConverter.toProto(result), commandId);
+    }
+
+    private static Outbox fromPostTransactionReply(PostTransactionReplyPb replyPb, String commandId) {
         return Outbox.create(
                 OutboxEventType.LEDGER_POST_REPLY.code,
                 IdGenerator.generateEventId(commandId),

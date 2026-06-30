@@ -15,10 +15,9 @@ import com.exchange.app.ledger.processor.post.GetLedgerTxnProcessor;
 import com.exchange.app.ledger.processor.post.PostLedgerProcessor;
 import com.exchange.app.ledger.po.ledger.LedgerEntry;
 import com.exchange.app.ledger.result.LedgerServiceErrorCode;
-import com.exchange.proto.common.error.ErrorCodePb;
+import com.exchange.app.ledger.result.PostTransactionResult;
 import com.exchange.proto.ledger.common.LedgerDirectionPb;
 import com.exchange.proto.ledger.post.LedgerEntryPb;
-import com.exchange.proto.ledger.post.PostTransactionReplyPb;
 import com.exchange.proto.ledger.post.PostTransactionRequestPb;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Assert;
@@ -69,13 +68,13 @@ public class PostLedgerProcessorTest {
                 LedgerEntryPb.newBuilder().setAccountRef(accountRef).setDirection(LedgerDirectionPb.LedgerDirection_Debit).setAmount(100).setAssetId("asset-1").build(),
                 LedgerEntryPb.newBuilder().setAccountRef(accountRef).setDirection(LedgerDirectionPb.LedgerDirection_Credit).setAmount(100).setAssetId("asset-1").build()
         )).build();
-        PostTransactionReplyPb reply = postLedgerProcessor.postTransaction(request);
+        PostTransactionResult reply = postLedgerProcessor.postTransaction(request);
 
         result = getLedgerTxnProcessor.getLedgerTxn(GetLedgerTxnProcessor.LookupType.REF_ID, refId, false);
 
 
         log.info("reply: {}", reply);
-        Assert.assertEquals(ErrorCodePb.ERROR_OK, reply.getError().getCode());
+        Assert.assertTrue(reply.isSuccess());
 
         LambdaQueryWrapper<LedgerTxn> queryWrapper = (new LambdaQueryWrapper<LedgerTxn>()).eq(LedgerTxn::getReferenceId, refId);
         List<LedgerTxn> txn = ledgerTxnMapper.selectList(queryWrapper);

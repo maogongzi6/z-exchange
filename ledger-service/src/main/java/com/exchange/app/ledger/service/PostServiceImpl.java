@@ -1,11 +1,14 @@
 package com.exchange.app.ledger.service;
 
-
+import com.exchange.app.ledger.metrics.LedgerBusinessMetrics;
+import com.exchange.app.ledger.metrics.LedgerMetricTagValues;
 import com.exchange.app.ledger.processor.post.GetLedgerTxnProcessor;
 import com.exchange.app.ledger.result.LedgerBoundaryErrorMapper;
 import com.exchange.app.ledger.result.LedgerServiceErrorCode;
 import com.exchange.app.ledger.processor.post.PostLedgerProcessor;
 import com.exchange.app.ledger.result.PbErrorBuilder;
+import com.exchange.app.ledger.result.PostTransactionResult;
+import com.exchange.app.ledger.result.PostTransactionResultConverter;
 import com.exchange.app.ledger.utils.PbConverter;
 import com.exchange.common.result.Result;
 import com.exchange.proto.ledger.post.*;
@@ -21,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 public class PostServiceImpl extends PostServiceGrpc.PostServiceImplBase {
     final private PostLedgerProcessor postLedgerProcessor;
     private final GetLedgerTxnProcessor getLedgerTxnProcessor;
+    private final LedgerBusinessMetrics ledgerBusinessMetrics;
 
     @Override
     public void getTxnById(GetTxnByIdRequestPb request, StreamObserver<GetTxnReplyPb> responseObserver) {
@@ -37,7 +41,11 @@ public class PostServiceImpl extends PostServiceGrpc.PostServiceImplBase {
     private void handleTransactionRequest(GetLedgerTxnProcessor.LookupType lookupType, String lookupValue,
                                           boolean includeEntries, StreamObserver<GetTxnReplyPb> responseObserver) {
         try {
-            Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = getLedgerTxnProcessor.getLedgerTxn(lookupType, lookupValue, includeEntries);
+            Result<GetLedgerTxnProcessor.LedgerTxnInfo> result = ledgerBusinessMetrics.recordLedgerTxnQuery(
+                    operationFor(lookupType),
+                    LedgerMetricTagValues.Ingress.GRPC,
+                    () -> getLedgerTxnProcessor.getLedgerTxn(lookupType, lookupValue, includeEntries)
+            );
             if (result.isSuccess()) {
                 GetLedgerTxnProcessor.LedgerTxnInfo info = result.getValue();
                 GetTxnReplyPb.Builder replyBuilder = GetTxnReplyPb.newBuilder()
@@ -63,18 +71,27 @@ public class PostServiceImpl extends PostServiceGrpc.PostServiceImplBase {
 
     @Override
     public void postTransaction(PostTransactionRequestPb request, StreamObserver<PostTransactionReplyPb> responseObserver) {
-        PostTransactionReplyPb reply;
+        PostTransactionResult result;
         try {
-            reply = postLedgerProcessor.postTransaction(request);
+            result = ledgerBusinessMetrics.recordPostTransaction(
+                    LedgerMetricTagValues.Ingress.GRPC,
+                    () -> postLedgerProcessor.postTransaction(request)
+            );
         } catch (Exception e) {
             log.error("uncaught exception", e);
-            reply = PostTransactionReplyPb.newBuilder()
-                    .setError(PbErrorBuilder.build(LedgerServiceErrorCode.SERVER_ERROR))
-                    .build();
+            result = PostTransactionResult.failure(LedgerServiceErrorCode.SERVER_ERROR, "");
         }
-        responseObserver.onNext(reply);
+        responseObserver.onNext(PostTransactionResultConverter.toProto(result));
         responseObserver.onCompleted();
     }
 
-    
+    private String operationFor(GetLedgerTxnProcessor.LookupType lookupType) {
+        if (lookupType == GetLedgerTxnProcessor.LookupType.TXN_ID) {
+            return LedgerMetricTagValues.Operations.GET_LEDGER_TXN_BY_ID;
+        }
+        if (lookupType == GetLedgerTxnProcessor.LookupType.REF_ID) {
+            return LedgerMetricTagValues.Operations.GET_LEDGER_TXN_BY_REF;
+        }
+        return LedgerMetricTagValues.UNKNOWN;
+    }
 }

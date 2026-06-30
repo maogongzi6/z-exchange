@@ -1,4 +1,10 @@
 spring:
+  application:
+    name: ledger-service
+
+  profiles:
+    default: vmware
+
   datasource:
     url: "jdbc:mysql://localhost:3306/trade_ledgerservice?serverTimezone=GMT%2B8&characterEncoding=utf-8&useSSL=false"
     username: root
@@ -8,14 +14,11 @@ spring:
   cache:
     type: redis
   redis:
-    host: 192.168.52.100
     port: 6379
   redisson:
     config: classpath:redisson.yml
 
   kafka:
-    bootstrap-servers: 192.168.52.100:9092
-
     consumer:
       auto-offset-reset: latest
       fetch-min-size: 256
@@ -61,6 +64,25 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        zexchange.grpc.server.duration: true
+        zexchange.ledger.processing.duration: true
+        zexchange.kafka.listener.duration: true
+        zexchange.kafka.publish.duration: true
+        zexchange.outbox.dispatch.duration: true
+        zexchange.redis.operation.duration: true
+        zexchange.db.operation.duration: true
+        zexchange.db.transaction.duration: true
+      slo:
+        zexchange.grpc.server.duration: 5ms,10ms,25ms,50ms,100ms,250ms,500ms,1s,3s
+        zexchange.ledger.processing.duration: 5ms,10ms,25ms,50ms,100ms,250ms,500ms,1s,3s
+        zexchange.kafka.listener.duration: 10ms,25ms,50ms,100ms,250ms,500ms,1s,3s,10s
+        zexchange.kafka.publish.duration: 5ms,10ms,25ms,50ms,100ms,250ms,500ms,1s,3s
+        zexchange.outbox.dispatch.duration: 10ms,25ms,50ms,100ms,250ms,500ms,1s,3s,10s,30s
+        zexchange.redis.operation.duration: 1ms,2ms,5ms,10ms,25ms,50ms,100ms,250ms,500ms,1s
+        zexchange.db.operation.duration: 1ms,2ms,5ms,10ms,25ms,50ms,100ms,250ms,500ms,1s,3s
+        zexchange.db.transaction.duration: 5ms,10ms,25ms,50ms,100ms,250ms,500ms,1s,3s,10s
 
 app:
   db:
