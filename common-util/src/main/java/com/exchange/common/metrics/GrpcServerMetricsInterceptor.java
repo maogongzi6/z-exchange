@@ -22,7 +22,7 @@ public class GrpcServerMetricsInterceptor implements ServerInterceptor {
         AtomicBoolean finished = new AtomicBoolean(false);
         Timer.Sample sample = Timer.start(meterRegistry);
 
-        // register as active
+        // Active-call gauges are saturation signals, so increment before handing control to service code.
         counter.incrementAndGet();
 
         ServerCall<ReqT, RespT> wrappedCall = new ForwardingServerCall.SimpleForwardingServerCall<>(serverCall) {
@@ -71,6 +71,7 @@ public class GrpcServerMetricsInterceptor implements ServerInterceptor {
                 @Override
                 public void onComplete() {
                     try {
+                        // A normal unary call is timed from ServerCall.close; finishing here would double-record it.
                         super.onComplete();
                     } catch (Throwable throwable) {
                         finishOnce(methodKey, sample, counter, finished, statusFromThrowable(throwable));
@@ -113,7 +114,7 @@ public class GrpcServerMetricsInterceptor implements ServerInterceptor {
             return;
         }
 
-        // unregister active
+        // close/cancel/listener exceptions can race; the active gauge and timer must be updated once.
         counter.decrementAndGet();
 
         // sample time cost

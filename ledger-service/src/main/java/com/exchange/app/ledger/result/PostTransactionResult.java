@@ -4,6 +4,8 @@ import com.exchange.common.utils.ValidateHelper;
 
 import java.util.Objects;
 
+// Transport-neutral result for the post ledger use case.
+// Keeps exact ledger error codes and metric facts before conversion to protobuf.
 public record PostTransactionResult(
         String referenceId,
         String ledgerTxnId,

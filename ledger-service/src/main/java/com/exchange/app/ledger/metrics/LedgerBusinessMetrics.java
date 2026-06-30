@@ -20,6 +20,12 @@ import java.util.function.Supplier;
 public class LedgerBusinessMetrics {
     private final MeterRegistry registry;
 
+    /**
+     * Records the post-transaction business request and processing duration.
+     * <p>
+     * The processor returns transport-neutral business facts; this wrapper owns ingress tags,
+     * derives success/error labels, and emits created/idempotent counters from the result kind.
+     */
     public PostTransactionResult recordPostTransaction(String ingress, Supplier<PostTransactionResult> action) {
         return recordBusinessRequest(
                 LedgerMetricTagValues.Operations.POST_TRANSACTION,
@@ -32,6 +38,12 @@ public class LedgerBusinessMetrics {
         );
     }
 
+    /**
+     * Records a ledger transaction read request and processing duration.
+     * <p>
+     * The caller supplies the normalized lookup operation so query-by-id and query-by-ref
+     * remain separate low-cardinality metric series.
+     */
     public <T> Result<T> recordLedgerTxnQuery(String operation, String ingress, Supplier<Result<T>> action) {
         return recordBusinessRequest(
                 operation,
@@ -41,6 +53,11 @@ public class LedgerBusinessMetrics {
         );
     }
 
+    /**
+     * Records facts that are true only for newly committed ledger transactions.
+     * <p>
+     * Idempotent replays deliberately do not increment created count or entry complexity.
+     */
     private void recordLedgerTransactionCreated(int entryCount) {
         counter(LedgerMetrics.LEDGER_TRANSACTIONS_CREATED).increment();
         DistributionSummary.builder(LedgerMetrics.LEDGER_ENTRIES_PER_TRANSACTION.name())
@@ -50,6 +67,11 @@ public class LedgerBusinessMetrics {
                 .record(entryCount);
     }
 
+    /**
+     * Records successful idempotent replays separately from newly created transactions.
+     * <p>
+     * Source distinguishes the fast Redis path from the DB backstop without tagging by request key.
+     */
     private void recordIdempotentTransaction(String ingress, String source) {
         Counter.builder(LedgerMetrics.LEDGER_TRANSACTIONS_IDEMPOTENT.name())
                 .description(LedgerMetrics.LEDGER_TRANSACTIONS_IDEMPOTENT.description())
@@ -59,9 +81,16 @@ public class LedgerBusinessMetrics {
                 .increment();
     }
 
+    /**
+     * Shared timing wrapper for ledger business entrypoints.
+     * <p>
+     * It records request count and duration exactly once, including thrown exceptions as bounded
+     * server errors, while preserving the original return value/exception behavior.
+     */
     private <T> T recordBusinessRequest(String operation, String ingress, Supplier<T> action,
                                         Function<T, BusinessOutcome> outcomeExtractor) {
         Timer.Sample sample = Timer.start(registry);
+        // If the action throws, still record a bounded business error instead of dropping the sample.
         BusinessOutcome outcome = BusinessOutcome.error(LedgerServiceErrorCode.SERVER_ERROR.getMessage());
 
         try {
@@ -100,6 +129,7 @@ public class LedgerBusinessMetrics {
         if (result == null || !result.isSuccess()) {
             return;
         }
+        // These counters are emitted only after the processor has classified the result.
         if (result.isCreated()) {
             recordLedgerTransactionCreated(result.entryCount());
         } else if (result.isIdempotentReplay()) {

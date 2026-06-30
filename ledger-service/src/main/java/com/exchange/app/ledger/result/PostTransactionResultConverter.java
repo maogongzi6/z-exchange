@@ -7,6 +7,7 @@ public final class PostTransactionResultConverter {
     private PostTransactionResultConverter() {
     }
 
+    // Protobuf is a transport/event payload detail; keep conversion at service and outbox boundaries.
     public static PostTransactionReplyPb toProto(PostTransactionResult result) {
         if (result == null) {
             result = PostTransactionResult.failure(LedgerServiceErrorCode.SERVER_ERROR, "");

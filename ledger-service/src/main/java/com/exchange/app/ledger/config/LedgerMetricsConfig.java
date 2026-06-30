@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class LedgerMetricsConfig {
+    // Register common-util gRPC transport metrics at the service edge.
     @GrpcGlobalServerInterceptor
     public ServerInterceptor grpcServerMetricsInterceptor(MeterRegistry meterRegistry) {
         return new GrpcServerMetricsInterceptor(meterRegistry);

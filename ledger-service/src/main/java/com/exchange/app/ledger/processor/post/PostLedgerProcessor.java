@@ -109,6 +109,7 @@ public class PostLedgerProcessor {
         idempRedisClient.markIdempDone(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(), getReqStableHash(req),
                 token, txnId, JitterHelper.jitter(idempConfig.getDoneTtl(), idempConfig.getJitterMs()));
 
+        // Return domain facts; callers decide how to expose them as protobuf, outbox, or metrics.
         return PostTransactionResult.created(req.getReferenceId(), txnId, "success", entries.size());
     }
 
