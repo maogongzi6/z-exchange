@@ -4,6 +4,7 @@ import com.exchange.common.exception.CacheException;
 import com.exchange.common.redis.aop.CacheExceptionTranslate;
 import com.exchange.common.redis.cache.component.codec.VersionCacheEncoder;
 import com.exchange.common.redis.cache.constant.CacheType;
+import com.exchange.common.redis.component.support.ScriptExecutor;
 import com.exchange.common.result.error.CacheErrorCode;
 import com.exchange.common.utils.TtlStrategy;
 import lombok.RequiredArgsConstructor;

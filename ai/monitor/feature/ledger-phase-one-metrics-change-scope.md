@@ -100,13 +100,17 @@ Allowed values:
 ```text
 service = ledger-service
 scope = post_ledger
-error_type = hash_conflict | parse_error | release_failed | redis_error | unknown_state
+error_type = hash_conflict | parse_error | redis_error | timeout | access | script_error | configuration_error | contract_violation | unknown
 ```
 
 Notes:
 
 - `scope` may be derived from the bounded `scope` argument passed to `IdempRedisClient`; it must be a code-defined constant, not request input.
 - `service` may be emitted explicitly by the wrapper or supplied as a global Micrometer common tag.
+- `hash_conflict` maps from `IdempErrorCode.HASH_CONFLICT`.
+- `parse_error` maps from `RedisErrorCode.MALFORMED_KEY` or `RedisErrorCode.MALFORMED_VALUE`, including malformed idempotency key/value data.
+- Redis/script/release exceptions should use the normalized error type converted from the underlying `RedisErrorCode`; do not introduce a separate release-specific idempotency error.
+- `contract_violation` maps from `CacheErrorCode.CONTRACT_VIOLATION`.
 - Do not tag by idempotency key, token, reference ID, request hash, or raw Redis value.
 - Successful replay is tracked by `zexchange.ledger.transactions.idempotent`.
 

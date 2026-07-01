@@ -12,12 +12,13 @@ import com.exchange.app.ledger.po.ledger.LedgerTxn;
 import com.exchange.app.ledger.result.LedgerBoundaryErrorMapper;
 import com.exchange.app.ledger.result.LedgerServiceErrorCode;
 import com.exchange.app.ledger.result.PostTransactionResult;
-import com.exchange.common.redis.idemp.IdempRedisClient;
+import com.exchange.common.redis.idemp.IdempotencyClient;
 import com.exchange.common.redis.idemp.utils.CommonIdempHelper;
 import com.exchange.common.redis.idemp.utils.IdempValue;
 import com.exchange.common.constant.GlobalServiceId;
 import com.exchange.common.db.utils.DbTxnExecutor;
 import com.exchange.common.result.error.IdempErrorCode;
+import com.exchange.common.result.error.RedisErrorCode;
 import com.exchange.common.result.IResult;
 import com.exchange.common.result.Result;
 import com.exchange.common.utils.JitterHelper;
@@ -49,7 +50,7 @@ public class PostLedgerProcessor {
     final private AccountRepository accountManager;
     final private LedgerTxnRepository ledgerTxnRepository;
 
-    final private IdempRedisClient idempRedisClient;
+    final private IdempotencyClient idempotencyClient;
 
     final private DbTxnExecutor dbTxnExecutor;
     private final LedgerTxnStore ledgerTxnStore;
@@ -107,8 +108,12 @@ public class PostLedgerProcessor {
         // clean negative cache (if exist) after inserting ledger txn
         ledgerTxnStore.postInsert(ledgerTxn);
         // set idemp to DONE when found ledger txn
-        idempRedisClient.markIdempDone(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(), getReqStableHash(req),
-                token, txnId, JitterHelper.jitter(idempConfig.getDoneTtl(), idempConfig.getJitterMs()));
+        Result<Void> markDoneResult = idempotencyClient.markIdempDone(GlobalServiceId.LEDGER.code, SCOPE,
+                req.getReferenceId(), getReqStableHash(req), token, txnId,
+                JitterHelper.jitter(idempConfig.getDoneTtl(), idempConfig.getJitterMs()));
+        if (markDoneResult.isFailed()) {
+            log.warn("mark ledger idempotency done failed after DB commit, result={}", markDoneResult);
+        }
 
         // Return domain facts; callers decide how to expose them as protobuf, outbox, or metrics.
         return PostTransactionResult.created(req.getReferenceId(), txnId, "success", entries.size());
@@ -130,10 +135,10 @@ public class PostLedgerProcessor {
             switch (idempValue.status) {
                 case PENDING:
                     // another request with same params is in processing (but likely no wallet_txn has been persisted in db)
-                    log.error("another same request in processing, request:{}, idempValue:{}", req, idempValue);
+                    log.error("another same ledger request is still processing, referenceId={}", req.getReferenceId());
                     return Result.failure(LedgerServiceErrorCode.REQUEST_IN_PROCESSING, "request still processing");
                 case ACCEPTED:
-                    log.info("request accepted, idempValue:{}", idempValue);
+                    log.info("ledger request replayed from Redis idempotency, referenceId={}", req.getReferenceId());
                     return Result.success(IdempDecision.replay(idempValue.content, PostTransactionResult.IdempotentSource.REDIS));
                 default:
                     log.error("unknown idemp state:{}", idempValue);
@@ -144,8 +149,12 @@ public class PostLedgerProcessor {
         LedgerTxn txn = ledgerTxnRepository.getByRefId(req.getReferenceId());
         if (txn != null) {
             // set idemp to DONE when found ledger txn
-            idempRedisClient.markIdempDone(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(), getReqStableHash(req),
-                    token, txn.getTxnId(), JitterHelper.jitter(idempConfig.getDoneTtl(), idempConfig.getJitterMs()));
+            Result<Void> markDoneResult = idempotencyClient.markIdempDone(GlobalServiceId.LEDGER.code, SCOPE,
+                    req.getReferenceId(), getReqStableHash(req), token, txn.getTxnId(),
+                    JitterHelper.jitter(idempConfig.getDoneTtl(), idempConfig.getJitterMs()));
+            if (markDoneResult.isFailed()) {
+                log.warn("mark ledger idempotency done failed after DB replay, result={}", markDoneResult);
+            }
             log.info("ledger txn already exists, {}", txn);
             return Result.success(IdempDecision.replay(txn.getTxnId(), PostTransactionResult.IdempotentSource.DB));
         }
@@ -154,28 +163,38 @@ public class PostLedgerProcessor {
 
     private Result<IdempValue> claimIdempCacheIfAbsent(PostTransactionRequestPb req, String token) {
         String reqHash = getReqStableHash(req);
-        if (idempRedisClient.claimIdempIfAbsent(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(),
-                reqHash, token, JitterHelper.jitter(idempConfig.getPendingTtl(), idempConfig.getJitterMs()))) {
+        Result<Boolean> claimResult = idempotencyClient.claimIdempIfAbsent(GlobalServiceId.LEDGER.code, SCOPE,
+                req.getReferenceId(), reqHash, token, JitterHelper.jitter(idempConfig.getPendingTtl(), idempConfig.getJitterMs()));
+        if (claimResult.isFailed()) {
+            log.warn("claim ledger idempotency failed, falling back to DB idempotency, result={}", claimResult);
+            return Result.success();
+        }
+        if (Boolean.TRUE.equals(claimResult.getValue())) {
             return Result.success();
         }
 
-        String idempV = idempRedisClient.getIdemp(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId());
-        Result<IdempValue> valueResult = CommonIdempHelper.parseIdempValue(idempV);
+        Result<IdempValue> valueResult = idempotencyClient.getIdempAndVerifyHash(
+                GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId(), reqHash);
         if (valueResult.isFailed()) {
-            log.error("parse idemp value failed, key:{} , value:{}, result:{}", req.getReferenceId(), idempV, valueResult);
-            // rare case, delete invalid value to self-recover.
-            // force delete key here, value is malformed and possibly cannot get a token to verify the owner.
-            // this could mis-delete the key created by a concurrent identical request, but this is extremely rare,
-            // and we have db idemp as the backstop
-            idempRedisClient.forceDeleteIdemp(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId());
-            // return null, then access db to check if exists
+            if (Result.is(valueResult, IdempErrorCode.HASH_CONFLICT)) {
+                return Result.failure(LedgerServiceErrorCode.REQUEST_HASH_CONFLICT, valueResult.getDetail());
+            }
+            if (Result.is(valueResult, RedisErrorCode.MALFORMED_VALUE)) {
+                log.error("parse ledger idempotency value failed, deleting malformed Redis idempotency entry");
+                // rare case, delete invalid value to self-recover.
+                // force delete key here, value is malformed and possibly cannot get a token to verify the owner.
+                // this could mis-delete the key created by a concurrent identical request, but this is extremely rare,
+                // and we have db idemp as the backstop
+                Result<Boolean> deleteResult = idempotencyClient.forceDeleteIdemp(GlobalServiceId.LEDGER.code, SCOPE, req.getReferenceId());
+                if (deleteResult.isFailed()) {
+                    log.warn("delete malformed ledger idempotency value failed, result={}", deleteResult);
+                }
+                return Result.success();
+            }
+            log.warn("read ledger idempotency failed, falling back to DB idempotency, result={}", valueResult);
             return Result.success();
         }
         IdempValue idempValue = valueResult.getValue();
-        if (!Objects.equals(idempValue.hash, reqHash)) {
-            log.error("req hash does not match, reqHash={}, idemp: {}", reqHash, idempValue);
-            return Result.failure(IdempErrorCode.HASH_CONFLICT, "req_hash_conflict");
-        }
         return Result.success(idempValue);
     }
 
@@ -246,10 +265,10 @@ public class PostLedgerProcessor {
 
     private void releaseIdempIfOwned(String refId, String hash, String token) {
         String idempV = CommonIdempHelper.idempPendingValue(hash, token);
-        Result<String> releaseResult = idempRedisClient.releaseIdempIfOwned(GlobalServiceId.LEDGER.code, SCOPE, refId, idempV);
+        Result<String> releaseResult = idempotencyClient.releaseIdempIfOwned(GlobalServiceId.LEDGER.code, SCOPE, refId, idempV);
         if (releaseResult.isFailed()) {
             // log the error
-            log.error("release idemp failed, key:{} , result:{}", refId, releaseResult);
+            log.error("release ledger idempotency failed, result={}", releaseResult);
         }
     }
 

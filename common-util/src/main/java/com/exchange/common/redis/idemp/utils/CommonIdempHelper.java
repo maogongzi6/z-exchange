@@ -35,8 +35,8 @@ public class CommonIdempHelper {
     static public Result<IdempKey> parseIdempKey(String key) {
         String[] k = key.split(":");
         if (k.length != 4) {
-            log.error("parseIdempKey error, invalid key:{}", key);
-            return Result.failure(RedisErrorCode.MALFORMED_KEY, "invalid idemp key:" + key);
+            log.error("parseIdempKey error, invalid key format:{}", key);
+            return Result.failure(RedisErrorCode.MALFORMED_KEY, "invalid idemp key format");
         }
         return Result.success(new IdempKey(k[1], k[2], k[3]));
     }
@@ -44,17 +44,17 @@ public class CommonIdempHelper {
     static public Result<IdempValue> parseIdempValue(String value) {
         String[] v = value.split(":");
         if (v.length < 3) {
-            log.error("parseIdempValue error, invalid value:{}", value);
-            return Result.failure(RedisErrorCode.MALFORMED_VALUE, "invalid idemp value: " + value);
+            log.error("parseIdempValue error, invalid value format:{}", value);
+            return Result.failure(RedisErrorCode.MALFORMED_VALUE, "invalid idemp value format");
         }
         CommonIdempStatus status = CommonIdempStatus.getByCode(v[0]);
         if (CommonIdempStatus.isUnknown(status)) {
-            log.error("parseIdempValue error, invalid value, unknown status:{}", value);
-            return Result.failure(RedisErrorCode.MALFORMED_VALUE, "invalid value, unknown status: " + value);
+            log.error("parseIdempValue error, unknown idempotency status:{}", value);
+            return Result.failure(RedisErrorCode.MALFORMED_VALUE, "unknown idempotency status");
         }
         if (status == CommonIdempStatus.ACCEPTED && v.length != 4) {
-            log.error("parseIdempValue error, empty value with accepted status:{}", value);
-            return Result.failure(RedisErrorCode.MALFORMED_VALUE, "empty value with accepted status: " + value);
+            log.error("parseIdempValue error, empty content with accepted status:{}", value);
+            return Result.failure(RedisErrorCode.MALFORMED_VALUE, "empty content with accepted status");
         }
         return Result.success(new IdempValue(status, v[1], v[2], status == CommonIdempStatus.ACCEPTED ? v[3] : null));
     }

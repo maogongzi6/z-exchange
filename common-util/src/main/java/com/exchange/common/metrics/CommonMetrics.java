@@ -12,4 +12,9 @@ public final class CommonMetrics {
             "zexchange.grpc.server.duration",
             "Server-side gRPC call duration"
     );
+
+    public static final MetricDef IDEMPOTENCY_ERRORS = new MetricDef(
+            "zexchange.idempotency.errors",
+            "Idempotency infrastructure or semantic error count"
+    );
 }

@@ -9,7 +9,8 @@ It is not complete as written. The design needs a few corrections before impleme
 - define exact wrapper semantics for normal negative Redis outcomes, such as `claim=false`, `get=null`, and release returning empty string;
 - fix operation naming, especially `mark_down` -> `mark_done`;
 - decide whether `hash_compare` is a logical idempotency operation only, not a Redis client-side operation;
-- add or map idempotency-specific error codes for `hash_conflict`, `parse_error`, and possibly `release_failed`;
+- map Redis malformed key/value errors to parse-related metric error types;
+- keep idempotency-specific errors limited to idempotency semantics, currently `hash_conflict`;
 - update the moved `ScriptExecutor` references in the cache AOP, otherwise script errors may stop being classified as script errors.
 
 ## Sound Parts
@@ -78,7 +79,7 @@ Required semantic rule:
 
 ```text
 Redis key absent -> Result.success(null)
-Malformed value -> Result.failure(parse_error)
+Malformed value -> Result.failure(RedisErrorCode.MALFORMED_VALUE)
 Redis exception -> Result.failure(redis/timeout/script/etc.)
 ```
 
@@ -99,8 +100,8 @@ Recommended semantics:
 | Condition | Result |
 |---|---|
 | Key does not exist | `Result.success(null)` |
-| Value malformed | `Result.failure(parse_error)` |
-| Hash mismatch | `Result.failure(hash_conflict)` |
+| Value malformed | `Result.failure(RedisErrorCode.MALFORMED_VALUE)` |
+| Hash mismatch | `Result.failure(IdempErrorCode.HASH_CONFLICT)` |
 | Hash matches | `Result.success(idempValue)` |
 | Redis failure | `Result.failure(redis_error/timeout/script/etc.)` |
 
@@ -146,12 +147,12 @@ Recommended normalized values:
 ```text
 hash_conflict
 parse_error
-release_failed
 redis_error
 timeout
 access
 script_error
 configuration_error
+contract_violation
 unknown
 ```
 
@@ -159,16 +160,25 @@ Example mapping:
 
 | Source error | Metric `error_type` |
 |---|---|
-| `IdempErrorCode.INVALID_IDEMP_VALUE` | `parse_error` |
-| new `IdempErrorCode.HASH_CONFLICT` | `hash_conflict` |
-| new `IdempErrorCode.RELEASE_FAILED` | `release_failed` |
-| `CacheErrorCode.TIMEOUT` | `timeout` |
-| `CacheErrorCode.ACCESS` | `access` |
-| `CacheErrorCode.SCRIPT` | `script_error` |
-| `CacheErrorCode.CONFIGURATION` | `configuration_error` |
-| `CacheErrorCode.CONNECTION` / `UNEXPECTED_INTERNAL` | `redis_error` |
+| `IdempErrorCode.HASH_CONFLICT` | `hash_conflict` |
+| `RedisErrorCode.MALFORMED_KEY` / `MALFORMED_VALUE` | `parse_error` |
+| `RedisErrorCode.TIMEOUT` | `timeout` |
+| `RedisErrorCode.ACCESS` | `access` |
+| `RedisErrorCode.SCRIPT` | `script_error` |
+| `RedisErrorCode.CONFIGURATION` | `configuration_error` |
+| `RedisErrorCode.CONNECTION` | `redis_error` |
+| `RedisErrorCode.UNEXPECTED_INTERNAL` | `unknown` |
+| `CacheErrorCode.CONTRACT_VIOLATION` | `contract_violation` |
 
 Do not blindly use raw enum names unless they are guaranteed stable and bounded.
+
+The agreed error-code ownership is:
+
+| Error family | Ownership |
+|---|---|
+| `RedisErrorCode` | Redis/client/script/codec/storage-shape failures, including malformed idempotency key/value. |
+| `CacheErrorCode` | Cache contract failures only, currently `CONTRACT_VIOLATION`. |
+| `IdempErrorCode` | Idempotency semantic failures only, currently `HASH_CONFLICT`. |
 
 ## Semantic Corrections Needed
 
@@ -195,7 +205,9 @@ Current `release-idemp-if-owned.lua` returns empty string when:
 - the caller does not own the key;
 - the key is no longer in the expected pending state.
 
-That means an empty return is not necessarily a Redis failure. Treat script execution failure as an infra error, but do not automatically treat empty return as `release_failed` unless the business contract explicitly wants to observe release misses as abnormal.
+That means an empty return is not necessarily a Redis failure. Treat script execution failure as an infra error, but do not add a separate release-specific idempotency error type unless the business contract explicitly wants to observe release misses as abnormal.
+
+Do not introduce a release-specific idempotency error code. If release fails by exception, emit the metric by converting the underlying `Result.errorCode`, usually from `RedisErrorCode`.
 
 ### Avoid Sensitive Logging
 
@@ -229,7 +241,7 @@ Before implementation, define these items:
 1. A wrapper interface, for example `IdempotencyClient`, so services depend on the Result-returning API rather than the raw Redis client.
 2. Bean registration rules so ledger/wallet inject the wrapper, while the raw `IdempRedisClient` remains an internal dependency.
 3. Metric constants in `common-util`, including metric name, description, tags, operation values, and error type values.
-4. New or mapped idempotency error codes for hash conflict and parse failures.
+4. Error-type conversion from `RedisErrorCode`, `CacheErrorCode`, and `IdempErrorCode`.
 5. Whether `release` empty return is success, warning, or failure.
 6. How wrapper logging avoids raw key/value/token/hash details.
 7. Unit tests using a fake `MeterRegistry` or `SimpleMeterRegistry`.

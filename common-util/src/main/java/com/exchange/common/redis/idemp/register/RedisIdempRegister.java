@@ -1,12 +1,15 @@
 package com.exchange.common.redis.idemp.register;
 
 import com.exchange.common.redis.BaseRedisSupport;
+import com.exchange.common.redis.component.support.ScriptExecutor;
+import com.exchange.common.redis.idemp.DefaultIdempotencyClient;
 import com.exchange.common.redis.idemp.IdempRedisClient;
+import com.exchange.common.redis.idemp.IdempotencyClient;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.ResourceLoader;
 
 @Configuration
 public class RedisIdempRegister {
@@ -14,8 +17,16 @@ public class RedisIdempRegister {
     public IdempRedisClient idempRedisClient(
             BaseRedisSupport<String> baseRedisSupport,
             @Qualifier("defaultRedissonClient") RedissonClient redissonClient,
-            ResourceLoader resourceLoader
+            ScriptExecutor scriptExecutor
     ) {
-        return new IdempRedisClient(baseRedisSupport, redissonClient, resourceLoader);
+        return new IdempRedisClient(baseRedisSupport, redissonClient, scriptExecutor);
+    }
+
+    @Bean
+    public IdempotencyClient idempotencyClient(
+            IdempRedisClient idempRedisClient,
+            MeterRegistry meterRegistry
+    ) {
+        return new DefaultIdempotencyClient(idempRedisClient, meterRegistry);
     }
 }

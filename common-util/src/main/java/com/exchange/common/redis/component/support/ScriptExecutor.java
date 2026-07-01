@@ -1,4 +1,4 @@
-package com.exchange.common.redis.cache.component.support;
+package com.exchange.common.redis.component.support;
 
 import com.exchange.common.exception.CacheException;
 import com.exchange.common.redis.aop.CacheExceptionTranslate;
@@ -25,18 +25,14 @@ public class ScriptExecutor {
     private final ResourceLoader resourceLoader;
 
     private String setIfAbsentOrNewerScript;
+    private String releaseIdempIfOwnedScript;
 
     @PostConstruct
     private void loadScript() {
-        try {
-            Resource resource = resourceLoader.getResource("classpath:script/lua/set-if-absent-or-newer.lua");
-            try (InputStream inputStream = resource.getInputStream()) {
-                setIfAbsentOrNewerScript = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-            }
-        } catch (IOException e) {
-            throw new CacheException(RedisErrorCode.CONFIGURATION,
-                    "failed to load setIfAbsentOrNewer Lua script", e);
-        }
+        setIfAbsentOrNewerScript = loadLua("classpath:script/lua/set-if-absent-or-newer.lua",
+                "setIfAbsentOrNewer");
+        releaseIdempIfOwnedScript = loadLua("classpath:script/lua/release-idemp-if-owned.lua",
+                "releaseIdempIfOwned");
     }
 
     public Boolean setIfAbsentOrNewer(RedissonClient redissonClient, String key, String value, long newVersion, Duration ttl) {
@@ -48,5 +44,25 @@ public class ScriptExecutor {
                 value,
                 newVersion,
                 ttl.toMillis());
+    }
+
+    public String releaseIdempIfOwned(RedissonClient redissonClient, String key, String expectedValue) {
+        Object result = redissonClient.getScript(StringCodec.INSTANCE).eval(
+                RScript.Mode.READ_WRITE,
+                releaseIdempIfOwnedScript,
+                RScript.ReturnType.VALUE,
+                Collections.singletonList(key),
+                expectedValue);
+        return result == null ? "" : (String) result;
+    }
+
+    private String loadLua(String location, String scriptName) {
+        Resource resource = resourceLoader.getResource(location);
+        try (InputStream inputStream = resource.getInputStream()) {
+            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new CacheException(RedisErrorCode.CONFIGURATION,
+                    "failed to load " + scriptName + " Lua script", e);
+        }
     }
 }
