@@ -93,16 +93,20 @@ Metrics:
 
 | Metric | Type | Tags | Meaning |
 |---|---|---|---|
-| `zexchange.ledger.idempotency.errors` | Counter | `ingress`, `error_type` | Idempotency-specific failures or abnormal states. |
+| `zexchange.idempotency.errors` | Counter | `service`, `scope`, `error_type` | Idempotency-specific failures or abnormal states. |
 
 Allowed values:
 
 ```text
+service = ledger-service
+scope = post_ledger
 error_type = hash_conflict | parse_error | release_failed | redis_error | unknown_state
 ```
 
 Notes:
 
+- `scope` may be derived from the bounded `scope` argument passed to `IdempRedisClient`; it must be a code-defined constant, not request input.
+- `service` may be emitted explicitly by the wrapper or supplied as a global Micrometer common tag.
 - Do not tag by idempotency key, token, reference ID, request hash, or raw Redis value.
 - Successful replay is tracked by `zexchange.ledger.transactions.idempotent`.
 

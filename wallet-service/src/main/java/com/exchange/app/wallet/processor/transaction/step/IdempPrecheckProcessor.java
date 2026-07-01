@@ -14,6 +14,7 @@ import com.exchange.common.redis.idemp.utils.CommonIdempHelper;
 import com.exchange.common.redis.idemp.utils.IdempValue;
 import com.exchange.common.constant.GlobalServiceId;
 import com.exchange.common.result.Result;
+import com.exchange.common.result.error.IdempErrorCode;
 import com.exchange.common.utils.JitterHelper;
 import com.exchange.proto.wallet.common.ServiceIdPb;
 import lombok.RequiredArgsConstructor;
@@ -109,7 +110,7 @@ public class IdempPrecheckProcessor {
         IdempValue idempValue = parseResult.getValue();
         if (!Objects.equals(idempValue.hash, reqHash)) {
             log.error("idemp value hashcode conflict, key:{}, value:{}, hash:{}, reqInfo: {}", key, idempValue, reqHash, requestInfo);
-            return Result.failure(WalletServiceErrorCode.REQUEST_HASH_CONFLICT, "idemp value hashcode conflict");
+            return Result.failure(IdempErrorCode.HASH_CONFLICT, "idemp value hashcode conflict");
         }
 
         return Result.success(idempValue);

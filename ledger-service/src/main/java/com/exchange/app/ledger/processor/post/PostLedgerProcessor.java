@@ -17,6 +17,7 @@ import com.exchange.common.redis.idemp.utils.CommonIdempHelper;
 import com.exchange.common.redis.idemp.utils.IdempValue;
 import com.exchange.common.constant.GlobalServiceId;
 import com.exchange.common.db.utils.DbTxnExecutor;
+import com.exchange.common.result.error.IdempErrorCode;
 import com.exchange.common.result.IResult;
 import com.exchange.common.result.Result;
 import com.exchange.common.utils.JitterHelper;
@@ -173,7 +174,7 @@ public class PostLedgerProcessor {
         IdempValue idempValue = valueResult.getValue();
         if (!Objects.equals(idempValue.hash, reqHash)) {
             log.error("req hash does not match, reqHash={}, idemp: {}", reqHash, idempValue);
-            return Result.failure(LedgerServiceErrorCode.REQUEST_HASH_CONFLICT, "req_hash_conflict");
+            return Result.failure(IdempErrorCode.HASH_CONFLICT, "req_hash_conflict");
         }
         return Result.success(idempValue);
     }

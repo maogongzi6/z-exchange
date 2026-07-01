@@ -7,6 +7,7 @@ import com.exchange.common.redis.cache.constant.CacheType;
 import com.exchange.common.redis.cache.model.CacheReadResult;
 import com.exchange.common.redis.cache.util.CacheContentValidator;
 import com.exchange.common.result.error.CacheErrorCode;
+import com.exchange.common.result.error.RedisErrorCode;
 import com.exchange.common.utils.StringHelper;
 import com.exchange.common.utils.ValidateHelper;
 import lombok.RequiredArgsConstructor;
@@ -43,7 +44,7 @@ public class VersionCodec implements VersionCacheEncoder, CacheDecoder {
     public <T> CacheReadResult<T> decode(String value, Class<T> clazz) {
         if (ValidateHelper.isEmpty(value)) {
             log.error("decode exception, empty value");
-            throw new CacheException(CacheErrorCode.MALFORMED_VALUE, "Empty value");
+            throw new CacheException(RedisErrorCode.MALFORMED_VALUE, "Empty value");
         }
 
         Pair<String, Long> pair = divide(value);
@@ -58,7 +59,7 @@ public class VersionCodec implements VersionCacheEncoder, CacheDecoder {
         Pair<String, String> pair = StringHelper.strictDivideIntoTwoParts(value, "|");
         if (ValidateHelper.isEmpty(pair.getFirst()) || ValidateHelper.isEmpty(pair.getSecond())) {
             log.error("decode exception, invalid value format: {}", value);
-            throw new CacheException(CacheErrorCode.MALFORMED_VALUE,
+            throw new CacheException(RedisErrorCode.MALFORMED_VALUE,
                     "decode exception, invalid value format");
         }
         long version;
@@ -66,7 +67,7 @@ public class VersionCodec implements VersionCacheEncoder, CacheDecoder {
             version = Long.parseLong(pair.getFirst());
         } catch (NumberFormatException e) {
             log.error("decode str exception, parse long fails, invalid value: {}", value);
-            throw new CacheException(CacheErrorCode.MALFORMED_VALUE,
+            throw new CacheException(RedisErrorCode.MALFORMED_VALUE,
                     "decode exception, version format is invalid", e);
         }
         return Pair.of(pair.getSecond(), version);

@@ -2,7 +2,7 @@ package com.exchange.common.redis.cache.component.support;
 
 import com.exchange.common.exception.CacheException;
 import com.exchange.common.redis.aop.CacheExceptionTranslate;
-import com.exchange.common.result.error.CacheErrorCode;
+import com.exchange.common.result.error.RedisErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RScript;
@@ -34,7 +34,7 @@ public class ScriptExecutor {
                 setIfAbsentOrNewerScript = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
             }
         } catch (IOException e) {
-            throw new CacheException(CacheErrorCode.CONFIGURATION,
+            throw new CacheException(RedisErrorCode.CONFIGURATION,
                     "failed to load setIfAbsentOrNewer Lua script", e);
         }
     }

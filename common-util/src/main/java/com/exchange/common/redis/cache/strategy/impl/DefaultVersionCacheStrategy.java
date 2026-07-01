@@ -6,7 +6,7 @@ import com.exchange.common.redis.cache.component.support.DefaultCacheReader;
 import com.exchange.common.redis.cache.component.support.VersionCacheWriter;
 import com.exchange.common.redis.cache.model.CacheReadResult;
 import com.exchange.common.result.Result;
-import com.exchange.common.result.error.CacheErrorCode;
+import com.exchange.common.result.error.RedisErrorCode;
 import com.exchange.common.redis.cache.strategy.model.CacheDescriptor;
 import com.exchange.common.redis.cache.strategy.model.VersionStrategyConfig;
 import com.exchange.common.redis.cache.strategy.VersionCacheStrategy;
@@ -83,7 +83,7 @@ public class DefaultVersionCacheStrategy<T> implements VersionCacheStrategy<T> {
     }
 
     private boolean isSelfRecoverableReadError(CacheException e) {
-        return e.getErrorCode() == CacheErrorCode.MALFORMED_VALUE
-                || e.getErrorCode() == CacheErrorCode.SERIALIZATION;
+        return e.getErrorCode() == RedisErrorCode.MALFORMED_VALUE
+                || e.getErrorCode() == RedisErrorCode.SERIALIZATION;
     }
 }

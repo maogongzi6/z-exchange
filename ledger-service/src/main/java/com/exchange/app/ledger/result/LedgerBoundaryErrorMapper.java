@@ -38,10 +38,13 @@ public final class LedgerBoundaryErrorMapper {
             return ledgerServiceErrorCode;
         }
 
+        if (errorCode == IdempErrorCode.HASH_CONFLICT) {
+            return LedgerServiceErrorCode.REQUEST_HASH_CONFLICT;
+        }
+
         // These common-util failures indicate malformed internal state or infra
         // issues inside shared helpers, not caller-correctable ledger requests.
-        if (errorCode == IdempErrorCode.INVALID_IDEMP_KEY
-                || errorCode == IdempErrorCode.INVALID_IDEMP_VALUE
+        if (ErrorNamespace.REDIS.equals(errorCode.getNamespace())
                 || ErrorNamespace.CACHE.equals(errorCode.getNamespace())
                 || errorCode == OutboxErrorCode.UNEXPECTED_DB_ERROR) {
             return LedgerServiceErrorCode.INTERNAL_ERROR;

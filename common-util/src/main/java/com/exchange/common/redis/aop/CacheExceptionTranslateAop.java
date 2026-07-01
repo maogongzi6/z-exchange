@@ -2,7 +2,7 @@ package com.exchange.common.redis.aop;
 
 import com.exchange.common.exception.CacheException;
 import com.exchange.common.redis.cache.component.support.ScriptExecutor;
-import com.exchange.common.result.error.CacheErrorCode;
+import com.exchange.common.result.error.RedisErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -29,23 +29,23 @@ public class CacheExceptionTranslateAop {
         try {
             return pt.proceed();
         } catch (QueryTimeoutException e) {
-            throw translate(pt, CacheErrorCode.TIMEOUT, e);
+            throw translate(pt, RedisErrorCode.TIMEOUT, e);
         } catch (PermissionDeniedDataAccessException e) {
-            throw translate(pt, CacheErrorCode.ACCESS, e);
+            throw translate(pt, RedisErrorCode.ACCESS, e);
         } catch (DataAccessResourceFailureException e) {
-            throw translate(pt, CacheErrorCode.CONNECTION, e);
+            throw translate(pt, RedisErrorCode.CONNECTION, e);
         } catch (DataAccessException | RedisException e) {
             throw translate(pt, classify(e, isScriptOperation(pt)), e);
         }
     }
 
-    private CacheException translate(ProceedingJoinPoint pt, CacheErrorCode errorCode, Throwable cause) {
+    private CacheException translate(ProceedingJoinPoint pt, RedisErrorCode errorCode, Throwable cause) {
         String operation = pt.getSignature().toShortString();
         log.error("cache operation failed, operation: {}, errorCode: {}", operation, errorCode, cause);
         return new CacheException(errorCode, "cache operation failed: " + operation, cause);
     }
 
-    private CacheErrorCode classify(Throwable throwable, boolean scriptOperation) {
+    private RedisErrorCode classify(Throwable throwable, boolean scriptOperation) {
         Throwable rootCause = rootCauseOf(throwable);
         String classNames = throwable.getClass().getName() + " " + rootCause.getClass().getName();
 
@@ -53,23 +53,23 @@ public class CacheExceptionTranslateAop {
                 || rootCause instanceof TimeoutException
                 || rootCause instanceof SocketTimeoutException
                 || classNames.contains("Timeout")) {
-            return CacheErrorCode.TIMEOUT;
+            return RedisErrorCode.TIMEOUT;
         }
         if (throwable instanceof PermissionDeniedDataAccessException
                 || classNames.contains("Permission")
                 || classNames.contains("AccessDenied")
                 || classNames.contains("Auth")) {
-            return CacheErrorCode.ACCESS;
+            return RedisErrorCode.ACCESS;
         }
         if (throwable instanceof DataAccessResourceFailureException
                 || rootCause instanceof IOException
                 || classNames.contains("Connection")) {
-            return CacheErrorCode.CONNECTION;
+            return RedisErrorCode.CONNECTION;
         }
         if (scriptOperation) {
-            return CacheErrorCode.SCRIPT;
+            return RedisErrorCode.SCRIPT;
         }
-        return CacheErrorCode.UNEXPECTED_INTERNAL;
+        return RedisErrorCode.UNEXPECTED_INTERNAL;
     }
 
     private boolean isScriptOperation(ProceedingJoinPoint pt) {

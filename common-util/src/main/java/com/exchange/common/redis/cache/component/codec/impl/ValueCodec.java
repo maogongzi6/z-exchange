@@ -9,6 +9,7 @@ import com.exchange.common.redis.cache.constant.CacheType;
 import com.exchange.common.redis.cache.model.CacheReadResult;
 import com.exchange.common.redis.cache.util.CacheContentValidator;
 import com.exchange.common.result.error.CacheErrorCode;
+import com.exchange.common.result.error.RedisErrorCode;
 import com.exchange.common.utils.StringHelper;
 import com.exchange.common.utils.ValidateHelper;
 import lombok.RequiredArgsConstructor;
@@ -44,7 +45,7 @@ public class ValueCodec implements CacheEncoder, CacheDecoder {
                 strContent = jsonHelper.encode(content);
             } catch (JsonParseException e) {
                 log.error("encode exception, parse json error: {}", content, e);
-                throw new CacheException(CacheErrorCode.SERIALIZATION,
+                throw new CacheException(RedisErrorCode.SERIALIZATION,
                         "encode exception, parse json error: " + content, e);
             }
         } else if (cacheType != CacheType.TOMBSTONE && cacheType != CacheType.NEGATIVE) {
@@ -63,21 +64,21 @@ public class ValueCodec implements CacheEncoder, CacheDecoder {
     public <T> CacheReadResult<T> decode(String value, Class<T> clazz) {
         if (ValidateHelper.isEmpty(value)) {
             log.error("decode exception, empty value");
-            throw new CacheException(CacheErrorCode.MALFORMED_VALUE, "decode exception, empty value");
+            throw new CacheException(RedisErrorCode.MALFORMED_VALUE, "decode exception, empty value");
         }
 
         Pair<String, String> pair = StringHelper.strictDivideIntoTwoParts(value, ":");
         CacheType cacheType = CacheType.mapper.from(pair.getFirst());
         if (cacheType == null) {
             log.error("decode exception, invalid cache marker, value: {}, target_class: {}", value, clazz);
-            throw new CacheException(CacheErrorCode.MALFORMED_VALUE,
+            throw new CacheException(RedisErrorCode.MALFORMED_VALUE,
                     "invalid cache marker, value: " + value + ", target_class: " + clazz);
         }
         String cacheContent = pair.getSecond();
 
         if (!CacheContentValidator.validateContent(cacheContent, cacheType)) {
             log.error("value divided error, invalid cache value, value: {}, target_class: {}", value, clazz);
-            throw new CacheException(CacheErrorCode.MALFORMED_VALUE, "invalid cache value, value: " + value);
+            throw new CacheException(RedisErrorCode.MALFORMED_VALUE, "invalid cache value, value: " + value);
         }
 
         switch (cacheType) {
@@ -88,7 +89,7 @@ public class ValueCodec implements CacheEncoder, CacheDecoder {
             case STRING:
                 if (clazz != String.class) {
                     log.error("invalid cache value, value: {}, target_class: {}, should be a String", value, clazz);
-                    throw new CacheException(CacheErrorCode.MALFORMED_VALUE,
+                    throw new CacheException(RedisErrorCode.MALFORMED_VALUE,
                             "invalid cache value, value: " + value + ", target_class: " + clazz);
                 }
                 // safe cast, suppress the unchecked warning
@@ -99,12 +100,12 @@ public class ValueCodec implements CacheEncoder, CacheDecoder {
                     return CacheReadResult.valueHit(obj);
                 } catch (JsonParseException e) {
                     log.error("decode exception, parse json error: {}, class: {}", value, clazz, e);
-                    throw new CacheException(CacheErrorCode.SERIALIZATION,
+                    throw new CacheException(RedisErrorCode.SERIALIZATION,
                             "decode exception, parse json error: " + value, e);
                 }
             default:
                 log.error("invalid cache value, value: {}, target_class: {}", value, clazz);
-                throw new CacheException(CacheErrorCode.MALFORMED_VALUE,
+                throw new CacheException(RedisErrorCode.MALFORMED_VALUE,
                         "invalid cache value, value: " + value + ", target_class: " + clazz);
         }
     }
