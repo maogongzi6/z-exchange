@@ -12,12 +12,24 @@ import com.exchange.common.result.error.ErrorCode;
 import com.exchange.common.result.error.RedisErrorCode;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor
 final class CacheMetricRecorder {
     private final MeterRegistry meterRegistry;
-    private final String cacheType;
+    private final String safeCacheType;
+    private final Counter valueHitCounter;
+
+    CacheMetricRecorder(MeterRegistry meterRegistry, String cacheType) {
+        this.meterRegistry = meterRegistry;
+        this.safeCacheType = MetricTagSanitizer.safeValue(cacheType);
+        // Cache value hits are the steady-state read path. Reusing this Counter avoids
+        // repeated builder/register lookups and small allocations on every successful read,
+        // while miss/tombstone/negative/error paths stay simple until profiling says otherwise.
+        this.valueHitCounter = Counter.builder(CommonMetrics.CACHE_OPS.name())
+                .description(CommonMetrics.CACHE_OPS.description())
+                .tag(CommonMetricTags.CACHE_TYPE, safeCacheType)
+                .tag(CommonMetricTags.RESULT, CommonMetricTagValues.CacheResults.VALUE_HIT)
+                .register(meterRegistry);
+    }
 
     <T> void recordGet(IResult<CacheReadResult<T>> result) {
         if (result == null || result.isFailed()) {
@@ -54,9 +66,14 @@ final class CacheMetricRecorder {
     }
 
     private void recordReadResult(String result) {
+        if (CommonMetricTagValues.CacheResults.VALUE_HIT.equals(result)) {
+            valueHitCounter.increment();
+            return;
+        }
+
         Counter.builder(CommonMetrics.CACHE_OPS.name())
                 .description(CommonMetrics.CACHE_OPS.description())
-                .tag(CommonMetricTags.CACHE_TYPE, MetricTagSanitizer.safeValue(cacheType))
+                .tag(CommonMetricTags.CACHE_TYPE, safeCacheType)
                 .tag(CommonMetricTags.RESULT, result)
                 .register(meterRegistry)
                 .increment();
@@ -65,7 +82,7 @@ final class CacheMetricRecorder {
     private void recordError(String operation, ErrorCode errorCode) {
         Counter.builder(CommonMetrics.CACHE_ERRORS.name())
                 .description(CommonMetrics.CACHE_ERRORS.description())
-                .tag(CommonMetricTags.CACHE_TYPE, MetricTagSanitizer.safeValue(cacheType))
+                .tag(CommonMetricTags.CACHE_TYPE, safeCacheType)
                 .tag(CommonMetricTags.OPERATION, MetricTagSanitizer.safeValue(operation))
                 .tag(CommonMetricTags.ERROR_TYPE, toErrorType(errorCode))
                 .register(meterRegistry)
