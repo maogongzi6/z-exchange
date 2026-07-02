@@ -1,6 +1,6 @@
 package com.exchange.common.redis.cache.component.support;
 
-import com.exchange.common.redis.BaseRedisSupport;
+import com.exchange.common.redis.RedisValueSupport;
 import com.exchange.common.exception.CacheException;
 import com.exchange.common.redis.cache.component.codec.CacheEncoder;
 import com.exchange.common.redis.cache.constant.CacheType;
@@ -13,7 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class RawCacheWriter implements NegativeWriter {
     private final CacheEncoder cacheEncoder;
-    private final BaseRedisSupport<String> baseRedisSupport;
+    private final RedisValueSupport<String> baseRedisSupport;
 
     public <T> void set(String key, T value, TtlStrategy ttl) {
         if (value == null) {

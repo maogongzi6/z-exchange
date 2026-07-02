@@ -1,12 +1,16 @@
 package com.exchange.common.redis.cache.register;
 
-import com.exchange.common.redis.BaseClientSideCacheSupport;
-import com.exchange.common.redis.BaseRedisSupport;
+import com.exchange.common.redis.ClientSideCacheReadSupport;
+import com.exchange.common.redis.RedisValueSupport;
 import com.exchange.common.redis.cache.component.codec.impl.ValueCodec;
 import com.exchange.common.redis.cache.component.codec.impl.VersionCodec;
 import com.exchange.common.redis.cache.component.support.*;
+import com.exchange.common.redis.component.support.RedisScriptExecutor;
 import com.exchange.common.redis.component.support.ScriptExecutor;
+import com.exchange.common.redis.metrics.MeteredRedisScriptExecutor;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.redisson.api.RedissonClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,7 +24,7 @@ public class CacheSupportRegister {
     @Bean("defaultRawCacheReader")
     public DefaultCacheReader<ValueCodec> defaultRawCacheReader(
             ValueCodec codec,
-            BaseRedisSupport<String> baseRedisSupport) {
+            RedisValueSupport<String> baseRedisSupport) {
         return new DefaultCacheReader<>(codec, baseRedisSupport);
     }
 
@@ -28,19 +32,19 @@ public class CacheSupportRegister {
     @Bean("clientSideRawCacheReader")
     public DefaultCacheReader<ValueCodec> clientSideRawCacheReader(
             ValueCodec codec,
-            BaseClientSideCacheSupport<String> baseClientSideCacheSupport) {
+            ClientSideCacheReadSupport<String> baseClientSideCacheSupport) {
         return new DefaultCacheReader<>(codec, baseClientSideCacheSupport);
     }
 
     @Bean
     public RawCacheWriter rawCacheWriter(
             ValueCodec codec,
-            BaseRedisSupport<String> baseRedisSupport) {
+            RedisValueSupport<String> baseRedisSupport) {
         return new RawCacheWriter(codec, baseRedisSupport);
     }
 
     @Bean
-    public RawCacheDeleter rawCacheDeleter(BaseRedisSupport<String> baseRedisSupport) {
+    public RawCacheDeleter rawCacheDeleter(RedisValueSupport<String> baseRedisSupport) {
         return new RawCacheDeleter(baseRedisSupport);
     }
 
@@ -50,10 +54,19 @@ public class CacheSupportRegister {
     }
 
     @Primary
+    @Bean
+    public RedisScriptExecutor redisScriptExecutor(
+            ScriptExecutor scriptExecutor,
+            MeterRegistry meterRegistry,
+            @Value("${spring.application.name:unknown}") String serviceName) {
+        return new MeteredRedisScriptExecutor(scriptExecutor, meterRegistry, serviceName);
+    }
+
+    @Primary
     @Bean("defaultVersionCacheReader")
     public DefaultCacheReader<VersionCodec> defaultVersionCacheReader(
             VersionCodec codec,
-            BaseRedisSupport<String> baseRedisSupport) {
+            RedisValueSupport<String> baseRedisSupport) {
         return new DefaultCacheReader<>(codec, baseRedisSupport);
     }
 
@@ -61,15 +74,16 @@ public class CacheSupportRegister {
     @Bean("clientSideVersionCacheReader")
     public DefaultCacheReader<VersionCodec> clientSideVersionCacheReader(
             VersionCodec codec,
-            BaseClientSideCacheSupport<String> clientSideCacheSupport) {
+            ClientSideCacheReadSupport<String> clientSideCacheSupport) {
         return new DefaultCacheReader<>(codec, clientSideCacheSupport);
     }
 
     @Bean
     public VersionCacheWriter versionCacheWriter(
             VersionCodec codec,
+            RedisValueSupport<String> baseRedisSupport,
             @Qualifier("defaultRedissonClient") RedissonClient redissonClient,
-            ScriptExecutor scriptExecutor) {
-        return new VersionCacheWriter(codec, redissonClient, scriptExecutor);
+            RedisScriptExecutor scriptExecutor) {
+        return new VersionCacheWriter(codec, baseRedisSupport, redissonClient, scriptExecutor);
     }
 }

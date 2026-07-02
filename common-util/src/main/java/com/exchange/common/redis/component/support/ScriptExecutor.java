@@ -21,7 +21,7 @@ import java.util.Collections;
 @Slf4j
 @RequiredArgsConstructor
 @CacheExceptionTranslate
-public class ScriptExecutor {
+public class ScriptExecutor implements RedisScriptExecutor {
     private final ResourceLoader resourceLoader;
 
     private String setIfAbsentOrNewerScript;
@@ -35,6 +35,7 @@ public class ScriptExecutor {
                 "releaseIdempIfOwned");
     }
 
+    @Override
     public Boolean setIfAbsentOrNewer(RedissonClient redissonClient, String key, String value, long newVersion, Duration ttl) {
         return redissonClient.getScript(StringCodec.INSTANCE).eval(
                 RScript.Mode.READ_WRITE,
@@ -46,6 +47,7 @@ public class ScriptExecutor {
                 ttl.toMillis());
     }
 
+    @Override
     public String releaseIdempIfOwned(RedissonClient redissonClient, String key, String expectedValue) {
         Object result = redissonClient.getScript(StringCodec.INSTANCE).eval(
                 RScript.Mode.READ_WRITE,

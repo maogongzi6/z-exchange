@@ -1,7 +1,7 @@
 package com.exchange.common.redis.idemp;
 
-import com.exchange.common.redis.BaseRedisSupport;
-import com.exchange.common.redis.component.support.ScriptExecutor;
+import com.exchange.common.redis.RedisValueSupport;
+import com.exchange.common.redis.component.support.RedisScriptExecutor;
 import com.exchange.common.result.Result;
 import com.exchange.common.redis.idemp.constant.CommonIdempStatus;
 import com.exchange.common.redis.idemp.utils.CommonIdempHelper;
@@ -14,9 +14,9 @@ import java.time.Duration;
 @Slf4j
 @RequiredArgsConstructor
 public class IdempRedisClient {
-    private final BaseRedisSupport<String> baseRedisSupport;
+    private final RedisValueSupport<String> baseRedisSupport;
     private final RedissonClient redissonClient;
-    private final ScriptExecutor scriptExecutor;
+    private final RedisScriptExecutor scriptExecutor;
 
     public Boolean claimIdempIfAbsent(String service, String scope, String idempId, String hash, String token, Duration ttl) {
         String k = CommonIdempHelper.idempKey(service, scope, idempId);

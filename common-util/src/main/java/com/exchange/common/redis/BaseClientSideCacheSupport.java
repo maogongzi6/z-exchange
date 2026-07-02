@@ -8,7 +8,7 @@ import org.redisson.client.codec.Codec;
 
 @RequiredArgsConstructor
 @CacheExceptionTranslate
-public class BaseClientSideCacheSupport<T> implements BaseCacheReadSupport<T> {
+public class BaseClientSideCacheSupport<T> implements ClientSideCacheReadSupport<T> {
     private final RClientSideCaching clientSideCaching;
     private final Codec codec;
 

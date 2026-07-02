@@ -8,7 +8,7 @@ import java.time.Duration;
 
 @RequiredArgsConstructor
 @CacheExceptionTranslate
-public class BaseRedisSupport<T> implements BaseCacheReadSupport<T> {
+public class BaseRedisSupport<T> implements RedisValueSupport<T> {
     final private RedisTemplate<String, T> redisTemplate;
 
     // package private

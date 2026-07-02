@@ -1,10 +1,11 @@
 package com.exchange.common.redis.cache.component.support;
 
 import com.exchange.common.exception.CacheException;
+import com.exchange.common.redis.RedisValueSupport;
 import com.exchange.common.redis.aop.CacheExceptionTranslate;
 import com.exchange.common.redis.cache.component.codec.VersionCacheEncoder;
 import com.exchange.common.redis.cache.constant.CacheType;
-import com.exchange.common.redis.component.support.ScriptExecutor;
+import com.exchange.common.redis.component.support.RedisScriptExecutor;
 import com.exchange.common.result.error.CacheErrorCode;
 import com.exchange.common.utils.TtlStrategy;
 import lombok.RequiredArgsConstructor;
@@ -18,8 +19,9 @@ import java.time.Duration;
 @CacheExceptionTranslate
 public class VersionCacheWriter implements NegativeWriter {
     private final VersionCacheEncoder cacheEncoder;
+    private final RedisValueSupport<String> baseRedisSupport;
     private final RedissonClient redissonClient;
-    private final ScriptExecutor scriptExecutor;
+    private final RedisScriptExecutor scriptExecutor;
 
     public <T> Boolean setIfAbsentOrNewer(String key, T value, long newVersion, TtlStrategy ttl) {
         if (value == null) {
@@ -37,7 +39,7 @@ public class VersionCacheWriter implements NegativeWriter {
 
     public void setNegative(String key, TtlStrategy ttl) {
         String encoded = cacheEncoder.encode("", CacheType.NEGATIVE, 0L);
-        redissonClient.getBucket(key).setIfAbsent(encoded, ttl.afterJitter());
+        baseRedisSupport.setIfAbsent(key, encoded, ttl.afterJitter());
     }
 
     private <T> Boolean doSetIfAbsentOrNewer(String key, T value, CacheType cacheType, long newVersion, Duration ttl) {

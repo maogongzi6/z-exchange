@@ -2,6 +2,7 @@ package com.exchange.app.ledger.dao.cache;
 
 import com.exchange.app.ledger.constant.cache.CacheScope;
 import com.exchange.app.ledger.constant.cache.CacheTtlConfig;
+import com.exchange.app.ledger.metrics.LedgerMetricTagValues;
 import com.exchange.app.ledger.po.ledger.LedgerTxn;
 import com.exchange.common.redis.cache.component.codec.impl.ValueCodec;
 import com.exchange.common.redis.cache.component.codec.impl.VersionCodec;
@@ -18,9 +19,13 @@ import com.exchange.common.redis.cache.strategy.model.StrategyType;
 import com.exchange.common.redis.cache.strategy.model.VersionStrategyConfig;
 import com.exchange.common.redis.cache.strategy.RawCacheStrategy;
 import com.exchange.common.redis.cache.strategy.VersionCacheStrategy;
+import com.exchange.common.redis.cache.strategy.metrics.MetricRawCacheStrategy;
+import com.exchange.common.redis.cache.strategy.metrics.MetricVersionCacheStrategy;
 import com.exchange.common.redis.cache.strategy.model.CacheDescriptor;
 import com.exchange.common.redis.cache.strategy.impl.StrategyFactory;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -32,7 +37,9 @@ public class LedgerCacheRegister {
             RawCacheWriter cacheWriter,
             RawCacheDeleter cacheDeleter,
             StrategyFactory factory,
-            CacheTtlConfig config) {
+            CacheTtlConfig config,
+            MeterRegistry meterRegistry,
+            @Value("${spring.application.name:unknown}") String serviceName) {
         CacheDescriptor<String> descriptor = new CacheDescriptor<>(String.class, CacheScope::ledgerRefIdKey);
         SelfRecoverFeature recoverFeature = new RawDeleteSelfRecoverFeature(cacheDeleter);
         NegativeCacheFeature negativeCacheFeature = new DefaultNegativeCacheFeature(cacheWriter, cacheDeleter);
@@ -45,7 +52,10 @@ public class LedgerCacheRegister {
                 ttlConfig,
                 recoverFeature,
                 negativeCacheFeature);
-        return factory.buildRawCacheSuppressExceptionStrategy(descriptor, cacheReader, cacheWriter, strategyConfig);
+        RawCacheStrategy<String> strategy = factory.buildRawCacheSuppressExceptionStrategy(
+                descriptor, cacheReader, cacheWriter, strategyConfig);
+        return new MetricRawCacheStrategy<>(
+                strategy, meterRegistry, serviceName, LedgerMetricTagValues.CacheTypes.LEDGER_REF);
     }
 
     @Bean(name = "ledgerTxnCache")
@@ -54,7 +64,9 @@ public class LedgerCacheRegister {
             VersionCacheWriter cacheWriter,
             RawCacheDeleter cacheDeleter,
             StrategyFactory factory,
-            CacheTtlConfig config) {
+            CacheTtlConfig config,
+            MeterRegistry meterRegistry,
+            @Value("${spring.application.name:unknown}") String serviceName) {
         CacheDescriptor<LedgerTxn> descriptor = new CacheDescriptor<>(LedgerTxn.class, CacheScope::ledgerTxnIdKey);
         SelfRecoverFeature recoverFeature = new RawDeleteSelfRecoverFeature(cacheDeleter);
         var ttlConfig = new VersionStrategyConfig.TtlConfig(
@@ -66,6 +78,9 @@ public class LedgerCacheRegister {
                 ttlConfig,
                 recoverFeature,
                 NegativeCacheFeature.disable());
-        return factory.buildVersionCacheSuppressExceptionStrategy(descriptor, cacheReader, cacheWriter, versionStrategyConfig);
+        VersionCacheStrategy<LedgerTxn> strategy = factory.buildVersionCacheSuppressExceptionStrategy(
+                descriptor, cacheReader, cacheWriter, versionStrategyConfig);
+        return new MetricVersionCacheStrategy<>(
+                strategy, meterRegistry, serviceName, LedgerMetricTagValues.CacheTypes.LEDGER_TXN);
     }
 }

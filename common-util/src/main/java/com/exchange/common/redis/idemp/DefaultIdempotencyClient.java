@@ -4,6 +4,7 @@ import com.exchange.common.exception.CacheException;
 import com.exchange.common.metrics.CommonMetricTagValues;
 import com.exchange.common.metrics.CommonMetricTags;
 import com.exchange.common.metrics.CommonMetrics;
+import com.exchange.common.metrics.MetricTagSanitizer;
 import com.exchange.common.redis.idemp.utils.CommonIdempHelper;
 import com.exchange.common.redis.idemp.utils.IdempValue;
 import com.exchange.common.result.IResult;
@@ -121,20 +122,27 @@ public class DefaultIdempotencyClient implements IdempotencyClient {
         String errorType = toErrorType(result.getErrorCode());
         Counter.builder(CommonMetrics.IDEMPOTENCY_ERRORS.name())
                 .description(CommonMetrics.IDEMPOTENCY_ERRORS.description())
-                .tag(CommonMetricTags.SERVICE, bounded(service))
-                .tag(CommonMetricTags.SCOPE, bounded(scope))
-                .tag(CommonMetricTags.OPERATION, bounded(operation))
+                .tag(CommonMetricTags.SERVICE, MetricTagSanitizer.safeValue(service))
+                .tag(CommonMetricTags.SCOPE, MetricTagSanitizer.safeValue(scope))
+                .tag(CommonMetricTags.OPERATION, MetricTagSanitizer.safeValue(operation))
                 .tag(CommonMetricTags.ERROR_TYPE, errorType)
                 .register(meterRegistry)
                 .increment();
 
         if (throwable == null) {
             log.error("idempotency operation returned failure, service={}, scope={}, operation={}, errorType={}",
-                    bounded(service), bounded(scope), bounded(operation), errorType);
+                    MetricTagSanitizer.safeValue(service),
+                    MetricTagSanitizer.safeValue(scope),
+                    MetricTagSanitizer.safeValue(operation),
+                    errorType);
             return;
         }
         log.error("idempotency operation failed, service={}, scope={}, operation={}, errorType={}",
-                bounded(service), bounded(scope), bounded(operation), errorType, throwable);
+                MetricTagSanitizer.safeValue(service),
+                MetricTagSanitizer.safeValue(scope),
+                MetricTagSanitizer.safeValue(operation),
+                errorType,
+                throwable);
     }
 
     private String toErrorType(ErrorCode errorCode) {
@@ -168,7 +176,4 @@ public class DefaultIdempotencyClient implements IdempotencyClient {
         return CommonMetricTagValues.IdempotencyErrorTypes.UNKNOWN;
     }
 
-    private String bounded(String value) {
-        return value == null || value.isBlank() ? CommonMetricTagValues.UNKNOWN : value;
-    }
 }

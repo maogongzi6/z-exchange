@@ -1,7 +1,7 @@
 package com.exchange.common.redis.idemp.register;
 
-import com.exchange.common.redis.BaseRedisSupport;
-import com.exchange.common.redis.component.support.ScriptExecutor;
+import com.exchange.common.redis.RedisValueSupport;
+import com.exchange.common.redis.component.support.RedisScriptExecutor;
 import com.exchange.common.redis.idemp.DefaultIdempotencyClient;
 import com.exchange.common.redis.idemp.IdempRedisClient;
 import com.exchange.common.redis.idemp.IdempotencyClient;
@@ -15,9 +15,9 @@ import org.springframework.context.annotation.Configuration;
 public class RedisIdempRegister {
     @Bean
     public IdempRedisClient idempRedisClient(
-            BaseRedisSupport<String> baseRedisSupport,
+            RedisValueSupport<String> baseRedisSupport,
             @Qualifier("defaultRedissonClient") RedissonClient redissonClient,
-            ScriptExecutor scriptExecutor
+            RedisScriptExecutor scriptExecutor
     ) {
         return new IdempRedisClient(baseRedisSupport, redissonClient, scriptExecutor);
     }
