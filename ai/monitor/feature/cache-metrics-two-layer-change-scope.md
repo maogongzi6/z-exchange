@@ -37,8 +37,8 @@ Metrics:
 
 | Metric | Type | Tags | Meaning |
 |---|---|---|---|
-| `zexchange.cache.ops` | Counter | `service`, `cache_type`, `result` | Strategy-level cache read result count. Only emitted by `get`. |
-| `zexchange.cache.errors` | Counter | `service`, `cache_type`, `operation`, `error_type` | Strategy-level cache failure count with normalized reason. Emitted for read and write/update strategy operations. |
+| `zexchange.cache.ops` | Counter | `application`, `cache_type`, `result` | Strategy-level cache read result count. Only emitted by `get`. |
+| `zexchange.cache.errors` | Counter | `application`, `cache_type`, `operation`, `error_type` | Strategy-level cache failure count with normalized reason. Emitted for read and write/update strategy operations. |
 
 Allowed values:
 
@@ -72,7 +72,7 @@ Metrics:
 
 | Metric | Type | Tags | Meaning |
 |---|---|---|---|
-| `zexchange.redis.operation.duration` | Timer | `service`, `component`, `operation`, `outcome` | Client-observed latency for RedisTemplate value operations. |
+| `zexchange.redis.operation.duration` | Timer | `application`, `component`, `operation`, `outcome` | Client-observed latency for RedisTemplate value operations. |
 
 Allowed values:
 
@@ -100,7 +100,7 @@ Metrics:
 
 | Metric | Type | Tags | Meaning |
 |---|---|---|---|
-| `zexchange.redis.operation.duration` | Timer | `service`, `component`, `operation`, `outcome` | Client-observed latency for Redisson client-side-cache reads. |
+| `zexchange.redis.operation.duration` | Timer | `application`, `component`, `operation`, `outcome` | Client-observed latency for Redisson client-side-cache reads. |
 
 Allowed values:
 
@@ -128,7 +128,7 @@ Metrics:
 
 | Metric | Type | Tags | Meaning |
 |---|---|---|---|
-| `zexchange.redis.operation.duration` | Timer | `service`, `component`, `operation`, `outcome` | Client-observed latency for Lua script execution. |
+| `zexchange.redis.operation.duration` | Timer | `application`, `component`, `operation`, `outcome` | Client-observed latency for Lua script execution. |
 
 Allowed values:
 
@@ -200,7 +200,6 @@ The following are intentionally excluded:
 Allowed labels:
 
 - `application`;
-- `service`;
 - `cache_type`;
 - `result`;
 - `operation`;

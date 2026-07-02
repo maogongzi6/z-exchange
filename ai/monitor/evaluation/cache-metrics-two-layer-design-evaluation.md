@@ -84,9 +84,9 @@ Recommended definitions:
 
 | Metric | Type | Tags | Meaning |
 |---|---|---|---|
-| `zexchange.cache.ops` | Counter | `service`, `cache_type`, `result` | Strategy-level cache read result count. |
-| `zexchange.cache.errors` | Counter | `service`, `cache_type`, `operation`, `error_type` | Strategy-level cache error count. |
-| `zexchange.redis.operation.duration` | Timer | `service`, `component`, `operation`, `outcome` | Low-level Redis/client-side/script operation latency. |
+| `zexchange.cache.ops` | Counter | `application`, `cache_type`, `result` | Strategy-level cache read result count. |
+| `zexchange.cache.errors` | Counter | `application`, `cache_type`, `operation`, `error_type` | Strategy-level cache error count. |
+| `zexchange.redis.operation.duration` | Timer | `application`, `component`, `operation`, `outcome` | Low-level Redis/client-side/script operation latency. |
 
 Allowed values:
 
@@ -121,7 +121,7 @@ Tagging support metrics with `cache_type` would require either:
 Recommendation:
 
 ```text
-zexchange.redis.operation.duration{service,component,operation,outcome}
+zexchange.redis.operation.duration{application,component,operation,outcome}
 ```
 
 Use strategy metrics for logical cache type. Use support metrics for Redis operation latency.
@@ -230,8 +230,8 @@ The following are necessary to make the design complete:
 
 | Metric | Why |
 |---|---|
-| `zexchange.cache.errors{service,cache_type,operation,error_type}` | Strategy read/write errors can happen before support-layer Redis calls, especially decode, encode, and contract errors. |
-| `zexchange.redis.operation.duration{service,component,operation,outcome}` | Gives client-observed latency for RedisTemplate, client-side cache, and Lua scripts without relying on external exporters. |
+| `zexchange.cache.errors{application,cache_type,operation,error_type}` | Strategy read/write errors can happen before support-layer Redis calls, especially decode, encode, and contract errors. |
+| `zexchange.redis.operation.duration{application,component,operation,outcome}` | Gives client-observed latency for RedisTemplate, client-side cache, and Lua scripts without relying on external exporters. |
 
 ### Optional Later
 
@@ -239,8 +239,8 @@ These are valuable but not mandatory for phase one:
 
 | Metric | Why |
 |---|---|
-| `zexchange.cache.write.results{service,cache_type,operation,result}` | Helpful for versioned CAS visibility, especially `applied|skipped`, but can wait until cache write behavior becomes a test focus. |
-| `zexchange.cache.self_recovery{service,cache_type,outcome}` | Helpful if malformed/tombstone recovery becomes frequent. For now, `cache.errors` plus Redis delete latency is enough. |
+| `zexchange.cache.write.results{application,cache_type,operation,result}` | Helpful for versioned CAS visibility, especially `applied|skipped`, but can wait until cache write behavior becomes a test focus. |
+| `zexchange.cache.self_recovery{application,cache_type,outcome}` | Helpful if malformed/tombstone recovery becomes frequent. For now, `cache.errors` plus Redis delete latency is enough. |
 | Redis connection pool / Netty pending metrics | Better provided by Redisson/Micrometer or exporter integration later. Not necessary for this code-only phase. |
 
 ## 5. Performance Concerns

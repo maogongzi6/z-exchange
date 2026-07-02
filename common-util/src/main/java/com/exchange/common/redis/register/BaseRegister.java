@@ -9,7 +9,6 @@ import com.exchange.common.redis.metrics.MeteredRedisValueSupport;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.redisson.api.RClientSideCaching;
 import org.redisson.client.codec.StringCodec;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
@@ -27,9 +26,8 @@ public class BaseRegister {
     @Bean
     public RedisValueSupport<String> redisValueSupport(
             BaseRedisSupport<String> baseRedisSupport,
-            MeterRegistry meterRegistry,
-            @Value("${spring.application.name:unknown}") String serviceName) {
-        return new MeteredRedisValueSupport<>(baseRedisSupport, meterRegistry, serviceName);
+            MeterRegistry meterRegistry) {
+        return new MeteredRedisValueSupport<>(baseRedisSupport, meterRegistry);
     }
 
     @Lazy
@@ -43,8 +41,7 @@ public class BaseRegister {
     @Bean
     ClientSideCacheReadSupport<String> clientSideCacheReadSupport(
             BaseClientSideCacheSupport<String> baseClientSideCacheSupport,
-            MeterRegistry meterRegistry,
-            @Value("${spring.application.name:unknown}") String serviceName) {
-        return new MeteredClientSideCacheReadSupport<>(baseClientSideCacheSupport, meterRegistry, serviceName);
+            MeterRegistry meterRegistry) {
+        return new MeteredClientSideCacheReadSupport<>(baseClientSideCacheSupport, meterRegistry);
     }
 }

@@ -10,7 +10,6 @@ import com.exchange.common.redis.component.support.ScriptExecutor;
 import com.exchange.common.redis.metrics.MeteredRedisScriptExecutor;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.redisson.api.RedissonClient;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -57,9 +56,8 @@ public class CacheSupportRegister {
     @Bean
     public RedisScriptExecutor redisScriptExecutor(
             ScriptExecutor scriptExecutor,
-            MeterRegistry meterRegistry,
-            @Value("${spring.application.name:unknown}") String serviceName) {
-        return new MeteredRedisScriptExecutor(scriptExecutor, meterRegistry, serviceName);
+            MeterRegistry meterRegistry) {
+        return new MeteredRedisScriptExecutor(scriptExecutor, meterRegistry);
     }
 
     @Primary

@@ -3,7 +3,6 @@ package com.exchange.common.redis.metrics;
 import com.exchange.common.metrics.CommonMetricTagValues;
 import com.exchange.common.metrics.CommonMetricTags;
 import com.exchange.common.metrics.CommonMetrics;
-import com.exchange.common.metrics.MetricTagSanitizer;
 import com.exchange.common.redis.RedisValueSupport;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -16,7 +15,6 @@ import java.util.function.Supplier;
 public class MeteredRedisValueSupport<T> implements RedisValueSupport<T> {
     private final RedisValueSupport<T> delegate;
     private final MeterRegistry meterRegistry;
-    private final String service;
 
     @Override
     public void set(String key, T value) {
@@ -66,7 +64,6 @@ public class MeteredRedisValueSupport<T> implements RedisValueSupport<T> {
     private void stop(Timer.Sample sample, String operation, String outcome) {
         sample.stop(Timer.builder(CommonMetrics.REDIS_OPERATION_DURATION.name())
                 .description(CommonMetrics.REDIS_OPERATION_DURATION.description())
-                .tag(CommonMetricTags.SERVICE, MetricTagSanitizer.safeValue(service))
                 .tag(CommonMetricTags.COMPONENT, CommonMetricTagValues.RedisComponents.REDIS_TEMPLATE)
                 .tag(CommonMetricTags.OPERATION, operation)
                 .tag(CommonMetricTags.OUTCOME, outcome)

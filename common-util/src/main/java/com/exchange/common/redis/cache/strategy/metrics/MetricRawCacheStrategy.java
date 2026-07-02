@@ -12,10 +12,9 @@ public class MetricRawCacheStrategy<T> implements RawCacheStrategy<T> {
 
     public MetricRawCacheStrategy(RawCacheStrategy<T> delegate,
                                   MeterRegistry meterRegistry,
-                                  String service,
                                   String cacheType) {
         this.delegate = delegate;
-        this.recorder = new CacheMetricRecorder(meterRegistry, service, cacheType);
+        this.recorder = new CacheMetricRecorder(meterRegistry, cacheType);
     }
 
     @Override

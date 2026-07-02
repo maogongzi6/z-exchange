@@ -17,9 +17,9 @@ Added common metric definitions for:
 
 | Metric | Type | Tags | Meaning |
 |---|---|---|---|
-| `zexchange.cache.ops` | Counter | `service`, `cache_type`, `result` | Strategy-level cache read result count. |
-| `zexchange.cache.errors` | Counter | `service`, `cache_type`, `operation`, `error_type` | Strategy-level cache failure count with normalized reason. |
-| `zexchange.redis.operation.duration` | Timer | `service`, `component`, `operation`, `outcome` | Client-observed Redis/client-side-cache/script operation duration. |
+| `zexchange.cache.ops` | Counter | `application`, `cache_type`, `result` | Strategy-level cache read result count. |
+| `zexchange.cache.errors` | Counter | `application`, `cache_type`, `operation`, `error_type` | Strategy-level cache failure count with normalized reason. |
+| `zexchange.redis.operation.duration` | Timer | `application`, `component`, `operation`, `outcome` | Client-observed Redis/client-side-cache/script operation duration. |
 
 Common tag constants were added for:
 
@@ -178,7 +178,7 @@ The wallet compile was a shared-infrastructure compatibility check only; wallet-
 
 Suggested runtime validation:
 
-1. Ledger cache hit increments `zexchange.cache.ops{service="ledger-service",cache_type="ledger_txn",result="value_hit"}` or `cache_type="ledger_ref"`.
+1. Ledger cache hit increments `zexchange.cache.ops{application="ledger-service",cache_type="ledger_txn",result="value_hit"}` or `cache_type="ledger_ref"`.
 2. Ledger cache miss increments `zexchange.cache.ops{result="miss"}`.
 3. Malformed cached value increments both `zexchange.cache.ops{result="error"}` and `zexchange.cache.errors{operation="get",error_type="decode_error"}`.
 4. RedisTemplate operations emit `zexchange.redis.operation.duration{component="redis_template"}`.

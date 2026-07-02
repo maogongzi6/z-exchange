@@ -17,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 final class CacheMetricRecorder {
     private final MeterRegistry meterRegistry;
-    private final String service;
     private final String cacheType;
 
     <T> void recordGet(IResult<CacheReadResult<T>> result) {
@@ -57,7 +56,6 @@ final class CacheMetricRecorder {
     private void recordReadResult(String result) {
         Counter.builder(CommonMetrics.CACHE_OPS.name())
                 .description(CommonMetrics.CACHE_OPS.description())
-                .tag(CommonMetricTags.SERVICE, MetricTagSanitizer.safeValue(service))
                 .tag(CommonMetricTags.CACHE_TYPE, MetricTagSanitizer.safeValue(cacheType))
                 .tag(CommonMetricTags.RESULT, result)
                 .register(meterRegistry)
@@ -67,7 +65,6 @@ final class CacheMetricRecorder {
     private void recordError(String operation, ErrorCode errorCode) {
         Counter.builder(CommonMetrics.CACHE_ERRORS.name())
                 .description(CommonMetrics.CACHE_ERRORS.description())
-                .tag(CommonMetricTags.SERVICE, MetricTagSanitizer.safeValue(service))
                 .tag(CommonMetricTags.CACHE_TYPE, MetricTagSanitizer.safeValue(cacheType))
                 .tag(CommonMetricTags.OPERATION, MetricTagSanitizer.safeValue(operation))
                 .tag(CommonMetricTags.ERROR_TYPE, toErrorType(errorCode))

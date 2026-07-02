@@ -3,7 +3,6 @@ package com.exchange.common.redis.metrics;
 import com.exchange.common.metrics.CommonMetricTagValues;
 import com.exchange.common.metrics.CommonMetricTags;
 import com.exchange.common.metrics.CommonMetrics;
-import com.exchange.common.metrics.MetricTagSanitizer;
 import com.exchange.common.redis.component.support.RedisScriptExecutor;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -17,7 +16,6 @@ import java.util.function.Supplier;
 public class MeteredRedisScriptExecutor implements RedisScriptExecutor {
     private final RedisScriptExecutor delegate;
     private final MeterRegistry meterRegistry;
-    private final String service;
 
     @Override
     public Boolean setIfAbsentOrNewer(RedissonClient redissonClient, String key, String value, long newVersion, Duration ttl) {
@@ -46,7 +44,6 @@ public class MeteredRedisScriptExecutor implements RedisScriptExecutor {
     private void stop(Timer.Sample sample, String operation, String outcome) {
         sample.stop(Timer.builder(CommonMetrics.REDIS_OPERATION_DURATION.name())
                 .description(CommonMetrics.REDIS_OPERATION_DURATION.description())
-                .tag(CommonMetricTags.SERVICE, MetricTagSanitizer.safeValue(service))
                 .tag(CommonMetricTags.COMPONENT, CommonMetricTagValues.RedisComponents.SCRIPT_EXECUTOR)
                 .tag(CommonMetricTags.OPERATION, operation)
                 .tag(CommonMetricTags.OUTCOME, outcome)

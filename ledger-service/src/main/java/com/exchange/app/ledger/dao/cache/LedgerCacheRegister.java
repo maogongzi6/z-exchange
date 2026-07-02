@@ -25,7 +25,6 @@ import com.exchange.common.redis.cache.strategy.model.CacheDescriptor;
 import com.exchange.common.redis.cache.strategy.impl.StrategyFactory;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -38,8 +37,7 @@ public class LedgerCacheRegister {
             RawCacheDeleter cacheDeleter,
             StrategyFactory factory,
             CacheTtlConfig config,
-            MeterRegistry meterRegistry,
-            @Value("${spring.application.name:unknown}") String serviceName) {
+            MeterRegistry meterRegistry) {
         CacheDescriptor<String> descriptor = new CacheDescriptor<>(String.class, CacheScope::ledgerRefIdKey);
         SelfRecoverFeature recoverFeature = new RawDeleteSelfRecoverFeature(cacheDeleter);
         NegativeCacheFeature negativeCacheFeature = new DefaultNegativeCacheFeature(cacheWriter, cacheDeleter);
@@ -55,7 +53,7 @@ public class LedgerCacheRegister {
         RawCacheStrategy<String> strategy = factory.buildRawCacheSuppressExceptionStrategy(
                 descriptor, cacheReader, cacheWriter, strategyConfig);
         return new MetricRawCacheStrategy<>(
-                strategy, meterRegistry, serviceName, LedgerMetricTagValues.CacheTypes.LEDGER_REF);
+                strategy, meterRegistry, LedgerMetricTagValues.CacheTypes.LEDGER_REF);
     }
 
     @Bean(name = "ledgerTxnCache")
@@ -65,8 +63,7 @@ public class LedgerCacheRegister {
             RawCacheDeleter cacheDeleter,
             StrategyFactory factory,
             CacheTtlConfig config,
-            MeterRegistry meterRegistry,
-            @Value("${spring.application.name:unknown}") String serviceName) {
+            MeterRegistry meterRegistry) {
         CacheDescriptor<LedgerTxn> descriptor = new CacheDescriptor<>(LedgerTxn.class, CacheScope::ledgerTxnIdKey);
         SelfRecoverFeature recoverFeature = new RawDeleteSelfRecoverFeature(cacheDeleter);
         var ttlConfig = new VersionStrategyConfig.TtlConfig(
@@ -81,6 +78,6 @@ public class LedgerCacheRegister {
         VersionCacheStrategy<LedgerTxn> strategy = factory.buildVersionCacheSuppressExceptionStrategy(
                 descriptor, cacheReader, cacheWriter, versionStrategyConfig);
         return new MetricVersionCacheStrategy<>(
-                strategy, meterRegistry, serviceName, LedgerMetricTagValues.CacheTypes.LEDGER_TXN);
+                strategy, meterRegistry, LedgerMetricTagValues.CacheTypes.LEDGER_TXN);
     }
 }

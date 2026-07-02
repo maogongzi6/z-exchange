@@ -1,4 +1,7 @@
 spring:
+  application:
+    name: wallet-service
+
   profiles:
     default: cloud
 
