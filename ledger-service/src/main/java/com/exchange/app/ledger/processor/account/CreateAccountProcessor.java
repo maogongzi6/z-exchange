@@ -1,8 +1,7 @@
 package com.exchange.app.ledger.processor.account;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.exchange.app.ledger.dao.repository.AccountRepository;
-import com.exchange.app.ledger.dao.mapper.AssetMapper;
+import com.exchange.app.ledger.dao.repository.AssetRepository;
 import com.exchange.app.ledger.po.account.Account;
 import com.exchange.app.ledger.po.asset.Asset;
 import com.exchange.app.ledger.result.LedgerBoundaryErrorMapper;
@@ -21,7 +20,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
 import java.util.Objects;
 
 @Slf4j
@@ -29,7 +27,7 @@ import java.util.Objects;
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class CreateAccountProcessor {
     final private AccountRepository accountManager;
-    final private AssetMapper assetMapper;
+    final private AssetRepository assetRepository;
 
     public CreateAccountReplyPb createAccount(CreateAccountRequestPb req) {
 
@@ -43,12 +41,8 @@ public class CreateAccountProcessor {
             return replyError(result);
         }
 
-        LambdaQueryWrapper<Asset> wrapper = new LambdaQueryWrapper<>();
-        wrapper.select(Asset::getAssetId).eq(Asset::getAssetId, req.getAssetId());
-        List<Asset> asset = assetMapper.selectList(wrapper);
-        wrapper.clear();
-
-        if (asset.isEmpty()) {
+        Asset asset = assetRepository.getByAssetId(req.getAssetId());
+        if (asset == null) {
             return replyError(LedgerServiceErrorCode.ASSET_NOT_FOUND, req.getAssetId());
         }
 

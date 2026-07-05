@@ -3,6 +3,7 @@ package com.exchange.app.ledger.dao.repository;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.exchange.app.ledger.config.DbQueryProperties;
 import com.exchange.app.ledger.dao.mapper.LedgerEntryMapper;
+import com.exchange.app.ledger.exception.InvalidValueException;
 import com.exchange.app.ledger.po.ledger.LedgerEntry;
 import com.exchange.common.db.manager.DbBaseRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +43,13 @@ public class LedgerEntryRepository extends DbBaseRepository<LedgerEntry, LedgerE
 
         log.debug("Completed fetching all ledger entries for transactionId {}", txnId);
         return result;
+    }
+
+    public int batchInsert(List<LedgerEntry> entries) {
+        if (entries.isEmpty()) {
+            throw new InvalidValueException("ledger entry batch insert list must not be empty");
+        }
+        return mapper.batchInsert(entries);
     }
 
     // set to protected scope for unit test

@@ -5,7 +5,6 @@ import com.exchange.app.wallet.dao.repository.BalanceSnapshotRepository;
 import com.exchange.app.wallet.dao.repository.WalletAccountMappingRepository;
 import com.exchange.app.wallet.dao.repository.WalletRepository;
 import com.exchange.app.wallet.dao.store.BalanceSnapshotStore;
-import com.exchange.app.wallet.dao.mapper.WalletMapper;
 import com.exchange.app.wallet.po.enums.OwnerType;
 import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.enums.WalletStatus;
@@ -35,7 +34,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class CreateWalletProcessor {
     final private DbTxnExecutor dbTxnExecutor;
-    final private WalletMapper walletMapper;
     final private BalanceSnapshotRepository balanceSnapshotManager;
     final private WalletAccountMappingRepository walletAccountMappingManager;
 
@@ -52,7 +50,7 @@ public class CreateWalletProcessor {
             return replyError(result);
         }
 
-        Wallet walletInDb = walletMapper.selectByReferenceId(serviceId, req.getReferenceId());
+        Wallet walletInDb = walletManager.selectByReferenceId(serviceId, req.getReferenceId());
         if (walletInDb != null && walletInDb.getWalletStatus().hasInitiated()) {
             balanceSnapshotStore.postInsert(walletInDb.getWalletId(), walletInDb.getServiceId(), walletInDb.getReferenceId(), walletInDb.getOwnerType());
             return replySuccess("wallet has been created");
@@ -121,7 +119,7 @@ public class CreateWalletProcessor {
         BalanceSnapshot snapshot = BalanceSnapshot.create(wallet.getWalletId(), wallet.getServiceId(), wallet.getReferenceId(), wallet.getAssetId(), WalletStatus.OPEN, wallet.getOwnerType(), wallet.getOwnerId(), 0L, 0L, 0L);
 
         Result<Void> result = dbTxnExecutor.executeWithDefault(() -> {
-            if (walletMapper.updateWalletStatus(wallet.getWalletId(), WalletStatus.INIT, WalletStatus.OPEN) == 0) {
+            if (walletManager.updateWalletStatus(wallet.getWalletId(), WalletStatus.INIT, WalletStatus.OPEN) == 0) {
                 return Result.failure(WalletServiceErrorCode.WALLET_UPDATE_FAILED, "unable_to_change_status: " + wallet);
             }
             if (walletAccountMappingManager.insertIgnore(mapping) == 0) {

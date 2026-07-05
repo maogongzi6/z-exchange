@@ -1,6 +1,6 @@
 package com.exchange.app.wallet.processor;
 
-import com.exchange.app.wallet.dao.mapper.WalletMapper;
+import com.exchange.app.wallet.dao.repository.WalletRepository;
 import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.enums.WalletStatus;
 import com.exchange.app.wallet.po.wallet.Wallet;
@@ -24,7 +24,7 @@ public class CreateWalletProcessorTest {
     @Autowired
     CreateWalletProcessor createWalletProcessor;
     @Autowired
-    WalletMapper walletMapper;
+    WalletRepository walletRepository;
 
     @Test
     public void testCreateWalletProcessor() {
@@ -40,7 +40,7 @@ public class CreateWalletProcessorTest {
         CreateWalletReplyPb reply = createWalletProcessor.createWallet(request);
         System.out.println(reply);
         Assert.assertEquals(ErrorCodePb.ERROR_OK, reply.getError().getCode());
-        Wallet wallet = walletMapper.selectByReferenceId(ServiceId.USER, ref);
+        Wallet wallet = walletRepository.selectByReferenceId(ServiceId.USER, ref);
         Assert.assertEquals(WalletStatus.OPEN, wallet.getWalletStatus());
 
     }

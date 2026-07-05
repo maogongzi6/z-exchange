@@ -2,7 +2,7 @@ package com.exchange.app.wallet.dao.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.exchange.app.wallet.dao.mapper.WalletActionMapper;
-import com.exchange.app.wallet.exception.DbException;
+import com.exchange.app.wallet.exception.InvalidValueException;
 import com.exchange.app.wallet.po.transaction.WalletAction;
 import com.exchange.common.db.manager.DbBaseRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +22,7 @@ public class WalletActionRepository extends DbBaseRepository<WalletAction, Walle
 
     public int batchInsert(List<WalletAction> list) {
         if (list.isEmpty()) {
-            throw new DbException("empty list");
+            throw new InvalidValueException("wallet action batch insert list must not be empty");
         }
         return mapper.batchInsert(list);
     }

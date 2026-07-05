@@ -2,9 +2,9 @@ package com.exchange.app.ledger.processor.post;
 
 import com.exchange.app.ledger.config.CustomCacheProperties;
 import com.exchange.app.ledger.dao.repository.AccountRepository;
+import com.exchange.app.ledger.dao.repository.LedgerEntryRepository;
 import com.exchange.app.ledger.dao.repository.LedgerTxnRepository;
 import com.exchange.app.ledger.dao.store.LedgerTxnStore;
-import com.exchange.app.ledger.dao.mapper.LedgerEntryMapper;
 import com.exchange.app.ledger.po.account.Account;
 import com.exchange.app.ledger.po.enums.Direction;
 import com.exchange.app.ledger.po.ledger.LedgerEntry;
@@ -46,7 +46,7 @@ public class PostLedgerProcessor {
 
     final private CustomCacheProperties.Idemp idempConfig;
 
-    final private LedgerEntryMapper ledgerEntryMapper;
+    final private LedgerEntryRepository ledgerEntryRepository;
     final private AccountRepository accountManager;
     final private LedgerTxnRepository ledgerTxnRepository;
 
@@ -95,7 +95,7 @@ public class PostLedgerProcessor {
                 log.error("duplicated ledger txn: {}", ledgerTxn);
                 return Result.failure(LedgerServiceErrorCode.LEDGER_DUPLICATED, "duplicated ledger txn");
             }
-            if (ledgerEntryMapper.batchInsert(entries) < entries.size()) {
+            if (ledgerEntryRepository.batchInsert(entries) < entries.size()) {
                 log.error("unexpected ledger txn already exists, {}", ledgerTxn);
                 // should be a server error?
                 return Result.failure(LedgerServiceErrorCode.SERVER_ERROR, "unexpected duplicated_ledger_entry");

@@ -1,5 +1,7 @@
 package com.exchange.app.wallet.dao.repository;
 
+import com.exchange.app.wallet.po.enums.ServiceId;
+import com.exchange.app.wallet.po.enums.WalletStatus;
 import com.exchange.app.wallet.dao.mapper.WalletMapper;
 import com.exchange.app.wallet.po.wallet.Wallet;
 import com.exchange.common.db.manager.DbBaseRepository;
@@ -15,4 +17,21 @@ public class WalletRepository extends DbBaseRepository<Wallet, WalletMapper> {
         super(mapper);
     }
 
+    public Wallet selectByWalletId(String walletId) {
+        return mapper.selectOne(queryLambdaWrapper()
+                .eq(Wallet::getWalletId, walletId));
+    }
+
+    public Wallet selectByReferenceId(ServiceId serviceId, String referenceId) {
+        return mapper.selectOne(queryLambdaWrapper()
+                .eq(Wallet::getServiceId, serviceId)
+                .eq(Wallet::getReferenceId, referenceId));
+    }
+
+    public int updateWalletStatus(String walletId, WalletStatus oldStatus, WalletStatus newStatus) {
+        return mapper.update(updateLambdaWrapper()
+                .eq(Wallet::getWalletId, walletId)
+                .eq(Wallet::getWalletStatus, oldStatus)
+                .set(Wallet::getWalletStatus, newStatus));
+    }
 }
