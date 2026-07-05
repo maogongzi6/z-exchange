@@ -21,7 +21,7 @@ Wallet remains on the raw `IdempRedisClient` path for now.
 Moved the Lua script executor from cache-specific infrastructure to common Redis infrastructure:
 
 ```text
-com.exchange.common.redis.component.support.ScriptExecutor
+com.exchange.common.redis.component.ScriptExecutor
 ```
 
 The executor now owns:

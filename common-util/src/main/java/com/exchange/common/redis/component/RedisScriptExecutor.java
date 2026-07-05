@@ -1,4 +1,4 @@
-package com.exchange.common.redis.component.support;
+package com.exchange.common.redis.component;
 
 import org.redisson.api.RedissonClient;
 

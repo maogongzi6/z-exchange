@@ -1,7 +1,7 @@
 package com.exchange.common.redis.idemp;
 
 import com.exchange.common.redis.RedisValueSupport;
-import com.exchange.common.redis.component.support.RedisScriptExecutor;
+import com.exchange.common.redis.component.RedisScriptExecutor;
 import com.exchange.common.result.Result;
 import com.exchange.common.redis.idemp.constant.CommonIdempStatus;
 import com.exchange.common.redis.idemp.utils.CommonIdempHelper;

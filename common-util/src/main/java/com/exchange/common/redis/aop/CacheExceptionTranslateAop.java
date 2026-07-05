@@ -1,7 +1,7 @@
 package com.exchange.common.redis.aop;
 
 import com.exchange.common.exception.CacheException;
-import com.exchange.common.redis.component.support.RedisScriptExecutor;
+import com.exchange.common.redis.component.RedisScriptExecutor;
 import com.exchange.common.result.error.RedisErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;

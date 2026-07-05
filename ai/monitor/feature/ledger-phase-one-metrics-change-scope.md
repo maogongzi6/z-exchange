@@ -176,7 +176,8 @@ Change points:
 
 - instrument the wallet-post listener;
 - record active listener processing for saturation;
-- record listener duration with outcome, error type, and retryability;
+- record listener duration with low-cardinality outcome tags only;
+- record listener record count with diagnostic error type and retryability tags;
 - separate deserialize failures from processing failures;
 - keep retryability as a dimension because processing errors may be retriable or non-retriable.
 
@@ -185,7 +186,8 @@ Metrics:
 | Metric | Type | Tags | Meaning |
 |---|---|---|---|
 | `zexchange.kafka.listener.active` | Gauge | `listener_name` | Current records being processed by the listener. Saturation signal. |
-| `zexchange.kafka.listener.duration` | Timer | `listener_name`, `outcome`, `error_type`, `retriable` | Listener processing duration and count by outcome. |
+| `zexchange.kafka.listener.duration` | Timer | `listener_name`, `outcome` | Listener processing duration with low-cardinality tags. Used for latency percentiles and processing-time health. |
+| `zexchange.kafka.listener.records` | Counter | `listener_name`, `outcome`, `error_type`, `retriable` | Listener consumed-record count by result and normalized failure details. Used for listener TPS, error rate, and retriable/non-retriable breakdown. |
 
 Allowed values:
 
@@ -198,7 +200,9 @@ retriable = true | false | none
 
 Notes:
 
-- Use timer `_count` for listener processed-rate.
+- Keep `duration` free of `error_type` and `retriable` so timer histogram cardinality stays low.
+- Use `records` for listener processed-rate, success/error rate, and failure breakdown.
+- Deserialize failures may be counter-only if the listener method is never invoked.
 - Do not tag by Kafka key, command ID, transaction ID, or exception class name unless normalized.
 
 ### 2.8 Kafka Publisher Metrics

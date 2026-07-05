@@ -1,4 +1,4 @@
-package com.exchange.common.redis.component.support;
+package com.exchange.common.redis.component;
 
 import com.exchange.common.exception.CacheException;
 import com.exchange.common.redis.aop.CacheExceptionTranslate;

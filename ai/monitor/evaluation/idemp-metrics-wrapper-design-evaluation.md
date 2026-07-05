@@ -36,7 +36,7 @@ This is sound.
 `ScriptExecutor` is not cache-specific anymore if it manages both cache CAS scripts and idempotency release scripts. A package such as this is cleaner:
 
 ```text
-com.exchange.common.redis.component.support.ScriptExecutor
+com.exchange.common.redis.component.ScriptExecutor
 ```
 
 or:
