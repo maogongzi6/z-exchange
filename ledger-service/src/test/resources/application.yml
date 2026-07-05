@@ -57,7 +57,7 @@ app:
       default-batch-size: 3
 
   kafka:
-    not-retriable-exceptions: com.exchange.app.ledger.exception.AbnormalProtoDataException
+    not-retriable-exceptions: com.exchange.common.exception.AbnormalProtoDataException
 
   outbox:
     interval: "*/5 * * * * ?"

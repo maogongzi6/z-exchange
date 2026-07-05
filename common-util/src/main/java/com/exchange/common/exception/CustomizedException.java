@@ -1,19 +1,21 @@
 package com.exchange.common.exception;
 
 import com.exchange.common.result.error.ErrorCode;
-import lombok.Getter;
 
-public class CustomizedException extends RuntimeException {
-    @Getter
-    private final ErrorCode errorCode;
+public class CustomizedException extends CustomThrowable {
+    public CustomizedException(ErrorCode errorCode) {
+        super(errorCode);
+    }
 
     public CustomizedException(ErrorCode errorCode, String message) {
-        super(message);
-        this.errorCode = errorCode;
+        super(errorCode, message);
+    }
+
+    public CustomizedException(ErrorCode errorCode, Throwable cause) {
+        super(errorCode, cause);
     }
 
     public CustomizedException(ErrorCode errorCode, String message, Throwable cause) {
-        super(message, cause);
-        this.errorCode = errorCode;
+        super(errorCode, message, cause);
     }
 }

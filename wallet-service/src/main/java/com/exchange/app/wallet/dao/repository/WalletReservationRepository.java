@@ -3,7 +3,7 @@ package com.exchange.app.wallet.dao.repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.exchange.app.wallet.dao.mapper.WalletReservationMapper;
-import com.exchange.app.wallet.exception.InvalidValueException;
+import com.exchange.app.wallet.exception.WalletExceptionFactory;
 import com.exchange.app.wallet.po.transaction.WalletReservation;
 import com.exchange.common.db.manager.DbBaseRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -80,7 +80,7 @@ public class WalletReservationRepository extends DbBaseRepository<WalletReservat
 
     public int batchInsert(List<WalletReservation> list) {
         if (list.isEmpty()) {
-            throw new InvalidValueException("wallet reservation batch insert list must not be empty");
+            throw WalletExceptionFactory.invalidValue("wallet reservation batch insert list must not be empty");
         }
         return mapper.batchInsert(list);
     }

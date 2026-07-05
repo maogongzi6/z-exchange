@@ -72,7 +72,7 @@ management:
 
 app:
   kafka:
-    not-retriable-exceptions: com.exchange.app.wallet.exception.AbnormalProtoDataException
+    not-retriable-exceptions: com.exchange.common.exception.AbnormalProtoDataException
 
   outbox:
     interval: "*/5 * * * * ?"

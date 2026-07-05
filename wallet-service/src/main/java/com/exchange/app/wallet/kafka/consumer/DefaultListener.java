@@ -1,11 +1,11 @@
 package com.exchange.app.wallet.kafka.consumer;
 
-import com.exchange.app.wallet.exception.AbnormalProtoDataException;
-import com.exchange.app.wallet.exception.RetriableException;
 import com.exchange.app.wallet.kafka.constant.WalletTopic;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
 import com.exchange.app.wallet.processor.transaction.step.AfterPostLedgerProcessor;
 import com.exchange.app.wallet.result.WalletServiceErrorCode;
+import com.exchange.common.exception.AbnormalProtoDataException;
+import com.exchange.common.exception.RetriableException;
 import com.exchange.common.result.Result;
 import com.exchange.proto.common.event.EventEnvelopePb;
 import com.exchange.proto.ledger.post.PostTransactionReplyPb;

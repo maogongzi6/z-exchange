@@ -8,6 +8,7 @@ public enum LedgerServiceErrorCode implements ErrorCode {
     SERVER_ERROR(3, ErrorCategory.INTERNAL, "server_error"),
     DB_ERROR(11, ErrorCategory.INTERNAL, "db_error"),
     SERIALIZE_ERROR(12, ErrorCategory.INTERNAL, "serialize_error"),
+    INVALID_VALUE_ERROR(13, ErrorCategory.INTERNAL, "invalid_value_error"),
     INVALID_ENUM_ERROR(14, ErrorCategory.INTERNAL, "invalid_enum_error"),
     PUBLISH_KAFKA_ERROR(15, ErrorCategory.INTERNAL, "publish_kafka_error"),
     INVALID_REQUEST_PARAMETER(100, ErrorCategory.INVALID_ARGUMENT, "invalid_request_parameter"),

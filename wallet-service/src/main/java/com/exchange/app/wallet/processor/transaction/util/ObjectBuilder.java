@@ -1,6 +1,5 @@
 package com.exchange.app.wallet.processor.transaction.util;
 
-import com.exchange.app.wallet.exception.InvalidEnumException;
 import com.exchange.app.wallet.po.enums.BusinessType;
 import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.enums.WalletBucket;
@@ -9,6 +8,7 @@ import com.exchange.app.wallet.po.transaction.WalletAction;
 import com.exchange.app.wallet.po.transaction.WalletReservation;
 import com.exchange.app.wallet.po.transaction.WalletTransaction;
 import com.exchange.app.wallet.po.wallet.WalletAccountMapping;
+import com.exchange.app.wallet.exception.WalletExceptionFactory;
 import com.exchange.app.wallet.utils.IdGenerator;
 import com.exchange.app.wallet.utils.OutboxHelper;
 import com.exchange.common.outbox.po.Outbox;
@@ -73,7 +73,7 @@ public class ObjectBuilder {
                         ReservationOutcome.NOT_DONE,
                         walletTransaction.getTxnId()
                 );
-            default: throw new InvalidEnumException("OperationType_Reserve not supported: " + line.getOperationType());
+            default: throw WalletExceptionFactory.invalidEnum("OperationType_Reserve not supported: " + line.getOperationType());
         }
     }
 
@@ -99,7 +99,7 @@ public class ObjectBuilder {
                 actions.add(createAction(txnId, walletId, null, WalletBucket.AVAILABLE, ActionType.TRANSFER_IN, line));
                 break;
             default:
-                throw new InvalidEnumException("invalid operation type: " + line.getOperationType());
+                throw WalletExceptionFactory.invalidEnum("invalid operation type: " + line.getOperationType());
         }
         return actions;
     }

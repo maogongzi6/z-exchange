@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.exchange.app.wallet.dao.mapper.BalanceSnapshotMapper;
-import com.exchange.app.wallet.exception.InvalidValueException;
+import com.exchange.app.wallet.exception.WalletExceptionFactory;
 import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.enums.WalletStatus;
 import com.exchange.app.wallet.po.wallet.BalanceSnapshot;
@@ -94,7 +94,7 @@ public class BalanceSnapshotRepository extends DbBaseRepository<BalanceSnapshot,
 
     public int reserveFromWalletId(Long id, String walletId, String assetId, long amount) {
         if (amount <= 0) {
-            throw new InvalidValueException("amount<=0, amount: " + amount);
+            throw WalletExceptionFactory.invalidValue("amount<=0, amount: " + amount);
         }
         LambdaUpdateWrapper<BalanceSnapshot> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(BalanceSnapshot::getId, id)
@@ -109,7 +109,7 @@ public class BalanceSnapshotRepository extends DbBaseRepository<BalanceSnapshot,
 
     public int releaseFromWalletId(Long id, String walletId, String assetId, long amount) {
         if (amount <= 0) {
-            throw new InvalidValueException("amount<=0, amount: " + amount);
+            throw WalletExceptionFactory.invalidValue("amount<=0, amount: " + amount);
         }
         LambdaUpdateWrapper<BalanceSnapshot> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(BalanceSnapshot::getId, id)
@@ -124,7 +124,7 @@ public class BalanceSnapshotRepository extends DbBaseRepository<BalanceSnapshot,
 
     public int transferOutFromWalletId(Long id, String walletId, String assetId, long amount) {
         if (amount <= 0) {
-            throw new InvalidValueException("amount<=0, amount: " + amount);
+            throw WalletExceptionFactory.invalidValue("amount<=0, amount: " + amount);
         }
         LambdaUpdateWrapper<BalanceSnapshot> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(BalanceSnapshot::getId, id)
@@ -138,7 +138,7 @@ public class BalanceSnapshotRepository extends DbBaseRepository<BalanceSnapshot,
 
     public int transferInToWalletId(Long id, String walletId, String assetId, long amount) {
         if (amount <= 0) {
-            throw new InvalidValueException("amount<=0, amount: " + amount);
+            throw WalletExceptionFactory.invalidValue("amount<=0, amount: " + amount);
         }
         LambdaUpdateWrapper<BalanceSnapshot> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(BalanceSnapshot::getId, id)

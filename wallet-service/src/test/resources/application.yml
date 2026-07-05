@@ -55,7 +55,7 @@ mybatis-plus:
 app:
   kafka:
     not-retriable-exceptions: >
-      com.exchange.app.wallet.exception.AbnormalProtoDataException,
+      com.exchange.common.exception.AbnormalProtoDataException,
       java.lang.RuntimeException
 
   outbox:
