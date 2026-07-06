@@ -9,7 +9,6 @@ import com.exchange.app.ledger.metrics.LedgerMetricTagValues;
 import com.exchange.app.ledger.processor.post.PostLedgerProcessor;
 import com.exchange.app.ledger.result.LedgerServiceErrorCode;
 import com.exchange.app.ledger.result.PostTransactionResult;
-import com.exchange.app.ledger.result.PostTransactionResultConverter;
 import com.exchange.app.ledger.utils.OutboxHelper;
 import com.exchange.common.outbox.dao.repository.OutboxRepository;
 import com.exchange.common.outbox.po.Outbox;
@@ -17,8 +16,8 @@ import com.exchange.common.outbox.po.enums.OutboxStatus;
 import com.exchange.common.exception.AbnormalProtoDataException;
 import com.exchange.common.exception.RetriableException;
 import com.exchange.common.result.Result;
+import com.exchange.common.result.error.ErrorCategory;
 import com.exchange.common.utils.time.LocalDateTimeHelper;
-import com.exchange.proto.common.error.ErrorCodePb;
 import com.exchange.proto.common.event.EventEnvelopePb;
 import com.exchange.proto.ledger.post.PostTransactionRequestPb;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -82,19 +81,29 @@ public class DefaultListener {
                 LedgerMetricTagValues.Ingress.KAFKA,
                 () -> postLedgerProcessor.postTransaction(req)
         );
-        var reply = PostTransactionResultConverter.toProto(result);
-        // TODO retriable error, redesign the error logic, how to specify retriable error?
-        if (reply.getError().getCode() != ErrorCodePb.ERROR_OK) {
-            if (reply.getError().getCode() != ErrorCodePb.ERROR_INTERNAL) {
-                log.error("internal error, wait for retry: {}", reply.getError());
-                throw new RetriableException(LedgerServiceErrorCode.SERVER_ERROR, "internal error, wait for retry," + reply.getError());
-            } else {
-                log.error("non retriable, queue dlq: {}", reply.getError());
-                // TODO change exception type
-                throw new AbnormalProtoDataException(LedgerServiceErrorCode.SERVER_ERROR, "non retriable, queue dlq");
-            }
+        if (!result.isSuccess()) {
+            handlePostLedgerFailure(result);
         }
-        return OutboxHelper.fromPostTransactionResult(result, envelope.getCommandId());
+        return OutboxHelper.fromPostTransactionResult(result, envelope.getEventId(), envelope.getCommandId());
+    }
+
+    private void handlePostLedgerFailure(PostTransactionResult result) {
+        LedgerServiceErrorCode errorCode = result.errorCode() == null
+                ? LedgerServiceErrorCode.SERVER_ERROR
+                : result.errorCode();
+        // Keep the existing retry/DLQ policy while removing protobuf as the decision model.
+        // The retryability rule should be redesigned separately with explicit error semantics.
+        if (errorCode.getCategory() != ErrorCategory.INTERNAL) {
+            log.error("post ledger failed, wait for retry: {}", result);
+            throw new RetriableException(
+                    LedgerServiceErrorCode.SERVER_ERROR,
+                    "post ledger failed, wait for retry, errorCode=" + errorCode + ", detail=" + result.detail()
+            );
+        }
+
+        log.error("post ledger failed with internal error, queue dlq: {}", result);
+        // TODO change exception type
+        throw new AbnormalProtoDataException(LedgerServiceErrorCode.SERVER_ERROR, "non retriable, queue dlq");
     }
 
     private void tryToPublishReply(Outbox replyOutbox) {

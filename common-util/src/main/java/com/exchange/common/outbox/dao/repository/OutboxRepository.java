@@ -23,6 +23,11 @@ public class OutboxRepository extends DbBaseRepository<Outbox, OutboxMapper> {
         return insertIgnore(outbox);
     }
 
+    public Outbox selectByEventId(String eventId) {
+        var query = Wrappers.<Outbox>lambdaQuery().eq(Outbox::getEventId, eventId);
+        return mapper.selectOne(query);
+    }
+
     public int updateStatusToFinalize(Outbox outbox, OutboxStatus newStatus, LocalDateTime finalizedAt) {
         var updateWrapper = new LambdaUpdateWrapper<Outbox>();
         updateWrapper.eq(Outbox::getEventId, outbox.getEventId())
@@ -47,11 +52,6 @@ public class OutboxRepository extends DbBaseRepository<Outbox, OutboxMapper> {
                 .set(Outbox::getNextAttemptAt, nextAttemptAt)
                 .setSql("attempt_count=attempt_count+1");
         return mapper.update(updateWrapper);
-    }
-
-    public Outbox selectByCommandId(String commandId) {
-        var query = Wrappers.<Outbox>lambdaQuery().eq(Outbox::getCommandId, commandId);
-        return mapper.selectOne(query);
     }
 
     public List<Outbox> selectForClaimSkipLock(LocalDateTime attemptAt, int maxRetries, long lastId, int limit) {

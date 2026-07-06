@@ -47,14 +47,18 @@ public class OutboxHelper {
             }}
     );
 
-    public static Outbox fromPostTransactionResult(PostTransactionResult result, String commandId) {
-        return fromPostTransactionReply(PostTransactionResultConverter.toProto(result), commandId);
+    public static Outbox fromPostTransactionResult(PostTransactionResult result, String requestEventId, String commandId) {
+        return fromPostTransactionReply(
+                PostTransactionResultConverter.toProto(result),
+                replyEventId(result, requestEventId),
+                commandId
+        );
     }
 
-    private static Outbox fromPostTransactionReply(PostTransactionReplyPb replyPb, String commandId) {
+    private static Outbox fromPostTransactionReply(PostTransactionReplyPb replyPb, String replyEventId, String commandId) {
         return Outbox.create(
                 OutboxEventType.LEDGER_POST_REPLY.code,
-                IdGenerator.generateEventId(commandId),
+                replyEventId,
                 commandId,
                 OutboxStatus.PENDING,
                 LedgerTopic.REPLY_WALLET,
@@ -66,5 +70,16 @@ public class OutboxHelper {
                 null,
                 null
         );
+    }
+
+    private static String replyEventId(PostTransactionResult result, String requestEventId) {
+        if (result != null && result.isSuccess()) {
+            return "reply:" + requestEventId + ":success";
+        }
+
+        LedgerServiceErrorCode errorCode = result == null || result.errorCode() == null
+                ? LedgerServiceErrorCode.SERVER_ERROR
+                : result.errorCode();
+        return "reply:" + requestEventId + ":error:" + errorCode.getNamespace() + ":" + errorCode.getMessage();
     }
 }
