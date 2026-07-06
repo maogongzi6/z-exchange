@@ -1,5 +1,6 @@
 package com.exchange.common.db.utils;
 
+import com.exchange.common.exception.DbException;
 import com.exchange.common.result.Result;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +25,9 @@ public class DbTxnExecutor {
                 }
                 return result;
             } catch (Throwable e) {
-                log.error("execute failed with exception, ", e);
+                if (!(e instanceof DbException)) {
+                    log.error("execute failed with exception, ", e);
+                }
                 transactionStatus.setRollbackOnly();
                 throw e;
             }

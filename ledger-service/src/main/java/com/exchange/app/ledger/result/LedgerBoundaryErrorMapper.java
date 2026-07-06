@@ -44,7 +44,8 @@ public final class LedgerBoundaryErrorMapper {
 
         // These common-util failures indicate malformed internal state or infra
         // issues inside shared helpers, not caller-correctable ledger requests.
-        if (ErrorNamespace.REDIS.equals(errorCode.getNamespace())
+        if (ErrorNamespace.DB.equals(errorCode.getNamespace())
+                || ErrorNamespace.REDIS.equals(errorCode.getNamespace())
                 || ErrorNamespace.CACHE.equals(errorCode.getNamespace())
                 || errorCode == OutboxErrorCode.UNEXPECTED_DB_ERROR) {
             return LedgerServiceErrorCode.INTERNAL_ERROR;

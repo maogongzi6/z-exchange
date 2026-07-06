@@ -3,6 +3,7 @@ package com.exchange.common.redis.aop;
 import com.exchange.common.exception.CacheException;
 import com.exchange.common.redis.component.RedisScriptExecutor;
 import com.exchange.common.result.error.RedisErrorCode;
+import com.exchange.common.utils.ThrowableUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -46,7 +47,7 @@ public class CacheExceptionTranslateAop {
     }
 
     private RedisErrorCode classify(Throwable throwable, boolean scriptOperation) {
-        Throwable rootCause = rootCauseOf(throwable);
+        Throwable rootCause = ThrowableUtils.rootCauseOf(throwable);
         String classNames = throwable.getClass().getName() + " " + rootCause.getClass().getName();
 
         if (throwable instanceof QueryTimeoutException
@@ -74,13 +75,5 @@ public class CacheExceptionTranslateAop {
 
     private boolean isScriptOperation(ProceedingJoinPoint pt) {
         return pt.getTarget() instanceof RedisScriptExecutor;
-    }
-
-    private Throwable rootCauseOf(Throwable throwable) {
-        Throwable current = throwable;
-        while (current.getCause() != null && current.getCause() != current) {
-            current = current.getCause();
-        }
-        return current;
     }
 }
