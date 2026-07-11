@@ -1,0 +1,279 @@
+package com.exchange.common.kafka.listener;
+
+import com.exchange.common.exception.CustomizedException;
+import com.exchange.common.exception.DbException;
+import com.exchange.common.kafka.listener.action.ListenerAction;
+import com.exchange.common.kafka.listener.exception.DlqException;
+import com.exchange.common.kafka.listener.exception.KafkaListenerRetriableException;
+import com.exchange.common.kafka.listener.failure.ListenerFailure;
+import com.exchange.common.kafka.listener.handler.MessageHandler;
+import com.exchange.common.kafka.listener.outbox.OutboxInsertDecision;
+import com.exchange.common.kafka.listener.retry.ListenerAttemptResolver;
+import com.exchange.common.kafka.producer.IPublisher;
+import com.exchange.common.outbox.dao.repository.OutboxRepository;
+import com.exchange.common.outbox.po.Outbox;
+import com.exchange.common.outbox.po.enums.OutboxStatus;
+import com.exchange.common.result.Result;
+import com.exchange.common.result.error.ErrorCode;
+import com.exchange.common.result.error.KafkaListenerErrorCode;
+import com.exchange.common.utils.time.LocalDateTimeHelper;
+import com.exchange.proto.common.event.EventEnvelopePb;
+import com.google.protobuf.InvalidProtocolBufferException;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.common.header.Headers;
+import org.springframework.kafka.support.Acknowledgment;
+
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.util.Objects;
+
+@Slf4j
+public class DefaultListener {
+    private static final String ACK_FAILED_HEADER = "zx-ack-failed";
+    private static final byte[] ACK_FAILED_HEADER_VALUE = "true".getBytes(StandardCharsets.UTF_8);
+
+    // TODO comment explain
+    private final MessageHandler messageHandler;
+    private final OutboxRepository outboxRepository;
+    private final IPublisher replyPublisher;
+    // TODO comment explain
+    private final ListenerAttemptResolver attemptResolver;
+    // TODO comment explain
+    private final ListenerRetryPolicy retryPolicy;
+    // TODO comment explain
+    private final ErrorCode unexpectedErrorCode;
+
+    public DefaultListener(
+            MessageHandler messageHandler,
+            OutboxRepository outboxRepository,
+            IPublisher replyPublisher,
+            ListenerAttemptResolver attemptResolver,
+            ListenerRetryPolicy retryPolicy,
+            ErrorCode unexpectedErrorCode
+    ) {
+        this.messageHandler = Objects.requireNonNull(messageHandler, "messageHandler");
+        this.outboxRepository = Objects.requireNonNull(outboxRepository, "outboxRepository");
+        this.replyPublisher = Objects.requireNonNull(replyPublisher, "replyPublisher");
+        this.attemptResolver = Objects.requireNonNull(attemptResolver, "attemptResolver");
+        this.retryPolicy = Objects.requireNonNull(retryPolicy, "retryPolicy");
+        this.unexpectedErrorCode = Objects.requireNonNull(unexpectedErrorCode, "unexpectedErrorCode");
+    }
+
+    // TODO comment about exception handling scenarios; explain why need manually ack
+    public void onMessage(byte[] envelopeBytes, Acknowledgment ack, Headers headers) {
+        EventEnvelopePb envelope = null;
+        Outbox outboxToPublish;
+
+        if (isAckFailureRetry(headers)) {
+            /*
+             * The previous attempt already made business/reply state durable and failed only
+             * while acknowledging Kafka. On retry, acknowledge the retry record directly instead
+             * of re-running idempotent business and outbox logic just to recover the offset.
+             */
+            acknowledgeOrThrowRetriable(ack, headers);
+            return;
+        }
+
+        try {
+            envelope = parseEnvelopeOrThrowDlq(envelopeBytes);
+            ListenerAction action = messageHandler.handle(envelope);
+            outboxToPublish = persistActionOrThrow(action);
+        } catch (DlqException e) {
+            log.error("listener dlq, errorCode={}, detail={}", e.getErrorCode(), e.getMessage(), e);
+            throw e;
+        } catch (KafkaListenerRetriableException e) {
+            outboxToPublish = handleRetriableFailureOrThrow(envelope, e, headers);
+        } catch (CustomizedException e) {
+            ListenerFailure failure = ListenerFailure.nonRetryable(e.getErrorCode(), e.getMessage(), e);
+            ListenerAction action = messageHandler.handleFailure(requireEnvelope(envelope), failure);
+            outboxToPublish = persistActionOrThrow(action);
+        } catch (Exception e) {
+            ListenerFailure failure = ListenerFailure.unexpected(
+                    unexpectedErrorCode,
+                    "unexpected listener failure",
+                    e
+            );
+            ListenerAction action = messageHandler.handleFailure(requireEnvelope(envelope), failure);
+            outboxToPublish = persistActionOrThrow(action);
+        }
+
+        acknowledgeOrThrowRetriable(ack, headers);
+        tryImmediatePublishSuppressingErrors(outboxToPublish);
+    }
+
+    // TODO comment explain why throw dlq here
+    private EventEnvelopePb parseEnvelopeOrThrowDlq(byte[] envelopeBytes) {
+        try {
+            return EventEnvelopePb.parseFrom(envelopeBytes);
+        } catch (InvalidProtocolBufferException e) {
+            throw new DlqException(
+                    KafkaListenerErrorCode.ENVELOPE_PARSE_ERROR,
+                    "cannot parse event envelope",
+                    e
+            );
+        }
+    }
+
+    // TODO explain the handle logic here
+    private Outbox handleRetriableFailureOrThrow(
+            EventEnvelopePb envelope,
+            KafkaListenerRetriableException e,
+            Headers headers
+    ) {
+        EventEnvelopePb requiredEnvelope = requireEnvelope(envelope);
+        int attempt = attemptResolver.resolve(headers);
+
+        if (attempt >= retryPolicy.dlqAfterAttempts()) {
+            throw new DlqException(
+                    KafkaListenerErrorCode.RETRY_EXHAUSTED,
+                    "retry exhausted and no durable reply exists, attempt=" + attempt,
+                    e
+            );
+        }
+
+        if (attempt < retryPolicy.replyFailureAfterAttempts()) {
+            throw e;
+        }
+
+        ListenerFailure failure = ListenerFailure.retryExhausted(
+                KafkaListenerErrorCode.RETRY_EXHAUSTED,
+                e.getMessage(),
+                e
+        );
+        ListenerAction action = messageHandler.handleFailure(requiredEnvelope, failure);
+        return persistActionOrThrow(action);
+    }
+
+    private EventEnvelopePb requireEnvelope(EventEnvelopePb envelope) {
+        if (envelope == null) {
+            throw new DlqException(
+                    KafkaListenerErrorCode.ENVELOPE_PARSE_ERROR,
+                    "cannot identify request because event envelope is unavailable"
+            );
+        }
+        return envelope;
+    }
+
+    private Outbox persistActionOrThrow(ListenerAction action) {
+        Objects.requireNonNull(action, "action");
+        if (action instanceof ListenerAction.AckOnly) {
+            return null;
+        }
+        if (action instanceof ListenerAction.OutboxReply(Outbox outbox)) {
+            return insertReplyOutboxOrThrowListenerException(outbox);
+        }
+        throw new DlqException(KafkaListenerErrorCode.LISTENER_INTERNAL_ERROR, "unknown listener action: " + action);
+    }
+
+    // TODO comment explain the insert and throw logic
+    private Outbox insertReplyOutboxOrThrowListenerException(Outbox outbox) {
+        try {
+            OutboxInsertDecision decision = outboxRepository.insertWithClaimAndVerify(
+                    outbox,
+                    LocalDateTimeHelper.nowAfterMs(retryPolicy.baseAttemptIntervalMs())
+            );
+            return switch (decision.type()) {
+                case INSERTED -> outbox;
+                case EXISTING_SAME_INTENT -> decision.existing();
+                case EXISTING_MISSING_AMBIGUOUS -> throw new KafkaListenerRetriableException(
+                        KafkaListenerErrorCode.REPLY_OUTBOX_AMBIGUOUS,
+                        "reply outbox insert affected 0 rows but existing row is missing, eventId=" + outbox.getEventId()
+                );
+                case EXISTING_CONFLICT -> throw new DlqException(
+                        KafkaListenerErrorCode.REPLY_OUTBOX_CONFLICT,
+                        "reply outbox event id conflicts with different intent, eventId=" + outbox.getEventId()
+                );
+            };
+        } catch (KafkaListenerRetriableException | DlqException e) {
+            throw e;
+        } catch (DbException e) {
+            if (e.isRetryable()) {
+                throw new KafkaListenerRetriableException(
+                        e.getErrorCode(),
+                        "retryable DB failure while inserting reply outbox",
+                        e
+                );
+            }
+            throw new DlqException(e.getErrorCode(), "non-retryable DB failure while inserting reply outbox", e);
+        }
+    }
+
+    private boolean isAckFailureRetry(Headers headers) {
+        return headers != null && headers.lastHeader(ACK_FAILED_HEADER) != null;
+    }
+
+    private void acknowledgeOrThrowRetriable(Acknowledgment ack, Headers headers) {
+        try {
+            ack.acknowledge();
+        } catch (Exception e) {
+            markAckFailure(headers);
+            /*
+             * Acknowledgment is the Kafka offset boundary. By the time this method is called,
+             * the normal reply or failure reply has already been made durable, so an ack failure
+             * must not be converted into a business failure. Retrying lets Kafka redeliver the
+             * record, while idempotent business logic and outbox verification prevent duplicate
+             * effects.
+             */
+            throw new KafkaListenerRetriableException(
+                    KafkaListenerErrorCode.ACK_FAILED,
+                    "failed to acknowledge Kafka record after durable listener processing",
+                    e
+            );
+        }
+    }
+
+    private void markAckFailure(Headers headers) {
+        if (headers == null || isAckFailureRetry(headers)) {
+            return;
+        }
+        headers.add(ACK_FAILED_HEADER, ACK_FAILED_HEADER_VALUE);
+    }
+
+    // TODO comment explain why suppressing here
+    private void tryImmediatePublishSuppressingErrors(Outbox outbox) {
+        if (outbox == null) {
+            return;
+        }
+        if (outbox.getOutboxStatus() != OutboxStatus.PENDING) {
+            log.info(
+                    "skip immediate publish for non-pending outbox, eventId={}, status={}",
+                    outbox.getEventId(),
+                    outbox.getOutboxStatus()
+            );
+            return;
+        }
+
+        try {
+            Result<Void> result = replyPublisher.publish(outbox);
+            if (result.isSuccess()) {
+                finalizeSentSuppressingErrors(outbox);
+            } else {
+                log.error(
+                        "immediate reply publish failed, eventId={}, commandId={}, errorCode={}, detail={}",
+                        outbox.getEventId(),
+                        outbox.getCommandId(),
+                        result.getErrorCode(),
+                        result.getDetail()
+                );
+            }
+        } catch (Exception e) {
+            log.error(
+                    "immediate reply publish threw exception, eventId={}, commandId={}",
+                    outbox.getEventId(),
+                    outbox.getCommandId(),
+                    e
+            );
+        }
+    }
+
+    private void finalizeSentSuppressingErrors(Outbox outbox) {
+        try {
+            int updated = outboxRepository.updateStatusToFinalize(outbox, OutboxStatus.SENT, LocalDateTime.now());
+            if (updated != 1) {
+                log.error("finalize reply outbox failed, eventId={}, updated={}", outbox.getEventId(), updated);
+            }
+        } catch (Exception e) {
+            log.error("finalize reply outbox threw exception, eventId={}", outbox.getEventId(), e);
+        }
+    }
+}

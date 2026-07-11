@@ -3,13 +3,16 @@ package com.exchange.common.outbox.dao.repository;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.exchange.common.db.manager.DbBaseRepository;
+import com.exchange.common.kafka.listener.outbox.OutboxInsertDecision;
 import com.exchange.common.outbox.dao.mapper.OutboxMapper;
 import com.exchange.common.outbox.po.Outbox;
 import com.exchange.common.outbox.po.enums.OutboxStatus;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 @Component
 public class OutboxRepository extends DbBaseRepository<Outbox, OutboxMapper> {
@@ -21,6 +24,22 @@ public class OutboxRepository extends DbBaseRepository<Outbox, OutboxMapper> {
         outbox.setAttemptCount(1);
         outbox.setNextAttemptAt(nextAttemptAt);
         return insertIgnore(outbox);
+    }
+
+    // TODO comment explain the insert and verify logic here
+    public OutboxInsertDecision insertWithClaimAndVerify(Outbox outbox, LocalDateTime nextAttemptAt) {
+        if (insertWithClaim(outbox, nextAttemptAt) == 1) {
+            return OutboxInsertDecision.inserted(outbox);
+        }
+
+        Outbox existing = selectByEventId(outbox.getEventId());
+        if (existing == null) {
+            return OutboxInsertDecision.existingMissingAmbiguous(outbox);
+        }
+        if (sameIntent(outbox, existing)) {
+            return OutboxInsertDecision.existingSameIntent(outbox, existing);
+        }
+        return OutboxInsertDecision.existingConflict(outbox, existing);
     }
 
     public Outbox selectByEventId(String eventId) {
@@ -63,5 +82,14 @@ public class OutboxRepository extends DbBaseRepository<Outbox, OutboxMapper> {
                 .orderByAsc(Outbox::getId)
                 .last("limit " + limit + " for update skip locked");
         return mapper.selectList(query);
+    }
+
+    private boolean sameIntent(Outbox intended, Outbox existing) {
+        return Objects.equals(intended.getEventType(), existing.getEventType())
+                && Objects.equals(intended.getEventId(), existing.getEventId())
+                && Objects.equals(intended.getCommandId(), existing.getCommandId())
+                && Objects.equals(intended.getDestination(), existing.getDestination())
+                && Objects.equals(intended.getPartitionKey(), existing.getPartitionKey())
+                && Arrays.equals(intended.getPayload(), existing.getPayload());
     }
 }

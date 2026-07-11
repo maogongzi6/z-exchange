@@ -1,0 +1,89 @@
+package com.exchange.app.ledger.kafka.consumer;
+
+import com.exchange.app.ledger.constant.EventType;
+import com.exchange.app.ledger.metrics.LedgerBusinessMetrics;
+import com.exchange.app.ledger.metrics.LedgerMetricTagValues;
+import com.exchange.app.ledger.processor.post.PostLedgerProcessor;
+import com.exchange.app.ledger.result.LedgerServiceErrorCode;
+import com.exchange.app.ledger.result.PostTransactionResult;
+import com.exchange.app.ledger.utils.OutboxHelper;
+import com.exchange.common.exception.AbnormalProtoDataException;
+import com.exchange.common.exception.CustomizedException;
+import com.exchange.common.kafka.listener.exception.KafkaListenerRetriableException;
+import com.exchange.common.outbox.po.Outbox;
+import com.exchange.proto.common.event.EventEnvelopePb;
+import com.exchange.proto.ledger.post.PostTransactionRequestPb;
+import com.google.protobuf.InvalidProtocolBufferException;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
+import java.util.function.Function;
+
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class LedgerCommandMessageHandler implements Function<EventEnvelopePb, Outbox> {
+    private final PostLedgerProcessor postLedgerProcessor;
+    private final LedgerBusinessMetrics ledgerBusinessMetrics;
+
+    @Override
+    public Outbox apply(EventEnvelopePb envelope) {
+        log.info(
+                "handle ledger command, eventId={}, commandId={}, eventType={}",
+                envelope.getEventId(),
+                envelope.getCommandId(),
+                envelope.getEventType()
+        );
+        return switch (envelope.getEventType()) {
+            case EventType.POST_LEDGER -> handlePostLedger(envelope);
+            default -> throw new AbnormalProtoDataException(
+                    LedgerServiceErrorCode.INVALID_ENUM_ERROR,
+                    "invalid event type: " + envelope.getEventType()
+            );
+        };
+    }
+
+    private Outbox handlePostLedger(EventEnvelopePb envelope) {
+        PostTransactionRequestPb request = parsePostLedgerRequest(envelope);
+        PostTransactionResult result = ledgerBusinessMetrics.recordPostTransaction(
+                LedgerMetricTagValues.Ingress.KAFKA,
+                () -> postLedgerProcessor.postTransaction(request)
+        );
+        if (!result.isSuccess()) {
+            handlePostLedgerFailure(result);
+        }
+        return OutboxHelper.fromPostTransactionResult(result, envelope.getEventId(), envelope.getCommandId());
+    }
+
+    // TODO comment explain why this InvalidProtocolBufferException parse error is not converted into dlq exception
+    private PostTransactionRequestPb parsePostLedgerRequest(EventEnvelopePb envelope) {
+        try {
+            return PostTransactionRequestPb.parseFrom(envelope.getPayload());
+        } catch (InvalidProtocolBufferException e) {
+            throw new AbnormalProtoDataException(
+                    LedgerServiceErrorCode.SERIALIZE_ERROR,
+                    "cannot parse post ledger payload",
+                    e
+            );
+        }
+    }
+
+    private void handlePostLedgerFailure(PostTransactionResult result) {
+        LedgerServiceErrorCode errorCode = result.errorCode() == null
+                ? LedgerServiceErrorCode.SERVER_ERROR
+                : result.errorCode();
+        if (isExplicitRetryable(errorCode)) {
+            throw new KafkaListenerRetriableException(
+                    errorCode,
+                    "post ledger failed with retryable error, errorCode=" + errorCode + ", detail=" + result.detail()
+            );
+        }
+        throw new CustomizedException(errorCode, result.detail());
+    }
+
+    private boolean isExplicitRetryable(LedgerServiceErrorCode errorCode) {
+        return errorCode == LedgerServiceErrorCode.REQUEST_IN_PROCESSING
+                || errorCode == LedgerServiceErrorCode.PUBLISH_KAFKA_ERROR;
+    }
+}

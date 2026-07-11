@@ -47,6 +47,7 @@ public final class LedgerBoundaryErrorMapper {
         if (ErrorNamespace.DB.equals(errorCode.getNamespace())
                 || ErrorNamespace.REDIS.equals(errorCode.getNamespace())
                 || ErrorNamespace.CACHE.equals(errorCode.getNamespace())
+                || ErrorNamespace.KAFKA.equals(errorCode.getNamespace())
                 || errorCode == OutboxErrorCode.UNEXPECTED_DB_ERROR) {
             return LedgerServiceErrorCode.INTERNAL_ERROR;
         }

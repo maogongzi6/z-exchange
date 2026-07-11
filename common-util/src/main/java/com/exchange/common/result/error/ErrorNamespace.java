@@ -6,4 +6,5 @@ public class ErrorNamespace {
     public static final String IDEMP = "idemp";
     public static final String CACHE = "cache";
     public static final String OUTBOX = "outbox";
+    public static final String KAFKA = "kafka";
 }

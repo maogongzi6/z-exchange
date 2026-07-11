@@ -1,121 +1,77 @@
 package com.exchange.app.ledger.kafka.consumer;
 
-import com.exchange.app.ledger.constant.EventType;
-import com.exchange.app.ledger.cronjob.outbox.constant.OutboxConstant;
 import com.exchange.app.ledger.kafka.constant.LedgerTopic;
-import com.exchange.app.ledger.kafka.producer.DefaultPublisher;
-import com.exchange.app.ledger.metrics.LedgerBusinessMetrics;
-import com.exchange.app.ledger.metrics.LedgerMetricTagValues;
-import com.exchange.app.ledger.processor.post.PostLedgerProcessor;
-import com.exchange.app.ledger.result.LedgerServiceErrorCode;
-import com.exchange.app.ledger.result.PostTransactionResult;
-import com.exchange.app.ledger.utils.OutboxHelper;
-import com.exchange.common.outbox.dao.repository.OutboxRepository;
-import com.exchange.common.outbox.po.Outbox;
-import com.exchange.common.outbox.po.enums.OutboxStatus;
-import com.exchange.common.exception.AbnormalProtoDataException;
-import com.exchange.common.exception.RetriableException;
-import com.exchange.common.result.Result;
-import com.exchange.common.result.error.ErrorCategory;
-import com.exchange.common.utils.time.LocalDateTimeHelper;
-import com.exchange.proto.common.event.EventEnvelopePb;
-import com.exchange.proto.ledger.post.PostTransactionRequestPb;
-import com.google.protobuf.InvalidProtocolBufferException;
-import lombok.RequiredArgsConstructor;
+import com.exchange.common.kafka.listener.exception.DlqException;
+import com.exchange.common.kafka.listener.exception.KafkaListenerRetriableException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.header.Header;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.kafka.retrytopic.DltStrategy;
 import org.springframework.kafka.support.Acknowledgment;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Component;
+
+import java.nio.charset.StandardCharsets;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class DefaultListener {
-    private final PostLedgerProcessor postLedgerProcessor;
-    private final OutboxRepository outboxManager;
-    private final DefaultPublisher replyWalletPublisher;
-    private final LedgerBusinessMetrics ledgerBusinessMetrics;
+    private final com.exchange.common.kafka.listener.DefaultListener delegate;
 
+    public DefaultListener(
+            @Qualifier("ledgerCommonListener") com.exchange.common.kafka.listener.DefaultListener delegate
+    ) {
+        this.delegate = delegate;
+    }
+
+    @RetryableTopic(
+            attempts = "${app.kafka.listener.retry.attempts:7}",
+            backoff = @Backoff(
+                    delayExpression = "${app.kafka.listener.retry.backoff-delay-ms:1000}",
+                    multiplierExpression = "${app.kafka.listener.retry.backoff-multiplier:1.0}",
+                    maxDelayExpression = "${app.kafka.listener.retry.backoff-max-delay-ms:25000}"
+            ),
+            include = {KafkaListenerRetriableException.class},
+            exclude = {DlqException.class},
+            listenerContainerFactory = "concurrentRetryTopicCommandKafkaListenerContainerFactory",
+            autoCreateTopics = "${app.kafka.listener.retry.auto-create-topics:false}",
+            retryTopicSuffix = ".retry",
+            dltTopicSuffix = ".dlq",
+            dltStrategy = DltStrategy.FAIL_ON_ERROR
+    )
     @KafkaListener(
             topics = LedgerTopic.WALLET_POST,
             groupId = "wallet-post",
-            containerFactory = "concurrentCommandKafkaListenerContainerFactory"
+            containerFactory = "concurrentRetryTopicCommandKafkaListenerContainerFactory"
     )
-    public void onMessage(byte[] envelopeBytes, Acknowledgment ack) {
-        log.info("onMessage");
-        try {
-            var envelope = EventEnvelopePb.parseFrom(envelopeBytes);
-            Outbox replyOutbox = handleMessage(envelope);
-            if (outboxManager.insertWithClaim(replyOutbox, LocalDateTimeHelper.nowAfterMs(OutboxConstant.BASE_ATTEMPT_INTERVAL_MS))
-                    != 1) {
-                log.error("duplicated outbox, {}", replyOutbox);
-                throw new RetriableException(LedgerServiceErrorCode.LEDGER_OUTBOX_DUPLICATED, "insert outbox failed, outbox=" + replyOutbox);
-            }
-            // ack first, then try to publish immediately
-            ack.acknowledge();
-            tryToPublishReply(replyOutbox);
-        } catch (InvalidProtocolBufferException e) {
-            log.error("Error parsing envelope", e);
-            throw new AbnormalProtoDataException(LedgerServiceErrorCode.SERIALIZE_ERROR, "Error parsing envelope", e);
-        }
+    public void onMessage(ConsumerRecord<String, byte[]> record, Acknowledgment ack) {
+        delegate.onMessage(record.value(), ack, record.headers());
     }
 
-    private Outbox handleMessage(EventEnvelopePb envelope) throws InvalidProtocolBufferException {
-        log.info("handleMessage: {}", envelope);
-        Outbox replyOutbox;
-        switch (envelope.getEventType()) {
-            case EventType.POST_LEDGER:
-                replyOutbox = handlePostLedger(envelope);
-                break;
-            default:
-                throw new AbnormalProtoDataException(LedgerServiceErrorCode.INVALID_ENUM_ERROR, "invalid event type" + envelope.getEventType());
-        }
-        return replyOutbox;
-    }
-
-    private Outbox handlePostLedger(EventEnvelopePb envelope) throws InvalidProtocolBufferException {
-        var req = PostTransactionRequestPb.parseFrom(envelope.getPayload());
-        log.info("handlePostLedger: {}", req);
-        PostTransactionResult result = ledgerBusinessMetrics.recordPostTransaction(
-                LedgerMetricTagValues.Ingress.KAFKA,
-                () -> postLedgerProcessor.postTransaction(req)
+    @DltHandler
+    public void onDltMessage(ConsumerRecord<String, byte[]> record) {
+        log.error(
+                "ledger listener dlt message, topic={}, partition={}, offset={}, key={}, original_topic={}, exception_class={}, exception_message={}",
+                record.topic(),
+                record.partition(),
+                record.offset(),
+                record.key(),
+                headerString(record, KafkaHeaders.ORIGINAL_TOPIC, KafkaHeaders.DLT_ORIGINAL_TOPIC),
+                headerString(record, KafkaHeaders.EXCEPTION_FQCN, KafkaHeaders.DLT_EXCEPTION_FQCN),
+                headerString(record, KafkaHeaders.EXCEPTION_MESSAGE, KafkaHeaders.DLT_EXCEPTION_MESSAGE)
         );
-        if (!result.isSuccess()) {
-            handlePostLedgerFailure(result);
-        }
-        return OutboxHelper.fromPostTransactionResult(result, envelope.getEventId(), envelope.getCommandId());
     }
 
-    private void handlePostLedgerFailure(PostTransactionResult result) {
-        LedgerServiceErrorCode errorCode = result.errorCode() == null
-                ? LedgerServiceErrorCode.SERVER_ERROR
-                : result.errorCode();
-        // Keep the existing retry/DLQ policy while removing protobuf as the decision model.
-        // The retryability rule should be redesigned separately with explicit error semantics.
-        if (errorCode.getCategory() != ErrorCategory.INTERNAL) {
-            log.error("post ledger failed, wait for retry: {}", result);
-            throw new RetriableException(
-                    LedgerServiceErrorCode.SERVER_ERROR,
-                    "post ledger failed, wait for retry, errorCode=" + errorCode + ", detail=" + result.detail()
-            );
+    private String headerString(ConsumerRecord<String, byte[]> record, String primaryName, String fallbackName) {
+        Header header = record.headers().lastHeader(primaryName);
+        if (header == null) {
+            header = record.headers().lastHeader(fallbackName);
         }
-
-        log.error("post ledger failed with internal error, queue dlq: {}", result);
-        // TODO change exception type
-        throw new AbnormalProtoDataException(LedgerServiceErrorCode.SERVER_ERROR, "non retriable, queue dlq");
-    }
-
-    private void tryToPublishReply(Outbox replyOutbox) {
-        Result<Void> result = replyWalletPublisher.publish(replyOutbox);
-        if (result.isSuccess()) {
-            if (outboxManager.updateStatusToFinalize(replyOutbox, OutboxStatus.SENT, replyOutbox.getLastAttemptAt()) != 1) {
-                // do not fail, ack as normal, wait cronjob to retry outbox
-                log.error("finalize outbox failed, {}", replyOutbox);
-            }
-        } else {
-            // do not fail, ack as normal, wait cronjob to retry outbox
-            log.error("publish reply failed, outbox={}, result={}", replyOutbox, result);
-        }
+        return header == null ? null : new String(header.value(), StandardCharsets.UTF_8);
     }
 }
