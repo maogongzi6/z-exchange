@@ -1,7 +1,0 @@
-hot key redis cache
-for the extremely hot key with tens of writings and thousands of reads per second.
-1. write through cache pattern to reduce cache invalidation
-2. distributed lock to protect db from massive concurrent updates when cache expires (thundering herd)
-3. (optional) L1 layer cache in JVM
-
-ps: add a jitter to all cache ttl to avoid thundering herd caused by massive keys expiring
