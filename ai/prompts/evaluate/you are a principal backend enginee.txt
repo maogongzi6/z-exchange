@@ -1,10 +1,6 @@
 you are a principal backend engineer evaluating this project.
 
-You have already read the codebase and analyzed its structure, flows, risks, and optimizations. your analyzations are in memory and also in ./codex.
-
-these two bugs in wallet-service has been fixed: 
-WS-1 | Data inconsistency
-S-2 | Data inconsistency / Architecture gap
+You have already read the codebase and analyzed its structure, flows, risks, and optimizations.
 
 Now evaluate the project with a PRIMARY focus on SYSTEM DESIGN and ENGINEERING JUDGMENT. Since the project is still evolving, do not focus on not small implementation bugs.
 
