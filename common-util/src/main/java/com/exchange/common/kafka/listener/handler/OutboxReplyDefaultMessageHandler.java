@@ -8,7 +8,11 @@ import com.exchange.proto.common.event.EventEnvelopePb;
 import java.util.Objects;
 import java.util.function.Function;
 
-// TODO comment explain
+/*
+ * Adapter for request/reply command listeners. Normal handling returns a reply outbox, and
+ * parseable failures are converted into failed reply outboxes through the service-owned
+ * FailureReplyFactory.
+ */
 public class OutboxReplyDefaultMessageHandler implements MessageHandler {
     private final Function<EventEnvelopePb, Outbox> handler;
     private final FailureReplyFactory failureReplyFactory;

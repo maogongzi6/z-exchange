@@ -26,7 +26,11 @@ public class OutboxRepository extends DbBaseRepository<Outbox, OutboxMapper> {
         return insertIgnore(outbox);
     }
 
-    // TODO comment explain the insert and verify logic here
+    /*
+     * INSERT IGNORE only tells us whether this attempt inserted a row. When it does not,
+     * verify the existing event id before treating the duplicate as success; same intent is
+     * idempotent delivery, missing state is ambiguous, and different intent is a conflict.
+     */
     public OutboxInsertDecision insertWithClaimAndVerify(Outbox outbox, LocalDateTime nextAttemptAt) {
         if (insertWithClaim(outbox, nextAttemptAt) == 1) {
             return OutboxInsertDecision.inserted(outbox);

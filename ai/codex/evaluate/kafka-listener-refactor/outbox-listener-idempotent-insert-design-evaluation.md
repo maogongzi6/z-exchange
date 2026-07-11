@@ -143,17 +143,19 @@ Recommended listener policy:
 | Business success | success reply | yes after durable insert | no |
 | Business/non-retryable failure | failure reply with business error code | yes after durable insert | only if failed reply cannot be inserted after retry limit |
 | Retryable failure before reply threshold | no reply yet | no | no |
-| Retryable failure after reply threshold | failure reply, e.g. `kafka:retry_exhausted` | yes after durable insert | only if failed reply cannot be inserted after DLQ threshold |
-| Reply outbox insert DB failure | retry source message | no | yes only after DLQ threshold |
+| Retryable failure after reply threshold | failure reply, e.g. `kafka:retry_exhausted` | yes after durable insert | only if failed reply cannot be inserted before `@RetryableTopic.attempts` is exhausted |
+| Reply outbox insert DB failure | retry source message | no | yes only after retry-topic exhaustion |
+| Ack failure after durable reply exists | existing durable reply | no; retry offset recovery | only after retry/DLT exhaustion |
+| Retry record has ack-failed marker | existing durable reply | ack directly without business/outbox replay | only after retry/DLT exhaustion |
 
-Two separate retry thresholds should be configured:
+Use one framework retry ceiling and one listener reply threshold:
 
 - `reply_failure_after_attempts`, for example `10`
   - after this many source-processing attempts, a retryable failure is converted into a durable failure reply such as `reply:{request_event_id}:error:kafka:retry_exhausted`
-- `dlq_after_attempts`, for example `15`
-  - after this many attempts, DLQ is allowed only if the listener still cannot insert the failure reply outbox
+- `@RetryableTopic.attempts`, for example `15`
+  - the final retry/DLT ceiling owned by Spring Kafka; if failed-reply persistence keeps throwing retryable exceptions until this ceiling, the record is routed to DLT
 
-These thresholds serve different purposes. The first prevents an upstream request from waiting forever without a reply. The second prevents DLQ from happening too aggressively when the system is temporarily unable to persist the failure reply.
+These values serve different purposes. The reply threshold prevents an upstream request from waiting forever without a reply. The retry-topic attempts value prevents infinite retry and owns the final DLT routing. A separate listener-level DLT attempt threshold is not needed because it duplicates Spring's retry-topic ceiling and can drift out of sync.
 
 Important implementation details:
 
@@ -161,6 +163,7 @@ Important implementation details:
 - If the source processing attempt count must survive process restart or rebalance, do not rely only on in-memory blocking retry state. Use Kafka retry-topic headers as the preferred attempt source. If headers are not enough for the required operational guarantee, use a durable listener-attempt record keyed by consumer group and source event id.
 - Failure reply event ids must be deterministic. Use stable codes such as `reply:{request_event_id}:error:kafka:retry_exhausted`; put volatile detail in the payload/log, not the event id.
 - After the reply outbox is durable, ack the source message before immediate publish. If immediate publish fails, the outbox retry worker owns delivery recovery.
+- If ack fails after the reply outbox is durable, treat it as Kafka offset recovery. Mark the retry record with `zx-ack-failed`, throw retryable `ACK_FAILED`, and on the retry path only acknowledge the record instead of re-running business/outbox logic.
 - Wallet must treat failure replies as at-least-once signals, not unconditional final state transitions, unless wallet state guards make compensation and normal completion mutually exclusive.
 
 This policy supports the product-level expectation that every valid request receives at least one reply unless Kafka/DB is unavailable for too long or the message is too corrupted to identify the request.
@@ -257,6 +260,11 @@ attempt >= reply_failure_after_attempts
   -> if insert fails with retryable DB error, throw KafkaListenerRetriableException
   -> if insert fails with non-retryable DB error, throw DlqException
 
+ack fails after any durable success/failure reply exists
+  -> add zx-ack-failed header
+  -> throw KafkaListenerRetriableException(ACK_FAILED)
+  -> retry record skips business/outbox logic and only attempts ack
+
 attempt >= RetryableTopic.attempts and still no durable reply
   -> DltHandler receives the record
 ```
@@ -342,7 +350,7 @@ Do not convert DB unavailable into a normal outbox reply with `internal` by defa
 - short component retry
 - bounded listener retry before any durable reply exists
 - create a deterministic retry-exhausted failure reply after the reply threshold if the message is parseable and a reply is required
-- DLQ and alert only when the failure reply still cannot be made durable after the DLQ threshold
+- DLQ and alert only when the failure reply still cannot be made durable before `@RetryableTopic.attempts` is exhausted
 - upstream recovery can re-drive the command using the same idempotency key/command id
 
 ## Missing Metrics And Observability
@@ -350,9 +358,10 @@ Do not convert DB unavailable into a normal outbox reply with `internal` by defa
 When implementing this, add metrics for the new decision points:
 
 - outbox insert decision: inserted, existing_same_intent, missing_ambiguous, conflict
-- listener outcome: success_reply, failure_reply, retry, dlq
+- listener outcome: success_reply, failure_reply, retry, dlq, ack_failed, ack_failed_retry
 - listener error type: proto_parse, invalid_enum, outbox_ambiguous, outbox_conflict, db_unavailable, db_timeout
-- listener retry stage: before_reply_threshold, after_reply_threshold, after_dlq_threshold
+- listener retry stage: before_reply_threshold, after_reply_threshold, retry_topic_exhausted
+- ack recovery marker count: marked, retried
 - immediate publish result after ack: success, failure
 - DLQ publish count
 
@@ -368,6 +377,7 @@ Implement in this order:
 4. Decide whether to replace blocking `DefaultErrorHandler` with `RetryableTopic` for command listeners that need non-blocking retry.
 5. Configure listener retry to include only explicit retriable listener exceptions.
 6. Refactor ledger listener to use the common outbox-reply listener template.
-7. Refactor wallet listener later with a separate ack-only template if needed.
+7. Add ack-failure offset recovery: retryable `ACK_FAILED`, marker header, and ack-only retry path.
+8. Refactor wallet listener later with a separate ack-only template if needed.
 
 The concept is solid, but deterministic outbox identity is a prerequisite. Without that, `inserted = 0` will not reliably represent duplicate delivery.

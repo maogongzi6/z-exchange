@@ -26,11 +26,15 @@ parse envelope
   -> run message handler
   -> if OutboxReply, insert outbox with idempotent verification
   -> ack
+  -> if ack fails, mark ack-failed header and throw retryable listener error
+  -> if retry has ack-failed header, skip business/outbox logic and ack only
   -> after ack, try immediate publish
   -> suppress/log immediate publish failure because outbox retry owns recovery
 ```
 
 This preserves the key invariant: source Kafka message is acknowledged only after the durable local outcome or reply outbox exists.
+
+Ack failure should be treated as Kafka offset recovery, not as a domain failure. By the time ack is attempted, the durable local outcome already exists. A retryable `ACK_FAILED` signal plus a compact marker header prevents the retry path from re-running business logic just to recover the offset.
 
 ## General Listener With Default Handler Adapters
 
@@ -52,6 +56,8 @@ interface MessageHandler {
 - call `messageHandler.handle(...)`
 - insert outbox for `OutboxReply`
 - ack after durable success
+- convert ack exceptions into retryable offset-recovery errors
+- skip handler/outbox execution on ack-failure retry records
 - try immediate publish after ack
 - catch listener exceptions and classify retry/DLQ behavior
 - call `messageHandler.handleFailure(...)` when a parseable failure should become a normal failed reply or ack-only completion
@@ -192,13 +198,13 @@ attempt >= reply_failure_after_attempts
   -> retry again if insert fails with retryable DB error
   -> throw DlqException if insert fails with non-retryable failure
 
-attempt >= dlq_after_attempts and failure reply still cannot be inserted
-  -> throw DlqException so the message is sent to the DLT/DLQ topic
+retry-topic attempts exhausted and failure reply still cannot be inserted
+  -> let @RetryableTopic route the message to DLT
 ```
 
 This keeps retry metadata out of `EventEnvelopePb`, which should remain immutable business event data.
 
-This threshold check is useful after server restart because retry-topic attempt metadata is carried in Kafka record headers. Do not rely on in-memory listener counters. Also, configure `@RetryableTopic.attempts` to be at least the DLQ threshold; otherwise Spring may route to DLT before the listener gets a chance to apply the intended policy.
+This threshold check is useful after server restart because retry-topic attempt metadata is carried in Kafka record headers. Do not rely on in-memory listener counters. Configure `@RetryableTopic.attempts` to be at least `reply_failure_after_attempts`; otherwise Spring may route to DLT before the listener gets a chance to create the retry-exhausted failed reply.
 
 ## Outbox Insert Requirement
 
@@ -262,28 +268,48 @@ switch (action) {
 ```java
 Outbox outboxToPublish = null;
 
+if (hasAckFailedHeader(headers)) {
+    acknowledgeOrThrowRetriable(ack, headers);
+    return;
+}
+
 try {
     ...
     if (action instanceof OutboxReply reply) {
         insertOutboxWithIdempotentVerification(reply.outbox());
         outboxToPublish = reply.outbox();
     }
-    ack.acknowledge();
 } catch (CustomizedException e) {
     ListenerAction failureAction = messageHandler.handleFailure(envelope, ListenerFailure.from(e));
     if (failureAction instanceof OutboxReply reply) {
         insertReplyOutboxOrThrowListenerException(reply.outbox());
         outboxToPublish = reply.outbox();
     }
-    ack.acknowledge();
 }
+
+acknowledgeOrThrowRetriable(ack, headers);
 
 if (outboxToPublish != null) {
     tryImmediatePublish(outboxToPublish);
 }
 ```
 
-This avoids publishing from stale or missing `action` state.
+This avoids publishing from stale or missing `action` state and keeps ack exceptions out of business failure conversion.
+
+Ack helper:
+
+```java
+void acknowledgeOrThrowRetriable(Acknowledgment ack, Headers headers) {
+    try {
+        ack.acknowledge();
+    } catch (Exception e) {
+        markAckFailed(headers);
+        throw new KafkaListenerRetriableException(ACK_FAILED, "ack failed after durable processing", e);
+    }
+}
+```
+
+The marker header is valid only after durable processing succeeds. It should never be added before reply outbox persistence or ack-only durable work is complete.
 
 ## Ledger Handler Evaluation
 
@@ -339,9 +365,10 @@ For ledger-service first:
 4. Add `FailureReplyFactory`.
 5. Add `ListenerAttemptResolver` based on Kafka headers.
 6. Add listener exceptions: `KafkaListenerRetriableException` and `DlqException`.
-7. Add `insertReplyOutboxOrThrowListenerException`.
-8. Configure DLQ threshold handling to throw `DlqException` when the retry-topic attempt count reaches the DLQ limit and no durable reply can be inserted.
-9. Refactor ledger listener to provide:
+7. Add retryable `ACK_FAILED` plus an ack-failed marker header for offset recovery after durable processing.
+8. Add `insertReplyOutboxOrThrowListenerException`.
+9. Configure `@RetryableTopic.attempts` as the final retry/DLT ceiling; do not keep a second listener-level DLQ attempt threshold.
+10. Refactor ledger listener to provide:
    - ledger message handler
    - ledger failure reply factory
    - ledger immediate publisher
@@ -350,6 +377,6 @@ Do not refactor wallet-service in the same step. Ack-only semantics deserve a se
 
 ## Final Assessment
 
-The design is solid if `DefaultListener` stays generic and failure behavior is delegated to `MessageHandler.handleFailure(...)`. The main missing pieces are the failure reply factory, safe control-flow state after catch blocks, DLQ-threshold handling, and idempotent outbox insert verification.
+The design is solid if `DefaultListener` stays generic and failure behavior is delegated to `MessageHandler.handleFailure(...)`. The main missing pieces are the failure reply factory, safe control-flow state after catch blocks, retry-topic DLT routing, idempotent outbox insert verification, and explicit ack-failure offset recovery.
 
 I would implement the general listener interface now, but only wire the outbox-reply adapter into ledger-service in this phase. Keep wallet-service on its current path until the ack-only failure policy is explicitly designed and configured.

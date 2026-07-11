@@ -32,15 +32,15 @@ public class DefaultListener {
     private static final String ACK_FAILED_HEADER = "zx-ack-failed";
     private static final byte[] ACK_FAILED_HEADER_VALUE = "true".getBytes(StandardCharsets.UTF_8);
 
-    // TODO comment explain
+    // Converts service-specific command handling into a normal listener action.
     private final MessageHandler messageHandler;
     private final OutboxRepository outboxRepository;
     private final IPublisher replyPublisher;
-    // TODO comment explain
+    // Hides Spring Kafka retry-topic header details from the listener workflow.
     private final ListenerAttemptResolver attemptResolver;
-    // TODO comment explain
+    // Controls when retryable listener failures become durable failure replies.
     private final ListenerRetryPolicy retryPolicy;
-    // TODO comment explain
+    // Public error used when an unexpected exception can still be converted into a reply.
     private final ErrorCode unexpectedErrorCode;
 
     public DefaultListener(
@@ -59,7 +59,13 @@ public class DefaultListener {
         this.unexpectedErrorCode = Objects.requireNonNull(unexpectedErrorCode, "unexpectedErrorCode");
     }
 
-    // TODO comment about exception handling scenarios; explain why need manually ack
+    /*
+     * The listener acknowledges only after a durable outcome exists: either the handler
+     * completed an ack-only action or a reply outbox row was inserted/verified. Parseable
+     * failures are converted through MessageHandler.handleFailure so callers still receive
+     * a reply. Retry/DLQ exceptions are reserved for cases where no durable outcome can be
+     * produced yet, or where the message cannot identify a request.
+     */
     public void onMessage(byte[] envelopeBytes, Acknowledgment ack, Headers headers) {
         EventEnvelopePb envelope = null;
         Outbox outboxToPublish;
@@ -101,7 +107,11 @@ public class DefaultListener {
         tryImmediatePublishSuppressingErrors(outboxToPublish);
     }
 
-    // TODO comment explain why throw dlq here
+    /*
+     * If the outer envelope cannot be parsed, the listener cannot know the event id,
+     * command id, or reply contract. There is no safe failure reply to create, so this is
+     * routed to DLQ instead of being downgraded into a business failure.
+     */
     private EventEnvelopePb parseEnvelopeOrThrowDlq(byte[] envelopeBytes) {
         try {
             return EventEnvelopePb.parseFrom(envelopeBytes);
@@ -114,7 +124,12 @@ public class DefaultListener {
         }
     }
 
-    // TODO explain the handle logic here
+    /*
+     * Retryable failures remain Kafka retries until the reply threshold. After that
+     * threshold, a deterministic retry-exhausted reply is persisted so the upstream is not
+     * left waiting forever. If that durable reply still cannot be produced, this method
+     * rethrows and lets Spring RetryableTopic own the final DLT routing.
+     */
     private Outbox handleRetriableFailureOrThrow(
             EventEnvelopePb envelope,
             KafkaListenerRetriableException e,
@@ -122,14 +137,6 @@ public class DefaultListener {
     ) {
         EventEnvelopePb requiredEnvelope = requireEnvelope(envelope);
         int attempt = attemptResolver.resolve(headers);
-
-        if (attempt >= retryPolicy.dlqAfterAttempts()) {
-            throw new DlqException(
-                    KafkaListenerErrorCode.RETRY_EXHAUSTED,
-                    "retry exhausted and no durable reply exists, attempt=" + attempt,
-                    e
-            );
-        }
 
         if (attempt < retryPolicy.replyFailureAfterAttempts()) {
             throw e;
@@ -165,7 +172,12 @@ public class DefaultListener {
         throw new DlqException(KafkaListenerErrorCode.LISTENER_INTERNAL_ERROR, "unknown listener action: " + action);
     }
 
-    // TODO comment explain the insert and throw logic
+    /*
+     * Reply outbox persistence is the durable boundary before ack. Duplicate delivery is
+     * accepted only when the existing row has the same intent; missing rows after an
+     * insert-ignore conflict are ambiguous and retryable, while conflicting intent is a
+     * contract/data error for DLQ.
+     */
     private Outbox insertReplyOutboxOrThrowListenerException(Outbox outbox) {
         try {
             OutboxInsertDecision decision = outboxRepository.insertWithClaimAndVerify(
@@ -229,7 +241,11 @@ public class DefaultListener {
         headers.add(ACK_FAILED_HEADER, ACK_FAILED_HEADER_VALUE);
     }
 
-    // TODO comment explain why suppressing here
+    /*
+     * Immediate publish is best-effort because the source message has already been acked
+     * and the outbox row is durable. Throwing here would create a Kafka retry for work the
+     * outbox retry worker already owns.
+     */
     private void tryImmediatePublishSuppressingErrors(Outbox outbox) {
         if (outbox == null) {
             return;

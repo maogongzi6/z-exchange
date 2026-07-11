@@ -56,7 +56,11 @@ public class LedgerCommandMessageHandler implements Function<EventEnvelopePb, Ou
         return OutboxHelper.fromPostTransactionResult(result, envelope.getEventId(), envelope.getCommandId());
     }
 
-    // TODO comment explain why this InvalidProtocolBufferException parse error is not converted into dlq exception
+    /*
+     * The envelope is already parseable here, so the request id and reply contract are
+     * known. Payload parse failure can be returned as a normal failed ledger reply instead
+     * of DLQ; DLQ is only reserved for messages where the listener cannot identify the request.
+     */
     private PostTransactionRequestPb parsePostLedgerRequest(EventEnvelopePb envelope) {
         try {
             return PostTransactionRequestPb.parseFrom(envelope.getPayload());

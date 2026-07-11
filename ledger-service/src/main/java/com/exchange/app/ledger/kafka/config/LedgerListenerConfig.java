@@ -41,8 +41,7 @@ public class LedgerListenerConfig {
         retryProperties.validate();
         ListenerRetryPolicy retryPolicy = new ListenerRetryPolicy(
                 retryProperties.getBaseAttemptIntervalMs(),
-                retryProperties.getReplyFailureAfterAttempts(),
-                retryProperties.getDlqAfterAttempts()
+                retryProperties.getReplyFailureAfterAttempts()
         );
         return new com.exchange.common.kafka.listener.DefaultListener(
                 ledgerMessageHandler,

@@ -11,7 +11,6 @@ import java.util.concurrent.TimeUnit;
 public class LedgerListenerRetryProperties {
     private int attempts = 7;
     private int replyFailureAfterAttempts = 5;
-    private int dlqAfterAttempts = 7;
     private long baseAttemptIntervalMs = OutboxConstant.DEFAULT_BASE_ATTEMPT_INTERVAL_MS;
     private long backoffDelayMs = TimeUnit.SECONDS.toMillis(1);
     private double backoffMultiplier = 1.0;
@@ -19,8 +18,10 @@ public class LedgerListenerRetryProperties {
     private boolean autoCreateTopics = false;
 
     public void validate() {
-        if (attempts < dlqAfterAttempts) {
-            throw new IllegalArgumentException("app.kafka.listener.retry.attempts must be >= dlq-after-attempts");
+        if (attempts < replyFailureAfterAttempts) {
+            throw new IllegalArgumentException(
+                    "app.kafka.listener.retry.attempts must be >= reply-failure-after-attempts"
+            );
         }
     }
 }

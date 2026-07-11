@@ -8,7 +8,11 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
-// TODO comment explain
+/*
+ * Adapter for listeners whose durable work is completed inside the consumer function and
+ * no reply outbox is required. Failure handling is injected so services must choose their
+ * own policy instead of common-util silently acknowledging every failure.
+ */
 public class AckOnlyDefaultMessageHandler implements MessageHandler {
     private final Consumer<EventEnvelopePb> consumer;
     private final BiFunction<EventEnvelopePb, ListenerFailure, ListenerAction> failurePolicy;

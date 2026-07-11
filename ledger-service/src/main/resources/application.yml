@@ -95,7 +95,6 @@ app:
       retry:
         attempts: 7
         reply-failure-after-attempts: 5
-        dlq-after-attempts: 7
         base-attempt-interval-ms: 15000
         backoff-delay-ms: 1000
         backoff-multiplier: 1.0

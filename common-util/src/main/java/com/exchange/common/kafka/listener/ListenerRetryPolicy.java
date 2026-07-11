@@ -2,8 +2,7 @@ package com.exchange.common.kafka.listener;
 
 public record ListenerRetryPolicy(
         long baseAttemptIntervalMs,
-        int replyFailureAfterAttempts,
-        int dlqAfterAttempts
+        int replyFailureAfterAttempts
 ) {
     public ListenerRetryPolicy {
         if (baseAttemptIntervalMs < 0) {
@@ -11,9 +10,6 @@ public record ListenerRetryPolicy(
         }
         if (replyFailureAfterAttempts < 1) {
             throw new IllegalArgumentException("replyFailureAfterAttempts must be >= 1");
-        }
-        if (dlqAfterAttempts < replyFailureAfterAttempts) {
-            throw new IllegalArgumentException("dlqAfterAttempts must be >= replyFailureAfterAttempts");
         }
     }
 }
