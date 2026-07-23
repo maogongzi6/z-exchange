@@ -1,18 +1,12 @@
-server:
-  port: 10020
-
-
-grpc:
-  client:
-    GLOBAL:
-      enable-keep-alive: true
-      negotiation-type: plaintext
-      address: static://127.0.0.1:9191
-
-
 spring:
+  application:
+    name: wallet-service
+
+  profiles:
+    default: cloud
+
   datasource:
-    url: "jdbc:mysql://localhost:3306/trade_walletservice?serverTimezone=GMT%2B8&characterEncoding=utf-8&useSSL=false&rewriteBatchedStatements=true"
+    url: "jdbc:mysql://localhost:3306/trade_walletservice?serverTimezone=GMT%2B8&characterEncoding=utf-8&useSSL=false"
     username: root
     password: "0000"
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -20,12 +14,9 @@ spring:
   cache:
     type: redis
   redis:
-    host: 192.168.52.100
     port: 6379
 
   kafka:
-    bootstrap-servers: 192.168.52.100:9092
-
     consumer:
       auto-offset-reset: latest
       fetch-min-size: 256
@@ -48,15 +39,40 @@ spring:
           idempotence: true
 
 
-mybatis-plus:
-  type-enums-package: com.exchange.app.wallet.po
+server:
+  port: 8082
 
+
+grpc:
+  server:
+    port: 9192
+
+  client:
+    GLOBAL:
+      enable-keep-alive: true
+      negotiation-type: plaintext
+
+    ledger-client:
+      address: static://127.0.0.1:9191
+
+    account-client:
+      address: static://127.0.0.1:9191
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
 
 app:
   kafka:
-    not-retriable-exceptions: >
-      com.exchange.common.exception.AbnormalProtoDataException,
-      java.lang.RuntimeException
+    not-retriable-exceptions: com.exchange.common.exception.AbnormalProtoDataException
 
   outbox:
     interval: "*/5 * * * * ?"

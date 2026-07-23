@@ -37,7 +37,6 @@ public class DefaultListener {
                     maxDelayExpression = "${app.kafka.listener.retry.backoff-max-delay-ms:25000}"
             ),
             include = {KafkaListenerRetriableException.class},
-            exclude = {DlqException.class},
             listenerContainerFactory = "concurrentRetryTopicCommandKafkaListenerContainerFactory",
             autoCreateTopics = "${app.kafka.listener.retry.auto-create-topics:false}",
             retryTopicSuffix = ".retry",
