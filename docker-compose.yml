@@ -8,6 +8,8 @@ services:
       MYSQL_USER: ${LEDGER_DB_USERNAME:-ledger}
       MYSQL_PASSWORD: ${LEDGER_DB_PASSWORD:-ledger-local}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root-local}
+      WALLET_DB_USERNAME: ${WALLET_DB_USERNAME:-wallet}
+      WALLET_DB_PASSWORD: ${WALLET_DB_PASSWORD:-wallet-local}
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_0900_ai_ci
@@ -17,6 +19,8 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql
       - ./standard/sql/ledger_service.sql:/docker-entrypoint-initdb.d/001-ledger-service.sql:ro
+      - ./standard/sql/wallet_service.sql:/docker-entrypoint-initdb.d/002-wallet-service.sql:ro
+      - ./standard/docker/mysql/grant-service-users.sh:/docker-entrypoint-initdb.d/003-grant-service-users.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot --password=\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
       interval: 5s
@@ -98,6 +102,34 @@ services:
     networks:
       - z-exchange-net
 
+  wallet-service:
+    build:
+      context: .
+      dockerfile: wallet-service/Dockerfile
+    image: z-exchange/wallet-service:local
+    container_name: wallet-service
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_USERNAME: ${WALLET_DB_USERNAME:-wallet}
+      DB_PASSWORD: ${WALLET_DB_PASSWORD:-wallet-local}
+    ports:
+      - "8082:8082"
+      - "9192:9192"
+    volumes:
+      - wallet-service-logs:/app/logs/wallet-service
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      ledger-service:
+        condition: service_started
+    networks:
+      - z-exchange-net
+
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
@@ -131,6 +163,7 @@ networks:
 
 volumes:
   ledger-service-logs:
+  wallet-service-logs:
   mysql-data:
   redis-data:
   prometheus-data:
