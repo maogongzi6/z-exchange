@@ -98,6 +98,14 @@ Kafka has two listeners:
 
 `ledger-service-logs`, `mysql-data`, `redis-data`, `prometheus-data`, and `grafana-data` retain state across `docker compose down` and container recreation. `ledger-service-logs` stores `/app/logs/ledger-service` as a Docker-managed named volume, so no server-side log directory or `chown` setup is required. The schema SQL is run only when `mysql-data` is empty. Because that SQL begins by dropping the ledger database, never run `docker compose down -v` against data you need to keep.
 
+When MySQL initializes an empty `mysql-data` volume, the official image starts a temporary server and executes the mounted files in `/docker-entrypoint-initdb.d/` in filename order:
+
+1. `001-ledger-service.sql` creates the ledger schema and tables.
+2. `002-wallet-service.sql` creates the wallet schema and tables.
+3. `003-grant-service-users.sh` creates the wallet user when needed and grants the ledger and wallet users access to their respective schemas.
+
+These initialization files do not run again when the existing `mysql-data` volume is reused. Apply equivalent SQL manually when adding the wallet schema or service users to an already initialized MySQL volume.
+
 ## Deploy On A Cloud Docker Host
 
 1. Install Docker Engine and the Compose plugin on the cloud server, then clone or upload this repository.
