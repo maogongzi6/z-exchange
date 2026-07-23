@@ -14,6 +14,11 @@ WORKDIR /app
 
 COPY --from=builder /workspace/ledger-service/target/ledger-service-1.0-SNAPSHOT.jar app.jar
 
+# Logback resolves its relative path from /app. Docker copies this directory
+# into the initially empty named volume with ownership preserved.
+RUN mkdir -p /app/logs/ledger-service \
+    && chown -R ledger:ledger /app/logs/ledger-service
+
 USER ledger
 EXPOSE 8081 9191
 

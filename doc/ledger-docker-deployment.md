@@ -96,7 +96,7 @@ Kafka has two listeners:
 
 `ledger-service` waits for healthy MySQL, Redis, and Kafka before starting. This prevents a normal cold start from failing simply because a dependency has not finished initialization. `restart: unless-stopped` restarts services after host/container failures.
 
-`mysql-data`, `redis-data`, `prometheus-data`, and `grafana-data` retain state across `docker compose down` and container recreation. The schema SQL is run only when `mysql-data` is empty. Because that SQL begins by dropping the ledger database, never run `docker compose down -v` against data you need to keep.
+`ledger-service-logs`, `mysql-data`, `redis-data`, `prometheus-data`, and `grafana-data` retain state across `docker compose down` and container recreation. `ledger-service-logs` stores `/app/logs/ledger-service` as a Docker-managed named volume, so no server-side log directory or `chown` setup is required. The schema SQL is run only when `mysql-data` is empty. Because that SQL begins by dropping the ledger database, never run `docker compose down -v` against data you need to keep.
 
 ## Deploy On A Cloud Docker Host
 
