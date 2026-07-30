@@ -1,0 +1,16 @@
+services:
+  stress-test:
+    build:
+      context: ..
+      dockerfile: stress-test/Dockerfile
+    image: z-exchange/stress-test:local
+    container_name: stress-test
+    environment:
+      LEDGER_GRPC_HOST: ${LEDGER_GRPC_HOST:-172.31.16.37}
+      LEDGER_GRPC_PORT: ${LEDGER_GRPC_PORT:-9191}
+      LEDGER_GRPC_DEADLINE_SECONDS: ${LEDGER_GRPC_DEADLINE_SECONDS:-5}
+      LEDGER_TEST_ACCOUNT_REF: ${LEDGER_TEST_ACCOUNT_REF:-gatling-smoke-account}
+      LEDGER_TEST_ASSET_ID: ${LEDGER_TEST_ASSET_ID:-asset-1}
+      LEDGER_TEST_AMOUNT: ${LEDGER_TEST_AMOUNT:-100}
+    volumes:
+      - ../stress-test/target/gatling:/workspace/stress-test/target/gatling
