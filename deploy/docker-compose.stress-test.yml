@@ -6,8 +6,11 @@ services:
     image: z-exchange/stress-test:local
     container_name: stress-test
     environment:
+      GATLING_SIMULATION_CLASS: ${GATLING_SIMULATION_CLASS:-com.exchange.stress.ledger.LedgerPostServiceSmokeSimulation}
       LEDGER_GRPC_HOST: ${LEDGER_GRPC_HOST:-172.31.16.37}
       LEDGER_GRPC_PORT: ${LEDGER_GRPC_PORT:-9191}
+      LEDGER_HTTP_HOST: ${LEDGER_HTTP_HOST:-172.31.16.37}
+      LEDGER_HTTP_PORT: ${LEDGER_HTTP_PORT:-8081}
       LEDGER_GRPC_DEADLINE_SECONDS: ${LEDGER_GRPC_DEADLINE_SECONDS:-5}
       LEDGER_TEST_ACCOUNT_REF: ${LEDGER_TEST_ACCOUNT_REF:-gatling-smoke-account}
       LEDGER_TEST_ASSET_ID: ${LEDGER_TEST_ASSET_ID:-asset-1}

@@ -15,6 +15,7 @@ public final class LedgerMetricTagValues {
 
     public static final class Ingress {
         public static final String GRPC = "grpc";
+        public static final String HTTP = "http";
         public static final String KAFKA = "kafka";
 
         private Ingress() {

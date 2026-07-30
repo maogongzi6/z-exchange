@@ -3,6 +3,8 @@ package com.exchange.stress.ledger;
 final class LedgerSmokeConfig {
     static final String HOST = stringValue("LEDGER_GRPC_HOST", "172.31.16.37");
     static final int PORT = positiveIntValue("LEDGER_GRPC_PORT", 9191);
+    static final String HTTP_HOST = stringValue("LEDGER_HTTP_HOST", HOST);
+    static final int HTTP_PORT = positiveIntValue("LEDGER_HTTP_PORT", 8081);
     static final String ACCOUNT_REF = stringValue("LEDGER_TEST_ACCOUNT_REF", "gatling-smoke-account");
     static final String ASSET_ID = stringValue("LEDGER_TEST_ASSET_ID", "asset-1");
     static final long AMOUNT = positiveLongValue("LEDGER_TEST_AMOUNT", 100);

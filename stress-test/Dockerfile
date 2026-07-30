@@ -7,6 +7,7 @@ WORKDIR /workspace
 # so the runtime invocation can be completely offline.
 COPY . .
 RUN mvn -pl stress-test -am -DskipTests install \
-    && mvn -pl stress-test -DskipTests gatling:help
+    && mvn -pl stress-test -DskipTests gatling:help \
+    && chmod +x stress-test/run-smoke.sh
 
-ENTRYPOINT ["mvn", "-o", "-B", "-pl", "stress-test", "-Dgatling.simulationClass=com.exchange.stress.ledger.LedgerPostServiceSmokeSimulation", "gatling:test"]
+ENTRYPOINT ["/workspace/stress-test/run-smoke.sh"]

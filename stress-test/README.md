@@ -1,7 +1,7 @@
-# Ledger gRPC Stress Test
+# Ledger Stress Test
 
-This non-Spring Maven module contains Gatling simulations for ledger gRPC APIs.
-The first simulation is a one-user smoke test for:
+This non-Spring Maven module contains Gatling simulations for ledger gRPC and
+HTTP APIs. The gRPC simulation is a one-user smoke test for:
 
 1. `PostService/postTransaction`
 2. `PostService/getTxnByRefId`
@@ -27,6 +27,18 @@ mvn -pl stress-test gatling:test
 
 The HTML report is written under `stress-test/target/gatling`.
 
+Run the HTTP query smoke test with:
+
+```bash
+mvn -pl stress-test \
+  -Dgatling.simulationClass=com.exchange.stress.ledger.LedgerHttpQuerySmokeSimulation \
+  gatling:test
+```
+
+It creates a transaction through internal gRPC before measurement, then verifies
+both HTTP transaction query resources. Set `LEDGER_HTTP_HOST` and
+`LEDGER_HTTP_PORT` when the HTTP endpoint is not `172.31.16.37:8081`.
+
 ## Run With Docker On The Load-Generator EC2
 
 From the repository root:
@@ -38,7 +50,16 @@ docker compose -f deploy/docker-compose.stress-test.yml up --build \
 ```
 
 No inbound port is required on the load-generator EC2. Its security group needs
-outbound access to ledger EC2 `172.31.16.37:9191`.
+outbound access to ledger EC2 `172.31.16.37:9191` for fixture creation and
+`172.31.16.37:8081` for the HTTP smoke.
+
+Select the HTTP simulation in Docker with:
+
+```bash
+GATLING_SIMULATION_CLASS=com.exchange.stress.ledger.LedgerHttpQuerySmokeSimulation \
+docker compose -f deploy/docker-compose.stress-test.yml up --build \
+  --abort-on-container-exit --exit-code-from stress-test
+```
 
 The official Gatling Community gRPC component is limited to five users and five
 minutes. This smoke test uses one user; larger capacity tests require Gatling

@@ -15,6 +15,11 @@
     <properties>
         <gatling.version>3.15.1</gatling.version>
         <gatling-maven-plugin.version>4.21.7</gatling-maven-plugin.version>
+        <!-- This non-Spring module must use Gatling's Netty line. The Spring Boot 2.7
+             parent otherwise manages Netty to 4.1.x, while Gatling 3.15 is compiled
+             against Netty 4.2 APIs such as io.netty.channel.IoHandle. -->
+        <netty.version>4.2.14.Final</netty.version>
+        <netty-tcnative.version>2.0.77.Final</netty-tcnative.version>
     </properties>
 
     <dependencies>
@@ -27,6 +32,12 @@
         <dependency>
             <groupId>io.gatling</groupId>
             <artifactId>gatling-grpc-java</artifactId>
+            <version>${gatling.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.gatling</groupId>
+            <artifactId>gatling-http-java</artifactId>
             <version>${gatling.version}</version>
             <scope>test</scope>
         </dependency>
