@@ -6,7 +6,7 @@ services:
     image: z-exchange/stress-test:local
     container_name: stress-test
     environment:
-      GATLING_SIMULATION_CLASS: ${GATLING_SIMULATION_CLASS:-com.exchange.stress.ledger.LedgerPostServiceSmokeSimulation}
+      GATLING_SIMULATION_CLASS: ${GATLING_SIMULATION_CLASS:-}
       LEDGER_GRPC_HOST: ${LEDGER_GRPC_HOST:-172.31.16.37}
       LEDGER_GRPC_PORT: ${LEDGER_GRPC_PORT:-9191}
       LEDGER_HTTP_HOST: ${LEDGER_HTTP_HOST:-172.31.16.37}

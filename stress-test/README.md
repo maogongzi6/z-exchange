@@ -15,7 +15,8 @@ for `getTxnById`.
 ## Run With Maven
 
 Start ledger-service first, then set the target when it is not the default
-`172.31.16.37:9191`:
+`172.31.16.37`. Running the plugin without a simulation selector executes both
+the gRPC and HTTP smoke simulations:
 
 ```bash
 mvn -pl stress-test -am -DskipTests install
@@ -25,9 +26,11 @@ LEDGER_GRPC_PORT=9191 \
 mvn -pl stress-test gatling:test
 ```
 
-The HTML report is written under `stress-test/target/gatling`.
+The HTML reports are written under `stress-test/target/gatling`. Gatling
+continues to the second simulation when the first has an assertion failure, but
+the Maven invocation still fails after all selected simulations have run.
 
-Run the HTTP query smoke test with:
+Run only the HTTP query smoke test with:
 
 ```bash
 mvn -pl stress-test \
@@ -48,6 +51,9 @@ mkdir -p stress-test/target/gatling
 docker compose -f deploy/docker-compose.stress-test.yml up --build \
   --abort-on-container-exit --exit-code-from stress-test
 ```
+
+By default, the container runs both smoke simulations. Select only one with
+`GATLING_SIMULATION_CLASS`.
 
 No inbound port is required on the load-generator EC2. Its security group needs
 outbound access to ledger EC2 `172.31.16.37:9191` for fixture creation and
