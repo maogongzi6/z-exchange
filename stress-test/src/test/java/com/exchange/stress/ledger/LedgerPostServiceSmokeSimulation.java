@@ -73,7 +73,7 @@ public final class LedgerPostServiceSmokeSimulation extends Simulation {
                                         response((GetTxnReplyPb reply) -> reply.getError().getCode())
                                                 .is(ErrorCodePb.ERROR_OK),
                                         response((GetTxnReplyPb reply) -> reply.getTransaction().getReferenceId())
-                                                .is("#{referenceId}"),
+                                                .is(session -> session.getString(REFERENCE_ID)),
                                         response(GetTxnReplyPb::getEntriesCount).is(2)
                                 )
                 )
@@ -91,7 +91,7 @@ public final class LedgerPostServiceSmokeSimulation extends Simulation {
                                         response((GetTxnReplyPb reply) -> reply.getError().getCode())
                                                 .is(ErrorCodePb.ERROR_OK),
                                         response((GetTxnReplyPb reply) -> reply.getTransaction().getLedgerTxnId())
-                                                .is("#{ledgerTxnId}"),
+                                                .is(session -> session.getString(LEDGER_TXN_ID)),
                                         response(GetTxnReplyPb::getEntriesCount).is(2)
                                 )
                 );
