@@ -46,7 +46,7 @@ Kafka advertises `172.31.18.211:9092` to VPC clients. This is required because K
 
 ## Infrastructure EC2
 
-Create `deploy/.env` on the infrastructure EC2. Do not commit it:
+Use `deploy/infra-test.env`
 
 ```dotenv
 INFRA_PRIVATE_IP=172.31.18.211
@@ -59,16 +59,16 @@ KAFKA_EXTERNAL_PORT=9092
 Start the infrastructure services from the repository root:
 
 ```bash
-docker compose --env-file deploy/.env -f deploy/docker-compose.infrastructure.yml up -d
-docker compose --env-file deploy/.env -f deploy/docker-compose.infrastructure.yml ps
-docker compose --env-file deploy/.env -f deploy/docker-compose.infrastructure.yml logs -f mysql redis kafka prometheus
+docker compose --env-file deploy/infra-test.env -f deploy/docker-compose.infrastructure.yml up -d
+docker compose --env-file deploy/infra-test.env -f deploy/docker-compose.infrastructure.yml ps
+docker compose --env-file deploy/infra-test.env -f deploy/docker-compose.infrastructure.yml logs -f mysql redis kafka prometheus
 ```
 
 MySQL initialization files run only when the `mysql-data` volume is empty. The mounted `001-ledger-service.sql` creates the ledger schema and tables. It does not run on restarts or when the existing data volume is reused.
 
 ## Ledger EC2
 
-Create `deploy/.env` on the ledger EC2. `LEDGER_DB_PASSWORD` must match the value used on the infrastructure EC2:
+Use `deploy/ledger-test.env`. `LEDGER_DB_PASSWORD` must match the value used on the infrastructure EC2:
 
 ```dotenv
 LEDGER_PRIVATE_IP=172.31.16.37
@@ -81,9 +81,9 @@ KAFKA_BOOTSTRAP_SERVERS=172.31.18.211:9092
 Build and start ledger-service from the repository root:
 
 ```bash
-docker compose --env-file deploy/.env -f deploy/docker-compose.ledger-service.yml up --build -d
-docker compose --env-file deploy/.env -f deploy/docker-compose.ledger-service.yml ps
-docker compose --env-file deploy/.env -f deploy/docker-compose.ledger-service.yml logs -f ledger-service
+docker compose --env-file deploy/ledger-test.env -f deploy/docker-compose.ledger-service.yml up --build -d
+docker compose --env-file deploy/ledger-test.env -f deploy/docker-compose.ledger-service.yml ps
+docker compose --env-file deploy/ledger-test.env -f deploy/docker-compose.ledger-service.yml logs -f ledger-service
 ```
 
 Verify from the ledger EC2:
