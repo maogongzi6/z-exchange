@@ -4,22 +4,15 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>com.exchange</groupId>
-        <artifactId>z-exchange-parent</artifactId>
-        <version>1.0-SNAPSHOT</version>
-    </parent>
-
+    <groupId>com.exchange</groupId>
     <artifactId>stress-test</artifactId>
+    <version>1.0-SNAPSHOT</version>
 
     <properties>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <gatling.version>3.15.1</gatling.version>
         <gatling-maven-plugin.version>4.21.7</gatling-maven-plugin.version>
-        <!-- This non-Spring module must use Gatling's Netty line. The Spring Boot 2.7
-             parent otherwise manages Netty to 4.1.x, while Gatling 3.15 is compiled
-             against Netty 4.2 APIs such as io.netty.channel.IoHandle. -->
-        <netty.version>4.2.14.Final</netty.version>
-        <netty-tcnative.version>2.0.77.Final</netty-tcnative.version>
     </properties>
 
     <dependencies>
@@ -44,6 +37,7 @@
         <dependency>
             <groupId>com.exchange</groupId>
             <artifactId>ledger-proto</artifactId>
+            <version>1.0-SNAPSHOT</version>
             <scope>test</scope>
             <exclusions>
                 <!-- The generated messages/descriptors are sufficient here. Avoid
@@ -59,6 +53,14 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <release>${maven.compiler.release}</release>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>io.gatling</groupId>
                 <artifactId>gatling-maven-plugin</artifactId>
