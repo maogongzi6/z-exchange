@@ -1,5 +1,8 @@
 # Ledger Write Stress-Test Flow
 
+Operational commands, configuration, dashboard queries, and result handling
+are documented in `doc/ledger-write-stress-test-operations.md`.
+
 ## 1. Purpose
 
 This test measures the sustainable write capacity of

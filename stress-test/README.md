@@ -1,7 +1,7 @@
 # Ledger Stress Test
 
-This directory contains a k6 gRPC smoke test and is not a Maven or Spring
-module. The smoke verifies one dependent workflow:
+This directory contains k6 gRPC smoke and write stress tests and is not a Maven
+or Spring module. The smoke verifies one dependent workflow:
 
 1. `PostService/postTransaction`
 2. `PostService/getTxnByRefId`
@@ -9,6 +9,11 @@ module. The smoke verifies one dependent workflow:
 
 The transaction reference is unique per run. Both query calls validate the
 transaction created by the write call and require the two ledger entries.
+
+The write stress test exercises `postTransaction` with open arrival-rate
+profiles for capacity discovery, overload recovery, and stable-load soak. See
+`doc/ledger-write-stress-test-operations.md` for its commands, configuration,
+metrics, and reconciliation flow.
 
 ## Fixture Provisioning
 
@@ -89,6 +94,10 @@ No inbound port is required on the load-generator EC2.
 ## Files
 
 - `scripts/ledger-grpc-smoke.js`: commented k6 workflow and assertions.
+- `scripts/ledger-grpc-write-stress.js`: commented distributed write workload.
 - `fixtures/ledger-smoke-fixture.sql`: idempotent Asset and Account fixture.
+- `fixtures/ledger-write-fixture.sql`: 10 assets and 100 distributed accounts.
+- `fixtures/ledger-write-verification.sql`: deterministic journal reconciliation.
 - `run-smoke.sh`: waits for MySQL, applies the fixture, then starts k6.
+- `run-write-stress.sh`: provisions, runs a write profile, and reconciles rows.
 - `Dockerfile`: combines the pinned k6 binary with MySQL 8.4's native client.
