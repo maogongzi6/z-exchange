@@ -47,7 +47,9 @@ SELECT
     ep.txn_id,
     CONCAT('k6-write-asset-', LPAD(ep.asset_index, 2, '0')),
     CONCAT('k6-write-account-id-', LPAD(ep.asset_index * 10 + ep.debit_offset, 3, '0')),
-    2,
+    -- Persisted Direction uses the Java enum code, not the protobuf ordinal:
+    -- DEBIT=1 and CREDIT=2.
+    1,
     ep.amount
 FROM expected_pair ep
 UNION ALL
@@ -55,7 +57,7 @@ SELECT
     ep.txn_id,
     CONCAT('k6-write-asset-', LPAD(ep.asset_index, 2, '0')),
     CONCAT('k6-write-account-id-', LPAD(ep.asset_index * 10 + ep.credit_offset, 3, '0')),
-    1,
+    2,
     ep.amount
 FROM expected_pair ep;
 

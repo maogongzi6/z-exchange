@@ -77,6 +77,10 @@ k6 run /scripts/ledger-grpc-write-stress.js
 k6_status=$?
 set -e
 
+# Report this before SQL verification so a reconciliation failure cannot hide
+# a separate k6 threshold or execution failure.
+echo "k6 finished with status ${k6_status}; starting ledger reconciliation..."
+
 # The workload is deterministic, so SQL can reconstruct every expected entry
 # for committed references without writing a high-volume manifest during load.
 echo "Reconciling committed ledger rows for run ${LEDGER_STRESS_RUN_ID}..."
@@ -98,6 +102,9 @@ printf '%s\n' "${verification_output}"
 verification_failures="$(printf '%s\n' "${verification_output}" | tail -n 1)"
 
 if [ "${verification_failures}" != "0" ]; then
+  if [ "${k6_status}" -ne 0 ]; then
+    echo "k6 also exited with status ${k6_status}" >&2
+  fi
   echo "Ledger reconciliation failed with ${verification_failures} mismatches" >&2
   exit 1
 fi

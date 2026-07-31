@@ -267,11 +267,23 @@ sum(rate(k6_ledger_write_successful_total{testid="$testid"}[15s]))
 Original-request p95 latency:
 
 ```promql
-max(k6_ledger_write_request_duration_p95{
+1000 * max(k6_ledger_write_request_duration_p95{
   testid="$testid",
   request_kind="original"
 })
 ```
+
+Original-request p99 latency:
+
+```promql
+1000 * max(k6_ledger_write_request_duration_p99{
+  testid="$testid",
+  request_kind="original"
+})
+```
+
+The Prometheus remote-write values for time Trends are in seconds. Multiplying
+by `1000` converts them to milliseconds for the dashboard's `ms` unit.
 
 Unexpected error rate:
 
@@ -314,9 +326,20 @@ request panel.
 
 ## 11. Terminal And SQL Results
 
+The maximum duration printed by k6 includes `gracefulStop`. If all scheduled
+stages finish and no iterations remain in flight, k6 can finish without using
+the reserved grace period. The elapsed/max-duration ratio can therefore be
+less than 100%; for example, a 12-minute schedule may finish around
+`12m02s/13m` when roughly one minute was reserved for graceful stop. This ratio
+alone does not prove early termination. A `✗` scenario marker still requires
+checking the total-results section and the runner's printed k6 exit status.
+`0 interrupted iterations` confirms that k6 did not cut off an in-flight
+iteration, but it does not replace the process exit status.
+
 The runner prints the k6 end summary, followed by output similar to:
 
 ```text
+k6 finished with status 0; starting ledger reconciliation...
 persisted transactions=1234
 persisted entries=5678
 0
@@ -340,6 +363,8 @@ The automatic SQL check verifies:
 - Debit equals credit per transaction and asset.
 - Persisted asset, account, direction, amount, and multiplicity match the
   deterministic request algorithm.
+- Direction comparison uses ledger database enum codes (`DEBIT=1`,
+  `CREDIT=2`), which differ from the protobuf enum numbers.
 - Duplicate attempts did not create an alternative transaction for the same
   reference; the database unique reference constraint provides the final
   durable guard.

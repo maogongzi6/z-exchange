@@ -93,8 +93,8 @@
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
       "targets": [
-        { "editorMode": "code", "expr": "max(k6_ledger_write_request_duration_p95{testid=~\"$testid\",test_profile=~\"$test_profile\",request_kind=\"original\"})", "legendFormat": "p95", "range": true, "refId": "A" },
-        { "editorMode": "code", "expr": "max(k6_ledger_write_request_duration_p99{testid=~\"$testid\",test_profile=~\"$test_profile\",request_kind=\"original\"})", "legendFormat": "p99", "range": true, "refId": "B" }
+        { "editorMode": "code", "expr": "1000 * max(k6_ledger_write_request_duration_p95{testid=~\"$testid\",test_profile=~\"$test_profile\",request_kind=\"original\"})", "legendFormat": "p95", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "1000 * max(k6_ledger_write_request_duration_p99{testid=~\"$testid\",test_profile=~\"$test_profile\",request_kind=\"original\"})", "legendFormat": "p99", "range": true, "refId": "B" }
       ],
       "title": "Original Request Latency p95 / p99",
       "type": "timeseries"
