@@ -1,0 +1,135 @@
+{
+  "annotations": { "list": [] },
+  "description": "Live client and server signals for ledger gRPC write capacity, overload recovery, and soak tests.",
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Attempts started by k6. Falls back to completed iterations until the write test exposes its dedicated offered counter.",
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "decimals": 1, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }] }, "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+      "id": 1,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showPercentChange": false, "textMode": "auto", "wideLayout": true },
+      "targets": [{ "editorMode": "code", "expr": "sum(rate(k6_ledger_requests_offered_total{scenario=~\"$scenario\"}[$__rate_interval])) or sum(rate(k6_iterations_total{scenario=~\"$scenario\"}[$__rate_interval]))", "legendFormat": "offered", "range": true, "refId": "A" }],
+      "title": "Offered TPS",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Completed postTransaction RPCs observed at the server boundary.",
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "decimals": 1, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }] }, "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+      "id": 2,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showPercentChange": false, "textMode": "auto", "wideLayout": true },
+      "targets": [{ "editorMode": "code", "expr": "sum(rate(k6_ledger_requests_completed_total{scenario=~\"$scenario\"}[$__rate_interval])) or sum(rate(zexchange_grpc_server_duration_seconds_count{instance=~\"$instance\",method=\"postTransaction\"}[$__rate_interval]))", "legendFormat": "completed", "range": true, "refId": "A" }],
+      "title": "Completed TPS",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Newly created and successful idempotent postTransaction responses.",
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "decimals": 1, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }] }, "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
+      "id": 3,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showPercentChange": false, "textMode": "auto", "wideLayout": true },
+      "targets": [{ "editorMode": "code", "expr": "sum(rate(k6_ledger_requests_successful_total{scenario=~\"$scenario\"}[$__rate_interval])) or sum(rate(zexchange_ledger_requests_total{instance=~\"$instance\",operation=\"post_transaction\",outcome=\"success\"}[$__rate_interval]))", "legendFormat": "successful", "range": true, "refId": "A" }],
+      "title": "Successful TPS",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Business failures excluding the expected request_in_processing result of a known in-flight duplicate.",
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "decimals": 2, "mappings": [], "max": 100, "min": 0, "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "yellow", "value": 0.1 }, { "color": "red", "value": 1 }] }, "unit": "percent" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
+      "id": 4,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showPercentChange": false, "textMode": "auto", "wideLayout": true },
+      "targets": [{ "editorMode": "code", "expr": "100 * sum(rate(zexchange_ledger_requests_total{instance=~\"$instance\",operation=\"post_transaction\",outcome=\"error\",error_code!=\"request_in_processing\"}[$__rate_interval])) / clamp_min(sum(rate(zexchange_ledger_requests_total{instance=~\"$instance\",operation=\"post_transaction\"}[$__rate_interval])), 0.000001)", "legendFormat": "unexpected errors", "range": true, "refId": "A" }],
+      "title": "Unexpected Error Rate",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none", "hideFrom": { "legend": false, "tooltip": false, "viz": false }, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "scaleDistribution": { "type": "linear" }, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" } }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }] }, "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 5 },
+      "id": 5,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "editorMode": "code", "expr": "sum(rate(k6_ledger_requests_offered_total{scenario=~\"$scenario\"}[$__rate_interval])) or sum(rate(k6_iterations_total{scenario=~\"$scenario\"}[$__rate_interval]))", "legendFormat": "offered", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "sum(rate(k6_ledger_requests_completed_total{scenario=~\"$scenario\"}[$__rate_interval])) or sum(rate(zexchange_grpc_server_duration_seconds_count{instance=~\"$instance\",method=\"postTransaction\"}[$__rate_interval]))", "legendFormat": "completed", "range": true, "refId": "B" },
+        { "editorMode": "code", "expr": "sum(rate(k6_ledger_requests_successful_total{scenario=~\"$scenario\"}[$__rate_interval])) or sum(rate(zexchange_ledger_requests_total{instance=~\"$instance\",operation=\"post_transaction\",outcome=\"success\"}[$__rate_interval]))", "legendFormat": "successful", "range": true, "refId": "C" }
+      ],
+      "title": "Offered vs Completed vs Successful",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Client p95 is preferred for the user-visible saturation knee. Server p95 helps isolate network and load-generator overhead.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none", "hideFrom": { "legend": false, "tooltip": false, "viz": false }, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "scaleDistribution": { "type": "linear" }, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" } }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }] }, "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 5 },
+      "id": 6,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "editorMode": "code", "expr": "1000 * avg(k6_ledger_write_duration_seconds_p95{scenario=~\"$scenario\"}) or avg(k6_ledger_write_duration_p95{scenario=~\"$scenario\"}) or 1000 * avg(k6_grpc_req_duration_seconds_p95{scenario=~\"$scenario\",operation=\"postTransaction\"}) or avg(k6_grpc_req_duration_p95{scenario=~\"$scenario\",operation=\"postTransaction\"})", "legendFormat": "client p95", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le) (rate(zexchange_grpc_server_duration_seconds_bucket{instance=~\"$instance\",method=\"postTransaction\"}[$__rate_interval])))", "legendFormat": "server p95", "range": true, "refId": "B" }
+      ],
+      "title": "Write Latency p95",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "A growing active-call level while throughput is flat confirms server-side queueing.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 20, "gradientMode": "none", "hideFrom": { "legend": false, "tooltip": false, "viz": false }, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "scaleDistribution": { "type": "linear" }, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" } }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }] }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 13 },
+      "id": 7,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [{ "editorMode": "code", "expr": "sum(zexchange_grpc_server_active{instance=~\"$instance\",method=\"postTransaction\"})", "legendFormat": "active postTransaction", "range": true, "refId": "A" }],
+      "title": "Active gRPC Writes",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "All ledger business errors share one panel. request_in_processing remains visible but is excluded from the unexpected-error stat.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none", "hideFrom": { "legend": false, "tooltip": false, "viz": false }, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "scaleDistribution": { "type": "linear" }, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" } }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }] }, "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 13 },
+      "id": 8,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "editorMode": "code", "expr": "sum by (error_code) (rate(zexchange_ledger_requests_total{instance=~\"$instance\",operation=\"post_transaction\",outcome=\"error\"}[$__rate_interval]))", "legendFormat": "{{error_code}}", "range": true, "refId": "A" }],
+      "title": "Business Outcomes by Error Code",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none", "hideFrom": { "legend": false, "tooltip": false, "viz": false }, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "scaleDistribution": { "type": "linear" }, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" } }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }] }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 13 },
+      "id": 9,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "editorMode": "code", "expr": "sum(k6_vus{scenario=~\"$scenario\"})", "legendFormat": "active VUs", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "sum(rate(k6_dropped_iterations_total{scenario=~\"$scenario\"}[$__rate_interval]))", "legendFormat": "dropped iterations/s", "range": true, "refId": "B" }
+      ],
+      "title": "Load Generator Capacity",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "tags": ["zexchange", "ledger", "stress-test"],
+  "templating": {
+    "list": [
+      { "allValue": ".*", "current": { "selected": true, "text": "All", "value": "$__all" }, "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" }, "definition": "label_values(k6_iterations_total, scenario)", "hide": 0, "includeAll": true, "label": "k6 scenario", "multi": false, "name": "scenario", "options": [], "query": "label_values(k6_iterations_total, scenario)", "refresh": 1, "regex": "", "skipUrlSync": false, "sort": 1, "type": "query" },
+      { "allValue": ".*", "current": { "selected": true, "text": "All", "value": "$__all" }, "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" }, "definition": "label_values(up{job=\"ledger-service\"}, instance)", "hide": 0, "includeAll": true, "label": "ledger instance", "multi": true, "name": "instance", "options": [], "query": "label_values(up{job=\"ledger-service\"}, instance)", "refresh": 1, "regex": "", "skipUrlSync": false, "sort": 1, "type": "query" }
+    ]
+  },
+  "time": { "from": "now-15m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Ledger Stress Test Overview",
+  "uid": "ledger-stress-test",
+  "version": 1,
+  "weekStart": ""
+}
