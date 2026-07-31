@@ -64,6 +64,7 @@ Compose default is `172.31.16.37`.
 | `LEDGER_DB_USERNAME` | `ledger` | Fixture database user |
 | `LEDGER_DB_PASSWORD` | `ledger-local` | Fixture database password |
 | `DB_READY_ATTEMPTS` | `30` | Two-second database readiness attempts |
+| `DB_CONNECT_TIMEOUT_SECONDS` | `5` | Maximum duration of each database connection attempt |
 
 The load-generator EC2 requires outbound VPC access to:
 
