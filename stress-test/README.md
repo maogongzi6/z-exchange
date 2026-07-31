@@ -31,7 +31,9 @@ permit `INSERT` and `UPDATE` on `assets` and `accounts`.
 From the repository root:
 
 ```bash
-docker compose -f deploy/docker-compose.stress-test.yml up --build \
+COMPOSE_MENU=false COMPOSE_ANSI=never \
+docker compose --progress plain \
+  -f deploy/docker-compose.stress-test.yml up --build \
   --abort-on-container-exit --exit-code-from stress-test
 ```
 
@@ -43,9 +45,16 @@ INFRA_PRIVATE_IP=172.31.18.211 \
 LEDGER_GRPC_HOST=172.31.16.37 \
 LEDGER_DB_USERNAME=ledger \
 LEDGER_DB_PASSWORD='replace-with-the-infrastructure-value' \
-docker compose -f deploy/docker-compose.stress-test.yml up --build \
+COMPOSE_MENU=false COMPOSE_ANSI=never \
+docker compose --progress plain \
+  -f deploy/docker-compose.stress-test.yml up --build \
   --abort-on-container-exit --exit-code-from stress-test
 ```
+
+`COMPOSE_MENU` and `COMPOSE_ANSI` control the host-side Compose terminal UI.
+Disabling them prevents the `Enable Watch / Detach` menu and ANSI redraws from
+overwriting the k6 summary. `--progress plain` also keeps image-build output
+line-oriented.
 
 `LEDGER_GRPC_HOST` overrides the gRPC target directly. If it is not set, the
 Compose default is `172.31.16.37`.
