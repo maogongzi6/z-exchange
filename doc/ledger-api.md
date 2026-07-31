@@ -83,8 +83,8 @@ The gRPC server uses port `9191`.
 - `PostService/getTxnById` is the internal query by canonical ledger ID.
 - `PostService/getTxnByRefId` is the internal query by the originating business
   reference.
-- `AccountService/createAccount` is internal setup used by wallet integration
-  and smoke-test fixtures.
+- `AccountService/createAccount` is internal account setup used by wallet
+  integration.
 
 Keeping internal gRPC avoids JSON conversion and provides generated protobuf
 contracts between trusted services. Keeping public HTTP read-only prevents
@@ -113,13 +113,25 @@ transaction; knowledge of a transaction or reference ID is not authorization.
 
 ## Smoke Tests
 
-- `LedgerPostServiceSmokeSimulation` verifies all three `PostService` gRPC
-  methods with one virtual user.
-- `LedgerHttpQuerySmokeSimulation` creates a fixture through internal gRPC
-  before measurement, then verifies both HTTP query forms and their JSON
-  response shape.
+`stress-test/scripts/ledger-grpc-smoke.js` uses k6 to verify all three
+`PostService` methods with one virtual user and one iteration:
 
-The HTTP smoke is a correctness check. Longer HTTP workloads can measure the
-read path without Gatling Community's gRPC-specific five-user/five-minute
-limit, but their throughput must be reported as HTTP capacity rather than gRPC
-capacity.
+1. It posts a balanced transaction.
+2. It retrieves that transaction by reference ID.
+3. It retrieves the same transaction by ledger transaction ID.
+
+The stress-test entrypoint inserts the dedicated `k6-smoke-asset` Asset and
+`k6-smoke-account` Account directly into the ledger MySQL database before k6
+starts. Fixture time is therefore excluded from gRPC measurements. The SQL uses
+idempotent upserts, while the posted transaction receives a unique reference ID
+on every run.
+
+k6 loads the same source protobuf definitions used by ledger-service. It reuses
+one HTTP/2 connection for all three calls, checks both gRPC status and protobuf
+business error values, and exits nonzero if any correctness check or latency
+threshold fails.
+
+HTTP remains useful for external read clients, but ledger gRPC capacity must be
+measured through the gRPC contract rather than through the HTTP adapter. Future
+throughput tests should extend the k6 gRPC workload with an open arrival-rate
+executor instead of treating HTTP capacity as a proxy.

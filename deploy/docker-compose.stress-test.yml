@@ -6,14 +6,13 @@ services:
     image: z-exchange/stress-test:local
     container_name: stress-test
     environment:
-      GATLING_SIMULATION_CLASS: ${GATLING_SIMULATION_CLASS:-}
       LEDGER_GRPC_HOST: ${LEDGER_GRPC_HOST:-172.31.16.37}
       LEDGER_GRPC_PORT: ${LEDGER_GRPC_PORT:-9191}
-      LEDGER_HTTP_HOST: ${LEDGER_HTTP_HOST:-172.31.16.37}
-      LEDGER_HTTP_PORT: ${LEDGER_HTTP_PORT:-8081}
       LEDGER_GRPC_DEADLINE_SECONDS: ${LEDGER_GRPC_DEADLINE_SECONDS:-5}
-      LEDGER_TEST_ACCOUNT_REF: ${LEDGER_TEST_ACCOUNT_REF:-gatling-smoke-account}
-      LEDGER_TEST_ASSET_ID: ${LEDGER_TEST_ASSET_ID:-asset-1}
       LEDGER_TEST_AMOUNT: ${LEDGER_TEST_AMOUNT:-100}
-    volumes:
-      - ../stress-test/target/gatling:/workspace/stress-test/target/gatling
+      DB_HOST: ${INFRA_PRIVATE_IP:-172.31.18.211}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${LEDGER_DB_NAME:-trade_ledgerservice}
+      DB_USERNAME: ${LEDGER_DB_USERNAME:-ledger}
+      DB_PASSWORD: ${LEDGER_DB_PASSWORD:-ledger-local}
+      DB_READY_ATTEMPTS: ${DB_READY_ATTEMPTS:-30}

@@ -1,72 +1,80 @@
 # Ledger Stress Test
 
-This non-Spring Maven module contains Gatling simulations for ledger gRPC and
-HTTP APIs. The gRPC simulation is a one-user smoke test for:
+This directory contains a k6 gRPC smoke test and is not a Maven or Spring
+module. The smoke verifies one dependent workflow:
 
 1. `PostService/postTransaction`
 2. `PostService/getTxnByRefId`
 3. `PostService/getTxnById`
 
-Before measurement starts, the simulation calls `AccountService/createAccount`
-to idempotently prepare the configured test account. The transaction reference
-is unique per run, and the transaction ID returned by `postTransaction` is used
-for `getTxnById`.
+The transaction reference is unique per run. Both query calls validate the
+transaction created by the write call and require the two ledger entries.
 
-## Run With Maven
+## Fixture Provisioning
 
-Start ledger-service first, then set the target when it is not the default
-`172.31.16.37`. Running the plugin without a simulation selector executes both
-the gRPC and HTTP smoke simulations:
+`run-smoke.sh` connects directly to the ledger MySQL database before starting
+k6 and applies `fixtures/ledger-smoke-fixture.sql`. The SQL idempotently creates
+these dedicated rows:
 
-```bash
-mvn -pl stress-test -am -DskipTests install
+| Fixture | Value |
+| --- | --- |
+| Asset ID | `k6-smoke-asset` |
+| Account ID | `k6-smoke-account-id` |
+| Account reference | `k6-smoke-account` |
 
-LEDGER_GRPC_HOST=172.31.16.37 \
-LEDGER_GRPC_PORT=9191 \
-mvn -pl stress-test gatling:test
-```
+Fixture setup is completed before k6 starts, so it is excluded from gRPC
+latency. Run this only against a test database. The database credentials must
+permit `INSERT` and `UPDATE` on `assets` and `accounts`.
 
-The HTML reports are written under `stress-test/target/gatling`. Gatling
-continues to the second simulation when the first has an assertion failure, but
-the Maven invocation still fails after all selected simulations have run.
-
-Run only the HTTP query smoke test with:
-
-```bash
-mvn -pl stress-test \
-  -Dgatling.simulationClass=com.exchange.stress.ledger.LedgerHttpQuerySmokeSimulation \
-  gatling:test
-```
-
-It creates a transaction through internal gRPC before measurement, then verifies
-both HTTP transaction query resources. Set `LEDGER_HTTP_HOST` and
-`LEDGER_HTTP_PORT` when the HTTP endpoint is not `172.31.16.37:8081`.
-
-## Run With Docker On The Load-Generator EC2
+## Run With Docker
 
 From the repository root:
 
 ```bash
-mkdir -p stress-test/target/gatling
 docker compose -f deploy/docker-compose.stress-test.yml up --build \
   --abort-on-container-exit --exit-code-from stress-test
 ```
 
-By default, the container runs both smoke simulations. Select only one with
-`GATLING_SIMULATION_CLASS`.
-
-No inbound port is required on the load-generator EC2. Its security group needs
-outbound access to ledger EC2 `172.31.16.37:9191` for fixture creation and
-`172.31.16.37:8081` for the HTTP smoke.
-
-Select the HTTP simulation in Docker with:
+For the AWS VPC deployment, provide the same database settings used by
+ledger-service:
 
 ```bash
-GATLING_SIMULATION_CLASS=com.exchange.stress.ledger.LedgerHttpQuerySmokeSimulation \
+INFRA_PRIVATE_IP=172.31.18.211 \
+LEDGER_GRPC_HOST=172.31.16.37 \
+LEDGER_DB_USERNAME=ledger \
+LEDGER_DB_PASSWORD='replace-with-the-infrastructure-value' \
 docker compose -f deploy/docker-compose.stress-test.yml up --build \
   --abort-on-container-exit --exit-code-from stress-test
 ```
 
-The official Gatling Community gRPC component is limited to five users and five
-minutes. This smoke test uses one user; larger capacity tests require Gatling
-Enterprise or a different gRPC load driver.
+`LEDGER_GRPC_HOST` overrides the gRPC target directly. If it is not set, the
+Compose default is `172.31.16.37`.
+
+## Configuration
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `LEDGER_GRPC_HOST` | `172.31.16.37` | Ledger gRPC host |
+| `LEDGER_GRPC_PORT` | `9191` | Ledger gRPC port |
+| `LEDGER_GRPC_DEADLINE_SECONDS` | `5` | Connection timeout, per-RPC timeout, and latency threshold |
+| `LEDGER_TEST_AMOUNT` | `100` | Debit and credit amount; passed as protobuf `int64` |
+| `INFRA_PRIVATE_IP` | `172.31.18.211` | Fixture database host |
+| `DB_PORT` | `3306` | Fixture database port |
+| `LEDGER_DB_NAME` | `trade_ledgerservice` | Ledger schema |
+| `LEDGER_DB_USERNAME` | `ledger` | Fixture database user |
+| `LEDGER_DB_PASSWORD` | `ledger-local` | Fixture database password |
+| `DB_READY_ATTEMPTS` | `30` | Two-second database readiness attempts |
+
+The load-generator EC2 requires outbound VPC access to:
+
+- ledger EC2 port `9191`
+- infrastructure EC2 port `3306`
+
+No inbound port is required on the load-generator EC2.
+
+## Files
+
+- `scripts/ledger-grpc-smoke.js`: commented k6 workflow and assertions.
+- `fixtures/ledger-smoke-fixture.sql`: idempotent Asset and Account fixture.
+- `run-smoke.sh`: waits for MySQL, applies the fixture, then starts k6.
+- `Dockerfile`: combines the pinned k6 binary with MySQL 8.4's native client.

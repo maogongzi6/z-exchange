@@ -24,7 +24,6 @@
         <module>grpc-proto/ledger-proto</module>
         <module>grpc-proto/common-proto</module>
         <module>grpc-proto/wallet-proto</module>
-        <module>stress-test</module>
     </modules>
 
     <properties>
