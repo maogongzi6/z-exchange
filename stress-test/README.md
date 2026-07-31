@@ -74,11 +74,15 @@ Compose default is `172.31.16.37`.
 | `LEDGER_DB_PASSWORD` | `ledger-local` | Fixture database password |
 | `DB_READY_ATTEMPTS` | `30` | Two-second database readiness attempts |
 | `DB_CONNECT_TIMEOUT_SECONDS` | `5` | Maximum duration of each database connection attempt |
+| `K6_OUT` | `experimental-prometheus-rw` | Streams granular k6 metrics to Prometheus during the run |
+| `K6_PROMETHEUS_RW_SERVER_URL` | `http://172.31.18.211:9290/api/v1/write` | Prometheus remote-write receiver on the infrastructure EC2 |
+| `K6_PROMETHEUS_RW_TREND_STATS` | `p(95),p(99),max` | Trend series retained for the provisioned stress dashboard |
 
 The load-generator EC2 requires outbound VPC access to:
 
 - ledger EC2 port `9191`
 - infrastructure EC2 port `3306`
+- infrastructure EC2 port `9290`
 
 No inbound port is required on the load-generator EC2.
 

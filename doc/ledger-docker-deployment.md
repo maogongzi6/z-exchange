@@ -103,4 +103,11 @@ Prometheus (172.31.18.211) -> ledger-service (172.31.16.37:8081)
 
 Verify the scrape target in Prometheus at `http://172.31.18.211:9290/targets`. Grafana is available at `http://172.31.18.211:3000`.
 
-Permit the following security-group traffic within the VPC: infrastructure EC2 to ledger EC2 TCP `8081`; ledger EC2 to infrastructure EC2 TCP `3306`, `6379`, and `9092`; and approved operator networks to Grafana TCP `3000` and Prometheus TCP `9290`. Ledger gRPC TCP `9191` should be allowed only from service clients that need it.
+Grafana provisions its Prometheus data source and the Z-Exchange dashboards
+from `monitoring/grafana` whenever the infrastructure stack starts. Dashboard
+JSON files are the source of truth and are mounted read-only into the Grafana
+container. The stress-test container sends granular k6 metrics to Prometheus at
+`http://172.31.18.211:9290/api/v1/write`; Prometheus enables its remote-write
+receiver specifically for this VPC traffic.
+
+Permit the following security-group traffic within the VPC: infrastructure EC2 to ledger EC2 TCP `8081`; ledger EC2 to infrastructure EC2 TCP `3306`, `6379`, and `9092`; stress-test EC2 to infrastructure EC2 TCP `3306` and `9290`; and approved operator networks to Grafana TCP `3000` and Prometheus TCP `9290`. Ledger gRPC TCP `9191` should be allowed only from service clients that need it.
