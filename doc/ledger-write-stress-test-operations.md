@@ -293,9 +293,11 @@ outcome tags, so no `max()` aggregation is required.
 The Prometheus remote-write values for time Trends are in seconds. Multiplying
 by `1000` converts them to milliseconds for the dashboard's `ms` unit.
 
-The dashboard retains a legacy original-request panel for historical runs. Its
-`max()` query selects the worst tagged subgroup and must not be interpreted as
-an overall percentile or used to determine capacity.
+The dashboard retains a detailed original-request panel. New runs populate the
+separate `ledger_write_original_request_detailed_duration` compatibility Trend;
+the panel falls back to the former metric for historical runs. Its `max()` query
+selects the worst tagged subgroup and must not be interpreted as an overall
+percentile or used to determine capacity.
 
 Unexpected error rate:
 

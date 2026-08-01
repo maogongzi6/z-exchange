@@ -355,7 +355,7 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
-      "description": "Legacy diagnostic for runs emitted before aggregate latency metrics were introduced. max() selects the worst detailed original-request subgroup; it is not an overall percentile and should not determine capacity.",
+      "description": "Original-request diagnostic using the dedicated compatibility metric for new runs and the former metric for historical runs. max() selects the worst detailed subgroup; it is not an overall percentile and should not determine capacity.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -392,10 +392,10 @@
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
       "targets": [
-        { "editorMode": "code", "expr": "1000 * max(k6_ledger_write_request_duration_p95{testid=~\"$testid\",test_profile=~\"$test_profile\",request_kind=\"original\"})", "legendFormat": "legacy worst-subgroup p95", "range": true, "refId": "A" },
-        { "editorMode": "code", "expr": "1000 * max(k6_ledger_write_request_duration_p99{testid=~\"$testid\",test_profile=~\"$test_profile\",request_kind=\"original\"})", "legendFormat": "legacy worst-subgroup p99", "range": true, "refId": "B" }
+        { "editorMode": "code", "expr": "1000 * (max(k6_ledger_write_original_request_detailed_duration_p95{testid=~\"$testid\",test_profile=~\"$test_profile\"}) or max(k6_ledger_write_request_duration_p95{testid=~\"$testid\",test_profile=~\"$test_profile\",request_kind=\"original\"}))", "legendFormat": "worst-subgroup p95", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "1000 * (max(k6_ledger_write_original_request_detailed_duration_p99{testid=~\"$testid\",test_profile=~\"$test_profile\"}) or max(k6_ledger_write_request_duration_p99{testid=~\"$testid\",test_profile=~\"$test_profile\",request_kind=\"original\"}))", "legendFormat": "worst-subgroup p99", "range": true, "refId": "B" }
       ],
-      "title": "Legacy Detailed Original-Request Latency",
+      "title": "Detailed Original-Request Latency",
       "type": "timeseries"
     }
   ],
@@ -414,6 +414,6 @@
   "timezone": "browser",
   "title": "Ledger Stress Test Overview",
   "uid": "ledger-stress-test",
-  "version": 4,
+  "version": 5,
   "weekStart": ""
 }

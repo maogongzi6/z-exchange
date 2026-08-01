@@ -31,6 +31,10 @@ const consistencyFailures = new Counter('ledger_write_consistency_failures');
 const unexpectedErrorRate = new Rate('ledger_write_unexpected_error_rate');
 const requestDuration = new Trend('ledger_write_request_duration', true);
 const successfulRequestDuration = new Trend('ledger_write_success_duration', true);
+const originalRequestDetailedDuration = new Trend(
+    'ledger_write_original_request_detailed_duration',
+    true,
+);
 // Primary latency Trends intentionally use only the bounded API operation tag.
 // Detailed workload/outcome tags would split p95 into subgroups whose maximum is
 // not the percentile of the complete request population.
@@ -337,6 +341,11 @@ async function invokeAttempt(request, requestKind, duplicateTiming, processingEx
             // Includes both newly created and idempotently returned successes.
             successfulRequestDuration.add(elapsedMs, latencyTags);
         }
+        if (requestKind === 'original') {
+            // Keep the former detailed diagnostic independently from the aggregate
+            // SLO Trends. Its worst subgroup is useful only for investigation.
+            originalRequestDetailedDuration.add(elapsedMs, resultTags);
+        }
         unexpectedErrorRate.add(unexpected, resultTags);
         if (unexpected) {
             unexpectedFailures.add(1, resultTags);
@@ -354,7 +363,11 @@ async function invokeAttempt(request, requestKind, duplicateTiming, processingEx
         };
     } catch (error) {
         const resultTags = { ...tags, outcome: 'transport_exception' };
-        requestDuration.add(Date.now() - startedAt, latencyTags);
+        const elapsedMs = Date.now() - startedAt;
+        requestDuration.add(elapsedMs, latencyTags);
+        if (requestKind === 'original') {
+            originalRequestDetailedDuration.add(elapsedMs, resultTags);
+        }
         unexpectedErrorRate.add(true, resultTags);
         unexpectedFailures.add(1, resultTags);
         logFailureSample('transport_exception', String(error), tags);
