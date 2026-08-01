@@ -4,6 +4,7 @@ import com.exchange.common.db.exception.DbExceptionTranslator;
 import com.exchange.common.metrics.CommonMetrics;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.apache.ibatis.cursor.Cursor;
+import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.executor.parameter.ParameterHandler;
 import org.apache.ibatis.executor.statement.StatementHandler;
 import org.apache.ibatis.mapping.BoundSql;
@@ -16,6 +17,7 @@ import org.apache.ibatis.session.ResultHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLTimeoutException;
@@ -37,9 +39,7 @@ class MybatisStatementMetricsInterceptorTest {
 
     @Test
     void recordsMappedStatementDurationWithBoundedTags() throws SQLException {
-        StatementHandler handler = meteredHandler(SqlCommandType.UPDATE, null);
-
-        assertEquals(1, handler.update(null));
+        assertEquals(1, meteredUpdate(SqlCommandType.UPDATE, null));
 
         assertEquals(1, registry.find(CommonMetrics.DB_OPERATION_DURATION.name())
                 .tag("statement", "LedgerTxnMapper.updateById")
@@ -50,12 +50,25 @@ class MybatisStatementMetricsInterceptorTest {
     }
 
     @Test
+    void recordsStatementContextMissingSeparatelyFromUnknownMetadata() throws SQLException {
+        StatementHandler handler = meteredStatementHandler(null);
+
+        assertEquals(1, handler.update(null));
+
+        assertEquals(1, registry.find(CommonMetrics.DB_OPERATION_DURATION.name())
+                .tag("statement", "statement_context_missing")
+                .tag("command", "unknown")
+                .tag("outcome", "success")
+                .timer()
+                .count());
+    }
+
+    @Test
     void recordsNormalizedErrorAndPreservesOriginalException() {
         SQLTimeoutException failure = new SQLTimeoutException("timed out");
-        StatementHandler handler = meteredHandler(SqlCommandType.SELECT, failure);
 
         SQLTimeoutException thrown = assertThrows(SQLTimeoutException.class,
-                () -> handler.query(null, null));
+                () -> meteredQuery(SqlCommandType.SELECT, failure));
 
         assertEquals(failure, thrown);
         assertEquals(1, registry.find(CommonMetrics.DB_OPERATION_DURATION.name())
@@ -74,9 +87,9 @@ class MybatisStatementMetricsInterceptorTest {
 
     @Test
     void separatesSuccessfulAndFailedStatementDurationsByOutcome() throws SQLException {
-        assertEquals(1, meteredHandler(SqlCommandType.UPDATE, null).update(null));
+        assertEquals(1, meteredUpdate(SqlCommandType.UPDATE, null));
         assertThrows(SQLException.class,
-                () -> meteredHandler(SqlCommandType.UPDATE, new SQLException("failed")).update(null));
+                () -> meteredUpdate(SqlCommandType.UPDATE, new SQLException("failed")));
 
         assertEquals(1, registry.find(CommonMetrics.DB_OPERATION_DURATION.name())
                 .tag("statement", "LedgerTxnMapper.updateById")
@@ -96,9 +109,9 @@ class MybatisStatementMetricsInterceptorTest {
     void collapsesStatementsBeyondTheTimerCacheLimitIntoOneBoundedSeries() throws SQLException {
         interceptor = new MybatisStatementMetricsInterceptor(registry, new DbExceptionTranslator(), 2);
 
-        assertEquals(1, meteredHandler("FirstMapper.insert", SqlCommandType.INSERT, null).update(null));
-        assertEquals(1, meteredHandler("SecondMapper.update", SqlCommandType.UPDATE, null).update(null));
-        assertEquals(1, meteredHandler("ThirdMapper.delete", SqlCommandType.DELETE, null).update(null));
+        assertEquals(1, meteredUpdate("FirstMapper.insert", SqlCommandType.INSERT, null));
+        assertEquals(1, meteredUpdate("SecondMapper.update", SqlCommandType.UPDATE, null));
+        assertEquals(1, meteredUpdate("ThirdMapper.delete", SqlCommandType.DELETE, null));
 
         assertEquals(1, registry.find(CommonMetrics.DB_OPERATION_DURATION.name())
                 .tag("statement", "cardinality_overflow")
@@ -111,11 +124,7 @@ class MybatisStatementMetricsInterceptorTest {
 
     @Test
     void recordsMissingMappedStatementMetadataAsUnknown() throws SQLException {
-        StatementHandler delegate = new TestStatementHandler(null, null);
-        StatementHandler target = new TestRoutingStatementHandler(delegate);
-        StatementHandler handler = (StatementHandler) interceptor.plugin(target);
-
-        assertEquals(1, handler.update(null));
+        assertEquals(1, meteredExecutor(meteredStatementHandler(null)).update(null, null));
 
         assertEquals(1, registry.find(CommonMetrics.DB_OPERATION_DURATION.name())
                 .tag("statement", "unknown")
@@ -125,16 +134,68 @@ class MybatisStatementMetricsInterceptorTest {
                 .count());
     }
 
-    private StatementHandler meteredHandler(SqlCommandType commandType, SQLException failure) {
-        return meteredHandler("com.exchange.app.ledger.dao.mapper.LedgerTxnMapper.updateById", commandType, failure);
+    @Test
+    void clearsUnconsumedContextAfterExecutorReturns() throws SQLException {
+        Executor executor = meteredExecutor(null);
+        MappedStatement mappedStatement = mappedStatement(
+                "com.exchange.app.ledger.dao.mapper.LedgerTxnMapper.updateById",
+                SqlCommandType.UPDATE
+        );
+
+        assertEquals(0, executor.update(mappedStatement, null));
+        assertEquals(1, meteredStatementHandler(null).update(null));
+
+        assertEquals(1, registry.find(CommonMetrics.DB_OPERATION_DURATION.name())
+                .tag("statement", "statement_context_missing")
+                .tag("command", "unknown")
+                .tag("outcome", "success")
+                .timer()
+                .count());
     }
 
-    private StatementHandler meteredHandler(String statementId,
-                                            SqlCommandType commandType,
-                                            SQLException failure) {
-        StatementHandler delegate = new TestStatementHandler(mappedStatement(statementId, commandType), failure);
-        StatementHandler target = new TestRoutingStatementHandler(delegate);
-        return (StatementHandler) interceptor.plugin(target);
+    private int meteredUpdate(SqlCommandType commandType, SQLException failure) throws SQLException {
+        return meteredUpdate(
+                "com.exchange.app.ledger.dao.mapper.LedgerTxnMapper.updateById",
+                commandType,
+                failure
+        );
+    }
+
+    private int meteredUpdate(String statementId,
+                              SqlCommandType commandType,
+                              SQLException failure) throws SQLException {
+        Executor executor = meteredExecutor(meteredStatementHandler(failure));
+        return executor.update(mappedStatement(statementId, commandType), null);
+    }
+
+    private List<Object> meteredQuery(SqlCommandType commandType, SQLException failure) throws SQLException {
+        Executor executor = meteredExecutor(meteredStatementHandler(failure));
+        return executor.query(
+                mappedStatement(
+                        "com.exchange.app.ledger.dao.mapper.LedgerTxnMapper.updateById",
+                        commandType
+                ),
+                null,
+                null,
+                null
+        );
+    }
+
+    private StatementHandler meteredStatementHandler(SQLException failure) {
+        return (StatementHandler) interceptor.plugin(new TestStatementHandler(failure));
+    }
+
+    private Executor meteredExecutor(StatementHandler statementHandler) {
+        Executor delegate = (Executor) Proxy.newProxyInstance(
+                Executor.class.getClassLoader(),
+                new Class<?>[]{Executor.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "update" -> statementHandler == null ? 0 : statementHandler.update(null);
+                    case "query" -> statementHandler == null ? List.of() : statementHandler.query(null, null);
+                    default -> throw new UnsupportedOperationException(method.getName());
+                }
+        );
+        return (Executor) interceptor.plugin(delegate);
     }
 
     private MappedStatement mappedStatement(String statementId, SqlCommandType commandType) {
@@ -149,11 +210,9 @@ class MybatisStatementMetricsInterceptorTest {
     }
 
     private static final class TestStatementHandler implements StatementHandler {
-        private final MappedStatement mappedStatement;
         private final SQLException failure;
 
-        private TestStatementHandler(MappedStatement mappedStatement, SQLException failure) {
-            this.mappedStatement = mappedStatement;
+        private TestStatementHandler(SQLException failure) {
             this.failure = failure;
         }
 
@@ -205,52 +264,4 @@ class MybatisStatementMetricsInterceptorTest {
         }
     }
 
-    // Production MyBatis wraps the concrete handler in RoutingStatementHandler; keep that object shape in tests.
-    private static final class TestRoutingStatementHandler implements StatementHandler {
-        private final StatementHandler delegate;
-
-        private TestRoutingStatementHandler(StatementHandler delegate) {
-            this.delegate = delegate;
-        }
-
-        @Override
-        public Statement prepare(Connection connection, Integer transactionTimeout) throws SQLException {
-            return delegate.prepare(connection, transactionTimeout);
-        }
-
-        @Override
-        public void parameterize(Statement statement) throws SQLException {
-            delegate.parameterize(statement);
-        }
-
-        @Override
-        public void batch(Statement statement) throws SQLException {
-            delegate.batch(statement);
-        }
-
-        @Override
-        public int update(Statement statement) throws SQLException {
-            return delegate.update(statement);
-        }
-
-        @Override
-        public <E> List<E> query(Statement statement, ResultHandler resultHandler) throws SQLException {
-            return delegate.query(statement, resultHandler);
-        }
-
-        @Override
-        public <E> Cursor<E> queryCursor(Statement statement) throws SQLException {
-            return delegate.queryCursor(statement);
-        }
-
-        @Override
-        public BoundSql getBoundSql() {
-            return delegate.getBoundSql();
-        }
-
-        @Override
-        public ParameterHandler getParameterHandler() {
-            return delegate.getParameterHandler();
-        }
-    }
 }

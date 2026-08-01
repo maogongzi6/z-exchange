@@ -3,6 +3,7 @@ package com.exchange.common.metrics;
 public final class CommonMetricTagValues {
     public static final String UNKNOWN = "unknown";
     public static final String CARDINALITY_OVERFLOW = "cardinality_overflow";
+    public static final String STATEMENT_CONTEXT_MISSING = "statement_context_missing";
 
     public static final class Outcomes {
         public static final String SUCCESS = "success";

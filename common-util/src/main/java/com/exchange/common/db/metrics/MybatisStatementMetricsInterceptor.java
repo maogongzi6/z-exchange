@@ -8,16 +8,18 @@ import com.exchange.common.result.error.DbErrorCode;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import org.apache.ibatis.cache.CacheKey;
+import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.executor.statement.StatementHandler;
+import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.mapping.SqlCommandType;
 import org.apache.ibatis.plugin.Interceptor;
 import org.apache.ibatis.plugin.Intercepts;
 import org.apache.ibatis.plugin.Invocation;
 import org.apache.ibatis.plugin.Signature;
-import org.apache.ibatis.reflection.MetaObject;
-import org.apache.ibatis.reflection.SystemMetaObject;
 import org.apache.ibatis.session.ResultHandler;
+import org.apache.ibatis.session.RowBounds;
 
 import java.sql.Statement;
 import java.util.Map;
@@ -26,6 +28,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Intercepts({
+        @Signature(type = Executor.class, method = "update", args = {MappedStatement.class, Object.class}),
+        @Signature(type = Executor.class, method = "query", args = {
+                MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class
+        }),
+        @Signature(type = Executor.class, method = "query", args = {
+                MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class,
+                CacheKey.class, BoundSql.class
+        }),
         @Signature(type = StatementHandler.class, method = "query", args = {Statement.class, ResultHandler.class}),
         @Signature(type = StatementHandler.class, method = "update", args = {Statement.class}),
         @Signature(type = StatementHandler.class, method = "batch", args = {Statement.class})
@@ -35,6 +45,11 @@ public class MybatisStatementMetricsInterceptor implements Interceptor {
     // Preserve an observation when MyBatis metadata is missing or malformed instead of dropping the metric.
     private static final StatementKey UNKNOWN_STATEMENT = new StatementKey(
             CommonMetricTagValues.UNKNOWN,
+            CommonMetricTagValues.DbCommands.UNKNOWN
+    );
+    // A statement without matching Executor metadata indicates an unexpected MyBatis instrumentation path.
+    private static final StatementKey MISSING_STATEMENT_CONTEXT = new StatementKey(
+            CommonMetricTagValues.STATEMENT_CONTEXT_MISSING,
             CommonMetricTagValues.DbCommands.UNKNOWN
     );
     // Collapse unseen statements after timer admission is exhausted, bounding registry cardinality and memory use.
@@ -49,6 +64,9 @@ public class MybatisStatementMetricsInterceptor implements Interceptor {
     private final Map<StatementKey, Timer> successTimers = new ConcurrentHashMap<>();
     private final Map<StatementKey, Timer> errorTimers = new ConcurrentHashMap<>();
     private final AtomicInteger cachedTimerCount = new AtomicInteger();
+    // Executor exposes MappedStatement through its public API, while StatementHandler provides the JDBC-adjacent
+    // timing boundary. This one-shot context transfers metadata between those callbacks on the same DB thread.
+    private final ThreadLocal<StatementKey> statementContext = new ThreadLocal<>();
 
     public MybatisStatementMetricsInterceptor(MeterRegistry meterRegistry,
                                               DbExceptionTranslator exceptionTranslator) {
@@ -68,7 +86,28 @@ public class MybatisStatementMetricsInterceptor implements Interceptor {
 
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
-        StatementKey key = statementKeySafely(invocation.getTarget());
+        if (invocation.getTarget() instanceof Executor) {
+            return interceptExecutor(invocation);
+        }
+        return interceptStatement(invocation);
+    }
+
+    private Object interceptExecutor(Invocation invocation) throws Throwable {
+        // Capture the key here because Executor exposes MappedStatement as a public argument before it creates the
+        // StatementHandler. Extracting it later from StatementHandler would require reflection over private MyBatis
+        // fields and plugin proxies, making metrics dependent on internal implementation details.
+        statementContext.set(statementKeySafely(mappedStatementArgument(invocation)));
+        try {
+            return invocation.proceed();
+        } finally {
+            // StatementHandler normally consumes the value. This cleanup covers cache hits and failures that occur
+            // before JDBC execution, preventing context leakage on reused request or worker threads.
+            statementContext.remove();
+        }
+    }
+
+    private Object interceptStatement(Invocation invocation) throws Throwable {
+        StatementKey key = consumeStatementKey();
         long startedAt = System.nanoTime();
         boolean success = false;
         try {
@@ -81,6 +120,21 @@ public class MybatisStatementMetricsInterceptor implements Interceptor {
         } finally {
             recordDurationSafely(key, success, System.nanoTime() - startedAt);
         }
+    }
+
+    private MappedStatement mappedStatementArgument(Invocation invocation) {
+        Object[] args = invocation.getArgs();
+        if (args.length == 0 || !(args[0] instanceof MappedStatement mappedStatement)) {
+            return null;
+        }
+        return mappedStatement;
+    }
+
+    private StatementKey consumeStatementKey() {
+        StatementKey key = statementContext.get();
+        // Consume before JDBC execution. A nested MyBatis query will install and consume its own statement key.
+        statementContext.remove();
+        return key == null ? MISSING_STATEMENT_CONTEXT : key;
     }
 
     private Timer createTimer(StatementKey key, String outcome) {
@@ -155,9 +209,8 @@ public class MybatisStatementMetricsInterceptor implements Interceptor {
         }
     }
 
-    private StatementKey statementKeySafely(Object target) {
+    private StatementKey statementKeySafely(MappedStatement mappedStatement) {
         try {
-            MappedStatement mappedStatement = mappedStatement(target);
             if (mappedStatement == null) {
                 return UNKNOWN_STATEMENT;
             }
@@ -171,22 +224,6 @@ public class MybatisStatementMetricsInterceptor implements Interceptor {
 
     private StatementKey normalize(StatementKey key) {
         return key == null ? UNKNOWN_STATEMENT : key;
-    }
-
-    private MappedStatement mappedStatement(Object target) {
-        try {
-            MetaObject metaObject = SystemMetaObject.forObject(target);
-            if (metaObject.hasGetter("delegate.mappedStatement")) {
-                return (MappedStatement) metaObject.getValue("delegate.mappedStatement");
-            }
-            if (metaObject.hasGetter("mappedStatement")) {
-                return (MappedStatement) metaObject.getValue("mappedStatement");
-            }
-        } catch (RuntimeException ignored) {
-            // Metrics must never prevent a statement from executing; unresolved internals use bounded fallback tags.
-            // If diagnostics become necessary, add rate-limited logging rather than logging every DB operation.
-        }
-        return null;
     }
 
     private String shortStatementId(String statementId) {
