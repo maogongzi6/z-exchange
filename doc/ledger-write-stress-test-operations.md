@@ -333,9 +333,12 @@ the reserved grace period, so elapsed time can be lower than that maximum.
 Each profile contains one final ramp-to-zero stage. The subsequent idle
 observation runs in `teardown()` because a redundant zero-to-zero arrival-rate
 stage has nothing to schedule and may be rendered by k6 as an interrupted
-scenario. The runner's printed k6 exit status remains the authoritative process
-result; `0 interrupted iterations` separately confirms that no active iteration
-was forcibly cut off.
+scenario. The test configures `teardownTimeout` to the observation duration plus
+a small scheduling margin; this is required when
+`LEDGER_STRESS_STAGE_SECONDS=60`, because k6's default teardown timeout is also
+60 seconds. The runner's printed k6 exit status remains the authoritative
+process result; `0 interrupted iterations` separately confirms that no active
+iteration was forcibly cut off.
 
 The runner prints the k6 end summary, followed by output similar to:
 

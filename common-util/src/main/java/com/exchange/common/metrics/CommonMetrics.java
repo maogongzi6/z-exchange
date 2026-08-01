@@ -32,4 +32,9 @@ public final class CommonMetrics {
             "zexchange.redis.operation.duration",
             "Client-observed Redis operation duration"
     );
+
+    public static final MetricDef DB_TRANSACTION_DURATION = new MetricDef(
+            "zexchange.db.transaction.duration",
+            "Client-observed DB transaction duration"
+    );
 }

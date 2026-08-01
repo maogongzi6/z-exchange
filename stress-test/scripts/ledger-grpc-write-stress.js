@@ -164,6 +164,10 @@ export const options = {
             gracefulStop: seconds(deadlineSeconds * 2 + 5),
         },
     },
+    // teardown() deliberately keeps dashboards observable for one stage after
+    // traffic reaches zero. Allow a small margin beyond that sleep; otherwise
+    // a 60-second stage hits k6's default 60-second teardown timeout.
+    teardownTimeout: seconds(stageSeconds + 5),
     thresholds,
     summaryTrendStats: ['avg', 'min', 'med', 'p(95)', 'p(99)', 'max'],
     tags: {
