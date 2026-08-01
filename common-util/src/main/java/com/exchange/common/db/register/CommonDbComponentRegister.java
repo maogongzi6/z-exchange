@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInt
 import com.exchange.common.db.aop.DbExceptionTranslateAop;
 import com.exchange.common.db.exception.DbExceptionTranslator;
 import com.exchange.common.db.handler.AutofillMetaObjectHandler;
+import com.exchange.common.db.metrics.MybatisStatementMetricsInterceptor;
 import com.exchange.common.db.utils.DbTxnExecutor;
 import com.exchange.common.db.utils.DefaultDbTxnExecutor;
 import com.exchange.common.db.utils.MeteredDbTxnExecutor;
@@ -42,5 +43,12 @@ public class CommonDbComponentRegister {
     @Bean
     public DbExceptionTranslateAop dbExceptionTranslateAop(DbExceptionTranslator translator) {
         return new DbExceptionTranslateAop(translator);
+    }
+
+    @Bean
+    public MybatisStatementMetricsInterceptor mybatisStatementMetricsInterceptor(
+            MeterRegistry meterRegistry,
+            DbExceptionTranslator translator) {
+        return new MybatisStatementMetricsInterceptor(meterRegistry, translator);
     }
 }

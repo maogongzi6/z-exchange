@@ -37,4 +37,14 @@ public final class CommonMetrics {
             "zexchange.db.transaction.duration",
             "Client-observed DB transaction duration"
     );
+
+    public static final MetricDef DB_OPERATION_DURATION = new MetricDef(
+            "zexchange.db.operation.duration",
+            "Client-observed MyBatis statement execution duration"
+    );
+
+    public static final MetricDef DB_OPERATION_ERRORS = new MetricDef(
+            "zexchange.db.operation.errors",
+            "MyBatis statement execution error count"
+    );
 }

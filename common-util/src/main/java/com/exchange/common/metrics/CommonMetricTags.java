@@ -9,6 +9,8 @@ public final class CommonMetricTags {
     public static final String RESULT = "result";
     public static final String COMPONENT = "component";
     public static final String OUTCOME = "outcome";
+    public static final String STATEMENT = "statement";
+    public static final String COMMAND = "command";
 
     private CommonMetricTags() {
     }
