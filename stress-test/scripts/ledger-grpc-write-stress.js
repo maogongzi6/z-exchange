@@ -31,9 +31,8 @@ const consistencyFailures = new Counter('ledger_write_consistency_failures');
 const unexpectedErrorRate = new Rate('ledger_write_unexpected_error_rate');
 const requestDuration = new Trend('ledger_write_request_duration', true);
 const successfulRequestDuration = new Trend('ledger_write_success_duration', true);
-// Primary latency Trends intentionally use only the bounded API operation tag.
-// Detailed workload/outcome tags would split p95 into subgroups whose maximum is
-// not the percentile of the complete request population.
+// Attempt and latency metrics intentionally use only the bounded API operation
+// tag so p95/p99 describe the complete request population.
 const latencyTags = { operation: 'postTransaction' };
 
 function integerEnv(name, fallback, minimum = 1) {
@@ -260,15 +259,6 @@ function isRequestInProcessing(response) {
     return processingCode && error.message === REQUEST_IN_PROCESSING_MESSAGE;
 }
 
-function metricTags(request, requestKind, duplicateTiming) {
-    return {
-        operation: 'postTransaction',
-        request_kind: requestKind,
-        duplicate_timing: duplicateTiming,
-        entry_count: String(request.entries.length),
-    };
-}
-
 function logFailureSample(classification, responseOrError, tags) {
     // Unlimited error logging can become the bottleneck during overload and
     // change the result being measured. Retain only a few samples per VU; use
@@ -284,8 +274,8 @@ function logFailureSample(classification, responseOrError, tags) {
     }));
 }
 
-async function invokeAttempt(request, requestKind, duplicateTiming, processingExpected) {
-    const tags = metricTags(request, requestKind, duplicateTiming);
+async function invokeAttempt(request, processingExpected) {
+    const tags = latencyTags;
     const startedAt = Date.now();
     offeredAttempts.add(1, tags);
 
@@ -392,7 +382,7 @@ function verifyDuplicateTxnIds(results, request) {
     const consistent = successfulIds.every((txnId) => txnId === first);
     check(results, {
         'successful duplicates return the same ledger transaction': () => consistent,
-    }, { operation: 'postTransaction', request_kind: 'duplicate_group' });
+    }, latencyTags);
     if (!consistent) {
         consistencyFailures.add(1, { reason: 'different_ledger_txn_id' });
         logFailureSample('duplicate_txn_id_conflict', successfulIds, {
@@ -430,19 +420,9 @@ export async function ledgerWrite() {
     // Starting asyncInvoke calls before awaiting any result makes these RPCs
     // overlap. Server scheduling can let any member win the idempotency claim,
     // so REQUEST_IN_PROCESSING is accepted for every immediate group member.
-    immediateAttempts.push(invokeAttempt(
-        request,
-        'original',
-        duplicateCounts.concurrent > 0 ? 'concurrent_group' : 'none',
-        duplicateCounts.concurrent > 0,
-    ));
+    immediateAttempts.push(invokeAttempt(request, duplicateCounts.concurrent > 0));
     for (let index = 0; index < duplicateCounts.concurrent; index += 1) {
-        immediateAttempts.push(invokeAttempt(
-            request,
-            'duplicate',
-            'concurrent',
-            true,
-        ));
+        immediateAttempts.push(invokeAttempt(request, true));
     }
 
     const results = await Promise.all(immediateAttempts);
@@ -452,7 +432,7 @@ export async function ledgerWrite() {
     // response at this point is classified as unexpected.
     for (let index = 0; index < duplicateCounts.delayed; index += 1) {
         sleep(duplicateDelaySeconds);
-        results.push(await invokeAttempt(request, 'duplicate', 'delayed', false));
+        results.push(await invokeAttempt(request, false));
     }
 
     verifyDuplicateTxnIds(results, request);

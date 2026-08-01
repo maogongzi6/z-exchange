@@ -270,8 +270,7 @@ Overall attempt p95 latency:
 ```promql
 1000 * k6_ledger_write_request_duration_p95{
   testid="$testid",
-  operation="postTransaction",
-  request_kind=""
+  operation="postTransaction"
 }
 ```
 
@@ -284,18 +283,13 @@ Successful attempt p95 latency:
 }
 ```
 
-Use the corresponding `_p99` series for p99. The empty `request_kind` matcher
-selects the new aggregate series and excludes historical detailed series.
-Successful latency contains validated new and idempotent successes; overall
-latency contains every attempt. Neither primary Trend is split by workload or
-outcome tags, so no `max()` aggregation is required.
+Use the corresponding `_p99` series for p99. Successful latency contains
+validated new and idempotent successes; overall latency contains every attempt.
+Neither primary Trend is split by workload or outcome tags, so no `max()`
+aggregation is required.
 
 The Prometheus remote-write values for time Trends are in seconds. Multiplying
 by `1000` converts them to milliseconds for the dashboard's `ms` unit.
-
-The dashboard retains a legacy original-request panel for historical runs. Its
-`max()` query selects the worst tagged subgroup and must not be interpreted as
-an overall percentile or used to determine capacity.
 
 Unexpected error rate:
 
