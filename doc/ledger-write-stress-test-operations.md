@@ -175,7 +175,7 @@ The profile runs, in one continuous server session:
 30s reduce to 60%
 60s recovery observation at 60%
 30s ramp to zero
-30s idle observation
+30s idle observation in k6 teardown
 ```
 
 Verify that completed TPS follows offered TPS again, p95 and unexpected errors
@@ -191,8 +191,9 @@ export LEDGER_STRESS_SOAK_SECONDS=120
 ```
 
 This runs a 30-second warm-up, ramps to 80% of the sustainable logical rate,
-holds it for two minutes, and drains to zero. After initial validation, increase
-`LEDGER_STRESS_SOAK_SECONDS` for leak, GC, and periodic-job testing.
+holds it for two minutes, drains to zero, and observes 30 idle seconds in k6
+teardown. After initial validation, increase `LEDGER_STRESS_SOAK_SECONDS` for
+leak, GC, and periodic-job testing.
 
 Optional acceptance thresholds are most useful for recovery and soak:
 
@@ -328,13 +329,13 @@ request panel.
 
 The maximum duration printed by k6 includes `gracefulStop`. If all scheduled
 stages finish and no iterations remain in flight, k6 can finish without using
-the reserved grace period. The elapsed/max-duration ratio can therefore be
-less than 100%; for example, a 12-minute schedule may finish around
-`12m02s/13m` when roughly one minute was reserved for graceful stop. This ratio
-alone does not prove early termination. A `✗` scenario marker still requires
-checking the total-results section and the runner's printed k6 exit status.
-`0 interrupted iterations` confirms that k6 did not cut off an in-flight
-iteration, but it does not replace the process exit status.
+the reserved grace period, so elapsed time can be lower than that maximum.
+Each profile contains one final ramp-to-zero stage. The subsequent idle
+observation runs in `teardown()` because a redundant zero-to-zero arrival-rate
+stage has nothing to schedule and may be rendered by k6 as an interrupted
+scenario. The runner's printed k6 exit status remains the authoritative process
+result; `0 interrupted iterations` separately confirms that no active iteration
+was forcibly cut off.
 
 The runner prints the k6 end summary, followed by output similar to:
 

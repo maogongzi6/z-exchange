@@ -237,7 +237,7 @@ k6 run without restarting ledger-service or its dependencies.
 | Reduce load | 30 seconds | 50-70% of sustainable capacity |
 | Recovery observation | 60 seconds | 50-70% of sustainable capacity |
 | Drain | 30 seconds | Ramp to 0 TPS |
-| Idle observation | 30 seconds | 0 TPS |
+| Idle observation | 30 seconds | 0 TPS, executed in k6 teardown |
 
 The test passes recovery only when:
 
@@ -260,7 +260,7 @@ Use a separate environment state and `run_id`:
 | Ramp | 30 seconds | 80% of sustainable capacity |
 | Soak | 2 minutes | 80% of sustainable capacity |
 | Drain | 30 seconds | Ramp to 0 TPS |
-| Idle observation | 30 seconds | 0 TPS |
+| Idle observation | 30 seconds | 0 TPS, executed in k6 teardown |
 
 During the soak, latency, successful TPS, error rate, and active requests must
 remain stable. Two minutes is a short initial soak and will not expose slow

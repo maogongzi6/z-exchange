@@ -105,7 +105,6 @@ function profileStages() {
             });
         }
         stages.push({ duration: seconds(stageSeconds), target: 0 });
-        stages.push({ duration: seconds(stageSeconds), target: 0 });
         return stages;
     }
 
@@ -122,7 +121,6 @@ function profileStages() {
             { duration: seconds(stageSeconds), target: recoveredRate },
             { duration: seconds(recoveryObservationSeconds), target: recoveredRate },
             { duration: seconds(stageSeconds), target: 0 },
-            { duration: seconds(stageSeconds), target: 0 },
         ];
     }
 
@@ -131,7 +129,6 @@ function profileStages() {
         { duration: seconds(stageSeconds), target: warmRate },
         { duration: seconds(stageSeconds), target: soakRate },
         { duration: seconds(soakSeconds), target: soakRate },
-        { duration: seconds(stageSeconds), target: 0 },
         { duration: seconds(stageSeconds), target: 0 },
     ];
 }
@@ -446,4 +443,12 @@ export async function ledgerWrite() {
     }
 
     verifyDuplicateTxnIds(results, request);
+}
+
+export function teardown() {
+    // A zero-to-zero arrival-rate stage has no work to schedule, so k6 can
+    // render the scenario as interrupted even though the run exits with 0.
+    // Keep the idle observation outside the executor: no requests are sent,
+    // while service and infrastructure dashboards remain observable.
+    sleep(stageSeconds);
 }
