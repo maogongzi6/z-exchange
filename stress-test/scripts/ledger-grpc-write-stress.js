@@ -30,6 +30,11 @@ const connectionFailures = new Counter('ledger_write_connection_failures');
 const consistencyFailures = new Counter('ledger_write_consistency_failures');
 const unexpectedErrorRate = new Rate('ledger_write_unexpected_error_rate');
 const requestDuration = new Trend('ledger_write_request_duration', true);
+const successfulRequestDuration = new Trend('ledger_write_success_duration', true);
+// Primary latency Trends intentionally use only the bounded API operation tag.
+// Detailed workload/outcome tags would split p95 into subgroups whose maximum is
+// not the percentile of the complete request population.
+const latencyTags = { operation: 'postTransaction' };
 
 function integerEnv(name, fallback, minimum = 1) {
     const raw = __ENV[name];
@@ -144,9 +149,9 @@ const maxP95Ms = __ENV.LEDGER_STRESS_MAX_P95_MS
     ? integerEnv('LEDGER_STRESS_MAX_P95_MS', 0)
     : null;
 if (maxP95Ms !== null) {
-    // Only original attempts define the primary write SLO. Fast idempotent
-    // duplicate responses must not make the write latency look better.
-    thresholds['ledger_write_request_duration{request_kind:original}'] = [
+    // Apply the threshold to the aggregate latency population. Successful-only
+    // latency remains visible separately so fast failures cannot hide degradation.
+    thresholds['ledger_write_request_duration{operation:postTransaction}'] = [
         `p(95)<${maxP95Ms}`,
     ];
 }
@@ -327,7 +332,11 @@ async function invokeAttempt(request, requestKind, duplicateTiming, processingEx
         }
 
         const resultTags = { ...tags, outcome: classification };
-        requestDuration.add(elapsedMs, resultTags);
+        requestDuration.add(elapsedMs, latencyTags);
+        if (classification === 'success') {
+            // Includes both newly created and idempotently returned successes.
+            successfulRequestDuration.add(elapsedMs, latencyTags);
+        }
         unexpectedErrorRate.add(unexpected, resultTags);
         if (unexpected) {
             unexpectedFailures.add(1, resultTags);
@@ -345,7 +354,7 @@ async function invokeAttempt(request, requestKind, duplicateTiming, processingEx
         };
     } catch (error) {
         const resultTags = { ...tags, outcome: 'transport_exception' };
-        requestDuration.add(Date.now() - startedAt, resultTags);
+        requestDuration.add(Date.now() - startedAt, latencyTags);
         unexpectedErrorRate.add(true, resultTags);
         unexpectedFailures.add(1, resultTags);
         logFailureSample('transport_exception', String(error), tags);

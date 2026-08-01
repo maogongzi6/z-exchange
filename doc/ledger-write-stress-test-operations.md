@@ -146,7 +146,7 @@ export LEDGER_STRESS_DISCOVERY_STEPS=8
 ```
 
 Watch Grafana during the run. Record the last stable actual offered TPS before
-completed TPS flattens or original-request p95 rises sharply. Repeat discovery
+completed TPS flattens or overall/successful p95 rises sharply. Repeat discovery
 at least three times, using smaller rate steps around the candidate knee.
 
 Do not configure strict p95/error thresholds for discovery unless deliberately
@@ -224,7 +224,7 @@ reconciliation to run.
 | `LEDGER_STRESS_BASE_AMOUNT` | `100` | Minimum entry amount in minor units |
 | `LEDGER_STRESS_AMOUNT_SPAN` | `900` | Deterministic amount variation range |
 | `LEDGER_STRESS_MAX_UNEXPECTED_ERROR_RATE` | unset | Optional k6 rate threshold |
-| `LEDGER_STRESS_MAX_P95_MS` | unset | Optional original-request p95 threshold |
+| `LEDGER_STRESS_MAX_P95_MS` | unset | Optional overall attempt p95 threshold |
 | `LEDGER_GRPC_DEADLINE_SECONDS` | `5` | Per-RPC deadline |
 
 Database, endpoint, VU, and Prometheus variables are defined in
@@ -240,9 +240,9 @@ iterations as a valid server-capacity result.
 Grafana provisions the **Ledger Stress Test Overview** dashboard from
 `monitoring/grafana/dashboards/ledger-stress-test-overview.json`. Select one
 `test run` and `test profile` before interpreting a result. Its primary panels
-combine offered, completed, and successful RPC TPS in one throughput chart and
-combine original-request p95 and p99 in one latency chart. Unexpected error
-rate and active ledger gRPC requests are shown beside the primary charts.
+combine offered, completed, and successful RPC TPS, and compare overall with
+successful p95/p99. Unexpected error rate and active ledger gRPC requests are
+shown beside them.
 
 Filter every k6 query by `testid`. Example queries below use `$testid` as a
 Grafana variable.
@@ -265,26 +265,37 @@ Successful response TPS:
 sum(rate(k6_ledger_write_successful_total{testid="$testid"}[15s]))
 ```
 
-Original-request p95 latency:
+Overall attempt p95 latency:
 
 ```promql
-1000 * max(k6_ledger_write_request_duration_p95{
+1000 * k6_ledger_write_request_duration_p95{
   testid="$testid",
-  request_kind="original"
-})
+  operation="postTransaction",
+  request_kind=""
+}
 ```
 
-Original-request p99 latency:
+Successful attempt p95 latency:
 
 ```promql
-1000 * max(k6_ledger_write_request_duration_p99{
+1000 * k6_ledger_write_success_duration_p95{
   testid="$testid",
-  request_kind="original"
-})
+  operation="postTransaction"
+}
 ```
+
+Use the corresponding `_p99` series for p99. The empty `request_kind` matcher
+selects the new aggregate series and excludes historical detailed series.
+Successful latency contains validated new and idempotent successes; overall
+latency contains every attempt. Neither primary Trend is split by workload or
+outcome tags, so no `max()` aggregation is required.
 
 The Prometheus remote-write values for time Trends are in seconds. Multiplying
 by `1000` converts them to milliseconds for the dashboard's `ms` unit.
+
+The dashboard retains a legacy original-request panel for historical runs. Its
+`max()` query selects the worst tagged subgroup and must not be interpreted as
+an overall percentile or used to determine capacity.
 
 Unexpected error rate:
 

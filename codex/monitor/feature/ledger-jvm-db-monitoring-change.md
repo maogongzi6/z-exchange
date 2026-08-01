@@ -48,13 +48,21 @@ The `Ledger Service Overview` dashboard adds a `JVM and Database` row:
 
 | Panel | Signals | Meaning |
 |---|---|---|
-| Ledger Write Latency and GC Correlation | gRPC p95, business p95, DB transaction p95, GC pause max | Identifies whether write spikes align with DB work or JVM pauses. |
+| Ledger Write Latency and GC Correlation | gRPC overall/OK p95, business overall/success p95, DB overall/success p95, GC pause max | Identifies whether write spikes align with successful work, DB work, or JVM pauses. |
 | Hikari Connections | active, max, pending | Shows pool utilization and waiting callers. |
 | Hikari Acquisition Latency | rolling average and max | Shows time spent obtaining a pooled connection. |
 | Hikari Connection Timeouts | timeout rate | Shows requests that could not obtain a connection in time. |
 
 All latency series are displayed in milliseconds and filtered by the selected
 ledger instance.
+
+The API and business sections also compare overall p95 with filtered latency:
+
+- gRPC `OK` means transport success and may still contain a protobuf business error.
+- Business `success` represents a successful processor result.
+- DB `success` represents a transaction that returned a successful `Result` and committed.
+
+Overall histograms remain visible so failures and timeouts are not excluded.
 
 ## Configuration And Deployment
 

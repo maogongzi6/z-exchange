@@ -130,8 +130,14 @@ This distinction must not hide defects:
   reference ID. A client timeout must not be classified immediately as a
   failed transaction.
 
-Measure original-request latency separately from duplicate-request latency.
-Fast duplicate responses must not artificially improve the primary write p95.
+Measure two aggregate latency populations, tagged only by API operation:
+
+- Overall latency includes every attempt and represents observed client traffic.
+- Successful latency includes validated new and idempotent successes.
+
+Compare both. Successful latency prevents fast failures from hiding degradation;
+overall latency exposes timeouts and failed attempts. Do not split these primary
+percentiles by entry count, duplicate timing, idempotency path, or outcome.
 
 ## 6. Result Classification
 
@@ -163,7 +169,7 @@ for deliberately concurrent duplicates.
 
 - k6 offered TPS
 - Completed and successful TPS
-- Original write-request p95 latency
+- Overall and successful write-request p95 latency
 - Unexpected error rate
 
 ### Useful Confirmation
@@ -207,7 +213,7 @@ these behaviors appears:
 
 - Offered TPS increases but completed/successful TPS increases very little or
   stops increasing.
-- Original-request p95 rises disproportionately between consecutive levels.
+- Overall or successful p95 rises disproportionately between consecutive levels.
 - Unexpected error or deadline rate begins increasing.
 - Active gRPC requests grow instead of returning to a stable level.
 
@@ -242,7 +248,7 @@ k6 run without restarting ledger-service or its dependencies.
 The test passes recovery only when:
 
 - Completed TPS again follows offered TPS at the reduced rate.
-- Original-request p95 returns near its pre-overload baseline.
+- Overall and successful p95 return near their pre-overload baselines.
 - Unexpected errors return to the baseline rate.
 - Active gRPC requests return to baseline rather than remaining queued.
 - All ambiguous requests are reconciled.
