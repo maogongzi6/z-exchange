@@ -6,7 +6,10 @@ services:
     image: z-exchange/ledger-service:local
     container_name: ledger-service
     restart: unless-stopped
+    mem_limit: ${LEDGER_MEMORY_LIMIT:-3g}
+    mem_reservation: ${LEDGER_MEMORY_RESERVATION:-2g}
     environment:
+      JAVA_TOOL_OPTIONS: "${LEDGER_JAVA_TOOL_OPTIONS:--Xms1g -Xmx2g}"
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: ${INFRA_PRIVATE_IP:-172.31.18.211}
       DB_PORT: ${DB_PORT:-3306}

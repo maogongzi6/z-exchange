@@ -22,4 +22,4 @@ RUN mkdir -p /app/logs/ledger-service \
 USER ledger
 EXPOSE 8081 9191
 
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-XX:+ExitOnOutOfMemoryError", "-jar", "/app/app.jar"]
+ENTRYPOINT ["java", "-XX:+ExitOnOutOfMemoryError", "-jar", "/app/app.jar"]
