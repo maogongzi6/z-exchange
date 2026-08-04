@@ -3,8 +3,8 @@ services:
     image: mysql:8.4
     container_name: mysql
     restart: unless-stopped
-    mem_limit: ${MYSQL_MEMORY_LIMIT:-1280m}
-    mem_reservation: ${MYSQL_MEMORY_RESERVATION:-768m}
+    mem_limit: ${MYSQL_MEMORY_LIMIT:-1792m}
+    mem_reservation: ${MYSQL_MEMORY_RESERVATION:-1280m}
     environment:
       MYSQL_DATABASE: trade_ledgerservice
       MYSQL_USER: ${LEDGER_DB_USERNAME:-ledger}
@@ -74,41 +74,5 @@ services:
       retries: 20
       start_period: 20s
 
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
-    restart: unless-stopped
-    mem_limit: ${PROMETHEUS_MEMORY_LIMIT:-512m}
-    mem_reservation: ${PROMETHEUS_MEMORY_RESERVATION:-384m}
-    command:
-      - --config.file=/etc/prometheus/prometheus.yml
-      - --storage.tsdb.path=/prometheus
-      - --storage.tsdb.retention.time=3d
-      - --storage.tsdb.retention.size=1GB
-      # k6 runs on a separate EC2 host and streams load-test metrics here.
-      - --web.enable-remote-write-receiver
-    ports:
-      - "${INFRA_PRIVATE_IP:-172.31.18.211}:9290:9090"
-    volumes:
-      - ../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus-data:/prometheus
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
-    restart: unless-stopped
-    mem_limit: ${GRAFANA_MEMORY_LIMIT:-256m}
-    mem_reservation: ${GRAFANA_MEMORY_RESERVATION:-128m}
-    ports:
-      - "${INFRA_PRIVATE_IP:-172.31.18.211}:3000:3000"
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ../monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ../monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
-    depends_on:
-      - prometheus
-
 volumes:
   mysql-data:
-  prometheus-data:
-  grafana-data:

@@ -85,7 +85,7 @@ error rate. The delayed duplicate must return the persisted result; a delayed
 
 Before running:
 
-1. Deploy ledger-service and infrastructure.
+1. Deploy ledger-service, infrastructure, and monitoring.
 2. Confirm the stress-test EC2 can reach ledger gRPC port `9191`, MySQL port
    `3306`, and Prometheus remote-write port `9290` over the VPC.
 3. Confirm Prometheus scrapes ledger-service and accepts remote writes.
