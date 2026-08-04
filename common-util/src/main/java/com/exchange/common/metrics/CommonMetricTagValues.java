@@ -2,6 +2,8 @@ package com.exchange.common.metrics;
 
 public final class CommonMetricTagValues {
     public static final String UNKNOWN = "unknown";
+    public static final String CARDINALITY_OVERFLOW = "cardinality_overflow";
+    public static final String STATEMENT_CONTEXT_MISSING = "statement_context_missing";
 
     public static final class Outcomes {
         public static final String SUCCESS = "success";
@@ -92,6 +94,17 @@ public final class CommonMetricTagValues {
         public static final String UNKNOWN = "unknown";
 
         private IdempotencyErrorTypes() {
+        }
+    }
+
+    public static final class DbCommands {
+        public static final String SELECT = "select";
+        public static final String INSERT = "insert";
+        public static final String UPDATE = "update";
+        public static final String DELETE = "delete";
+        public static final String UNKNOWN = "unknown";
+
+        private DbCommands() {
         }
     }
 

@@ -1,0 +1,261 @@
+{
+  "annotations": { "list": [] },
+  "description": "Ledger service API, business processing, and emitted component error signals.",
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "id": 100, "panels": [], "title": "API", "type": "row" },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "decimals": 1, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }] }, "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 }, "id": 1,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showPercentChange": false, "textMode": "auto", "wideLayout": true },
+      "targets": [{ "editorMode": "code", "expr": "sum(rate(zexchange_grpc_server_duration_seconds_count{instance=~\"$instance\"}[$__rate_interval]))", "legendFormat": "requests", "range": true, "refId": "A" }],
+      "title": "gRPC Request Rate", "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "decimals": 2, "mappings": [], "max": 100, "min": 0, "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "yellow", "value": 0.1 }, { "color": "red", "value": 1 }] }, "unit": "percent" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 }, "id": 2,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showPercentChange": false, "textMode": "auto", "wideLayout": true },
+      "targets": [{ "editorMode": "code", "expr": "100 * sum(rate(zexchange_grpc_server_duration_seconds_count{instance=~\"$instance\",grpc_status!=\"OK\"}[$__rate_interval])) / clamp_min(sum(rate(zexchange_grpc_server_duration_seconds_count{instance=~\"$instance\"}[$__rate_interval])), 0.000001)", "legendFormat": "non-OK", "range": true, "refId": "A" }],
+      "title": "gRPC Non-OK Rate", "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Overall p95 includes every gRPC status. OK p95 includes transport-successful calls only; protobuf business failures may still have gRPC status OK.",
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "decimals": 1, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "yellow", "value": 250 }, { "color": "red", "value": 1000 }] }, "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 }, "id": 3,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showPercentChange": false, "textMode": "auto", "wideLayout": true },
+      "targets": [
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le) (rate(zexchange_grpc_server_duration_seconds_bucket{instance=~\"$instance\"}[$__rate_interval])))", "legendFormat": "overall p95", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le) (rate(zexchange_grpc_server_duration_seconds_bucket{instance=~\"$instance\",grpc_status=\"OK\"}[$__rate_interval])))", "legendFormat": "OK p95", "range": true, "refId": "B" }
+      ],
+      "title": "gRPC p95 Overall / OK", "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "decimals": 0, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }] }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 }, "id": 4,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showPercentChange": false, "textMode": "auto", "wideLayout": true },
+      "targets": [{ "editorMode": "code", "expr": "sum(zexchange_grpc_server_active{instance=~\"$instance\"})", "legendFormat": "active", "range": true, "refId": "A" }],
+      "title": "Active gRPC Calls", "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 5 }, "id": 5,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "editorMode": "code", "expr": "sum by (method, grpc_status) (rate(zexchange_grpc_server_duration_seconds_count{instance=~\"$instance\"}[$__rate_interval]))", "legendFormat": "{{method}} / {{grpc_status}}", "range": true, "refId": "A" }],
+      "title": "gRPC Rate by Method and Status", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Compares each method's complete gRPC latency population with transport-successful calls. OK does not imply business success when errors are returned in the protobuf body.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 5 }, "id": 6,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le, method) (rate(zexchange_grpc_server_duration_seconds_bucket{instance=~\"$instance\"}[$__rate_interval])))", "legendFormat": "{{method}} overall", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le, method) (rate(zexchange_grpc_server_duration_seconds_bucket{instance=~\"$instance\",grpc_status=\"OK\"}[$__rate_interval])))", "legendFormat": "{{method}} OK", "range": true, "refId": "B" }
+      ],
+      "title": "gRPC p95 by Method Overall / OK", "type": "timeseries"
+    },
+
+    { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 12 }, "id": 101, "panels": [], "title": "Business", "type": "row" },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 13 }, "id": 7,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "editorMode": "code", "expr": "sum by (operation, ingress, outcome) (rate(zexchange_ledger_requests_total{instance=~\"$instance\",ingress=~\"$ingress\"}[$__rate_interval]))", "legendFormat": "{{operation}} / {{ingress}} / {{outcome}}", "range": true, "refId": "A" }],
+      "title": "Business Request Outcomes", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Compares all processor outcomes with successful business results. The success series prevents fast business failures from lowering the latency of completed business work.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 13 }, "id": 8,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le, operation, ingress) (rate(zexchange_ledger_processing_duration_seconds_bucket{instance=~\"$instance\",ingress=~\"$ingress\"}[$__rate_interval])))", "legendFormat": "{{operation}} / {{ingress}} overall", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le, operation, ingress) (rate(zexchange_ledger_processing_duration_seconds_bucket{instance=~\"$instance\",ingress=~\"$ingress\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "{{operation}} / {{ingress}} success", "range": true, "refId": "B" }
+      ],
+      "title": "Business Processing p95 Overall / Success", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 13 }, "id": 9,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "editorMode": "code", "expr": "sum(rate(zexchange_ledger_transactions_created_total{instance=~\"$instance\"}[$__rate_interval]))", "legendFormat": "created", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "sum by (source) (rate(zexchange_ledger_transactions_idempotent_total{instance=~\"$instance\",ingress=~\"$ingress\"}[$__rate_interval]))", "legendFormat": "idempotent / {{source}}", "range": true, "refId": "B" }
+      ],
+      "title": "Created and Idempotent Transactions", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Average entries recorded for newly committed transactions over the selected rate interval.",
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "decimals": 1, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }] }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 20 }, "id": 10,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showPercentChange": false, "textMode": "auto", "wideLayout": true },
+      "targets": [{ "editorMode": "code", "expr": "sum(rate(zexchange_ledger_entries_per_transaction_entries_sum{instance=~\"$instance\"}[$__rate_interval])) / clamp_min(sum(rate(zexchange_ledger_entries_per_transaction_entries_count{instance=~\"$instance\"}[$__rate_interval])), 0.000001)", "legendFormat": "average entries", "range": true, "refId": "A" }],
+      "title": "Average Entries per New Transaction", "type": "stat"
+    },
+
+    { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 }, "id": 103, "panels": [], "title": "JVM and Database", "type": "row" },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Successful ledger write gRPC latency. OK means transport success; protobuf business failures may still have gRPC status OK.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 25 }, "id": 14,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le) (rate(zexchange_grpc_server_duration_seconds_bucket{instance=~\"$instance\",service=\"ledger.PostService\",method=\"postTransaction\",grpc_status=\"OK\"}[$__rate_interval])))", "legendFormat": "p95", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.99, sum by (le) (rate(zexchange_grpc_server_duration_seconds_bucket{instance=~\"$instance\",service=\"ledger.PostService\",method=\"postTransaction\",grpc_status=\"OK\"}[$__rate_interval])))", "legendFormat": "p99", "range": true, "refId": "B" }
+      ],
+      "title": "Ledger Write gRPC Latency (OK)", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Successful post-transaction processor latency. Fast business failures are excluded.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 25 }, "id": 18,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le) (rate(zexchange_ledger_processing_duration_seconds_bucket{instance=~\"$instance\",operation=\"post_transaction\",ingress=\"grpc\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "p95", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.99, sum by (le) (rate(zexchange_ledger_processing_duration_seconds_bucket{instance=~\"$instance\",operation=\"post_transaction\",ingress=\"grpc\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "p99", "range": true, "refId": "B" }
+      ],
+      "title": "Ledger Write Business Latency", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Successful DB transaction latency, including connection acquisition, transaction work, and commit.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 25 }, "id": 19,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le) (rate(zexchange_db_transaction_duration_seconds_bucket{instance=~\"$instance\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "p95", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.99, sum by (le) (rate(zexchange_db_transaction_duration_seconds_bucket{instance=~\"$instance\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "p99", "range": true, "refId": "B" }
+      ],
+      "title": "DB Transaction Latency", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Successful MyBatis statement execution latency grouped by mapper method. Connection acquisition and transaction commit are excluded.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 16, "x": 0, "y": 32 }, "id": 20,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le, statement) (rate(zexchange_db_operation_duration_seconds_bucket{instance=~\"$instance\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "{{statement}} p95", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.99, sum by (le, statement) (rate(zexchange_db_operation_duration_seconds_bucket{instance=~\"$instance\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "{{statement}} p99", "range": true, "refId": "B" }
+      ],
+      "title": "DB Operation Latency", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Rate of MyBatis statement failures classified by normalized DB error type.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 32 }, "id": 21,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "editorMode": "code", "expr": "sum by (statement, command, error_type) (rate(zexchange_db_operation_errors_total{instance=~\"$instance\"}[$__rate_interval]))", "legendFormat": "{{statement}} / {{command}} / {{error_type}}", "range": true, "refId": "A" }],
+      "title": "DB Operation Errors", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Rolling maximum JVM GC pause for correlation with latency spikes.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 39 }, "id": 22,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "editorMode": "code", "expr": "1000 * max(max_over_time(jvm_gc_pause_seconds_max{instance=~\"$instance\"}[$__rate_interval]))", "legendFormat": "pause max", "range": true, "refId": "A" }],
+      "title": "JVM GC Pause", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Connection-pool pressure. Pending above zero or active approaching max indicates DB connection saturation.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 6, "x": 6, "y": 39 }, "id": 15,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "editorMode": "code", "expr": "sum(hikaricp_connections_active{instance=~\"$instance\"})", "legendFormat": "active", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "sum(hikaricp_connections_max{instance=~\"$instance\"})", "legendFormat": "max", "range": true, "refId": "B" },
+        { "editorMode": "code", "expr": "sum(hikaricp_connections_pending{instance=~\"$instance\"})", "legendFormat": "pending", "range": true, "refId": "C" }
+      ],
+      "title": "Hikari Connections", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Client wait to acquire a pooled DB connection. Average shows sustained pressure; rolling max preserves short stalls.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 6, "x": 12, "y": 39 }, "id": 16,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "editorMode": "code", "expr": "1000 * sum(rate(hikaricp_connections_acquire_seconds_sum{instance=~\"$instance\"}[$__rate_interval])) / clamp_min(sum(rate(hikaricp_connections_acquire_seconds_count{instance=~\"$instance\"}[$__rate_interval])), 0.000001)", "legendFormat": "average", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "1000 * max(max_over_time(hikaricp_connections_acquire_seconds_max{instance=~\"$instance\"}[$__rate_interval]))", "legendFormat": "max", "range": true, "refId": "B" }
+      ],
+      "title": "Hikari Acquisition Latency", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Rate of failures to obtain a DB connection before the configured pool timeout.",
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "red", "value": 0.001 }] }, "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 6, "x": 18, "y": 39 }, "id": 17,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "editorMode": "code", "expr": "sum(rate(hikaricp_connections_timeout_total{instance=~\"$instance\"}[$__rate_interval]))", "legendFormat": "timeouts/s", "range": true, "refId": "A" }],
+      "title": "Hikari Connection Timeouts", "type": "timeseries"
+    },
+
+    { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 46 }, "id": 102, "panels": [], "title": "Errors", "type": "row" },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "General business error breakdown. request_in_processing is visible here but can be excluded from alert and stress-test failure calculations.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 47 }, "id": 11,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "editorMode": "code", "expr": "sum by (operation, error_code) (rate(zexchange_ledger_requests_total{instance=~\"$instance\",ingress=~\"$ingress\",outcome=\"error\"}[$__rate_interval]))", "legendFormat": "{{operation}} / {{error_code}}", "range": true, "refId": "A" }],
+      "title": "Business Errors by Code", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 47 }, "id": 12,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "editorMode": "code", "expr": "sum by (method, grpc_status) (rate(zexchange_grpc_server_duration_seconds_count{instance=~\"$instance\",grpc_status!=\"OK\"}[$__rate_interval]))", "legendFormat": "{{method}} / {{grpc_status}}", "range": true, "refId": "A" }],
+      "title": "gRPC Errors by Status", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Shared error view for currently instrumented idempotency, cache, and Redis layers. Request identifiers are never labels.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 47 }, "id": 13,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "editorMode": "code", "expr": "sum by (scope, operation, error_type) (rate(zexchange_idempotency_errors_total{instance=~\"$instance\"}[$__rate_interval]))", "legendFormat": "idempotency / {{scope}} / {{operation}} / {{error_type}}", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "sum by (cache_type, error_type) (rate(zexchange_cache_errors_total{instance=~\"$instance\"}[$__rate_interval]))", "legendFormat": "cache / {{cache_type}} / {{error_type}}", "range": true, "refId": "B" },
+        { "editorMode": "code", "expr": "sum by (component, operation) (rate(zexchange_redis_operation_duration_seconds_count{instance=~\"$instance\",outcome=\"error\"}[$__rate_interval]))", "legendFormat": "Redis / {{component}} / {{operation}}", "range": true, "refId": "C" }
+      ],
+      "title": "Component Errors", "type": "timeseries"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "tags": ["zexchange", "ledger", "service"],
+  "templating": {
+    "list": [
+      { "allValue": ".*", "current": { "selected": true, "text": "All", "value": "$__all" }, "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" }, "definition": "label_values(up{job=\"ledger-service\"}, instance)", "hide": 0, "includeAll": true, "label": "ledger instance", "multi": true, "name": "instance", "options": [], "query": "label_values(up{job=\"ledger-service\"}, instance)", "refresh": 1, "regex": "", "skipUrlSync": false, "sort": 1, "type": "query" },
+      { "allValue": ".*", "current": { "selected": true, "text": "All", "value": "$__all" }, "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" }, "definition": "label_values(zexchange_ledger_requests_total, ingress)", "hide": 0, "includeAll": true, "label": "ingress", "multi": true, "name": "ingress", "options": [], "query": "label_values(zexchange_ledger_requests_total, ingress)", "refresh": 1, "regex": "", "skipUrlSync": false, "sort": 1, "type": "query" }
+    ]
+  },
+  "time": { "from": "now-30m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Ledger Service Overview",
+  "uid": "ledger-service-overview",
+  "version": 5,
+  "weekStart": ""
+}

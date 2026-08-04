@@ -1,3 +1,5 @@
+# Legacy all-in-one topology for local development only.
+# For the AWS split deployment, use the Compose files under deploy/.
 services:
   mysql:
     image: mysql:8.4

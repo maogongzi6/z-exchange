@@ -21,7 +21,7 @@ public class DbExceptionTranslateAop {
         return translate(point);
     }
 
-    @Around("execution(public * com.exchange.common.db.utils.DbTxnExecutor.*(..))")
+    @Around("execution(public * com.exchange.common.db.utils.DbTxnExecutor+.*(..))")
     public Object translateTxnException(ProceedingJoinPoint point) throws Throwable {
         return translate(point);
     }

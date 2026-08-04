@@ -1,184 +1,179 @@
-# Ledger Docker Deployment Guide
+# Ledger Split Docker Deployment
 
-## Purpose
+## Topology
 
-This deployment runs the ledger database, Redis, Kafka, ledger-service, Prometheus, and Grafana on one Docker host. The ledger container talks to its dependencies through the Docker bridge network; a locally running wallet-service talks to the cloud host through externally published Kafka, Redis, and gRPC ports.
-
-The expected paths are:
+This deployment uses three EC2 instances in one AWS VPC:
 
 ```text
-Local caller -> local wallet-service:9192
-                         |
-                         +-> cloud ledger-service:9191       (CreateWallet account creation)
-                         |
-                         +-> cloud Kafka -> cloud ledger-service
-                                              |
-Local wallet-service <- cloud Kafka reply <---+
+ledger EC2                    infrastructure EC2           monitoring EC2
+172.31.16.37                 172.31.18.211                172.31.28.170
+--------------------          ---------------------         ------------------
+ledger-service:8081 <-------------------------------------- Prometheus:9290
+ledger-service:9191           MySQL:3306                    Grafana:3000
+        |                     Redis:6379                         |
+        +-------------------> Kafka:9092                         +-> Prometheus:9090
+        +-------------------> MySQL:3306
 ```
 
-Normal wallet posting is asynchronous: wallet writes its own DB transaction and outbox, its publisher sends `wallet.ledger.command.posting` to Kafka, ledger consumes it, then ledger publishes `ledger.wallet.reply.posting`. The wallet reply listener consumes that reply and completes the wallet transaction. The local wallet does not connect to the ledger MySQL database.
+The VPC security groups are the network boundary. Compose binds published ports
+to each host's private IP; Docker DNS is used only between containers on the
+same EC2 instance.
 
-## Changed And Added Files
+## Deployment Files
 
-| File | Change | Why it is needed |
+| File | Host | Responsibility |
 | --- | --- | --- |
-| `ledger-service/Dockerfile` | New multi-stage Java 21 image. | Builds the Maven reactor dependencies, then runs only the executable ledger JAR as a non-root user. |
-| `.dockerignore` | New Docker build exclusions. | Prevents Git history, IDE files, existing `target` directories, and documentation from being sent to the Docker builder. |
-| `ledger-service/pom.xml` | Added `spring-boot-maven-plugin`. | Produces an executable Spring Boot JAR. The Docker runtime cannot launch the prior thin JAR by itself. |
-| `ledger-service/src/main/resources/application-docker.yml` | New `docker` profile. | Replaces host-oriented addresses with Docker service DNS names and allows runtime overrides. |
-| `docker-compose.yml` | Added MySQL and ledger-service; updated Redis, Kafka, network, health checks, and persistent volumes. | Starts the full ledger dependency set in the correct order and gives containers stable internal names. |
-| `monitoring/prometheus.yml` | Ledger scrape target changed to `ledger-service:8081`. | Prometheus is also in Docker, so it must use Docker DNS rather than a host IP. |
+| `deploy/docker-compose.infrastructure.yml` | `172.31.18.211` | MySQL, Redis, Kafka, and MySQL data. |
+| `deploy/docker-compose.ledger-service.yml` | `172.31.16.37` | Ledger application and ledger logs. |
+| `deploy/docker-compose.monitoring.yml` | `172.31.28.170` | Prometheus, Grafana, and monitoring data. |
+| `deploy/infra-test.env` | Infrastructure host | Infrastructure IP and database credentials. |
+| `deploy/ledger-test.env` | Ledger host | Ledger and infrastructure endpoints. |
+| `deploy/monitor-test.env` | Monitoring host | Monitoring IP and container memory budgets. |
+| `ledger-service/src/main/resources/application-docker.yml` | Ledger image | Docker profile defaults, overridable by Compose. |
+| `monitoring/prometheus.yml` | Monitoring host | Scrapes `172.31.16.37:8081/actuator/prometheus`. |
 
-The existing `vmware` and `cloud` Spring profiles remain unchanged. Compose selects the new profile with `SPRING_PROFILES_ACTIVE=docker`.
+The root `docker-compose.yml` remains the legacy all-in-one configuration for
+local development. Do not use it for this AWS deployment.
 
-## How Configuration Values Work Together
+## Connection Configuration
 
-Compose expands `${NAME:-default}` on the cloud host before a container is created. Spring expands `${NAME:default}` inside the ledger container when it starts.
-
-For example, [application-docker.yml](../ledger-service/src/main/resources/application-docker.yml) contains:
-
-```yaml
-username: ${DB_USERNAME:ledger}
-```
-
-This means: use the container environment variable `DB_USERNAME`; if it is absent, use `ledger`.
-
-Compose provides that value to ledger-service and creates the matching MySQL account:
-
-```yaml
-mysql:
-  environment:
-    MYSQL_USER: ${LEDGER_DB_USERNAME:-ledger}
-    MYSQL_PASSWORD: ${LEDGER_DB_PASSWORD:-ledger-local}
-
-ledger-service:
-  environment:
-    DB_USERNAME: ${LEDGER_DB_USERNAME:-ledger}
-    DB_PASSWORD: ${LEDGER_DB_PASSWORD:-ledger-local}
-```
-
-Consequently, setting `LEDGER_DB_USERNAME=ledger_app` changes both `MYSQL_USER` and `DB_USERNAME` to `ledger_app`. Setting `LEDGER_DB_PASSWORD` changes both the created MySQL user's password and the application's JDBC password. Those two values must always match.
-
-| Host variable | Default | Used by | Meaning |
-| --- | --- | --- | --- |
-| `LEDGER_DB_USERNAME` | `ledger` | `MYSQL_USER`, `DB_USERNAME` | Non-root MySQL account used by ledger-service. |
-| `LEDGER_DB_PASSWORD` | `ledger-local` | `MYSQL_PASSWORD`, `DB_PASSWORD` | Password for that account. Set a strong value on a cloud host. |
-| `MYSQL_ROOT_PASSWORD` | `root-local` | `MYSQL_ROOT_PASSWORD`, health check | MySQL administrative password. Ledger does not use it. |
-| `MYSQL_PORT` | `3306` | MySQL host port | Published only to `127.0.0.1`; use SSH tunneling for host administration. |
-| `KAFKA_EXTERNAL_HOST` | `192.168.52.100` | Kafka advertised external listener | Public/static IP or DNS that local wallet clients use. This must be set explicitly on a cloud host. |
-| `KAFKA_EXTERNAL_PORT` | `9092` | Kafka port mapping and advertised external listener | Use `19092` when local wallet-service is configured to reach `host:19092`. |
-
-| Ledger container variable | Default in `application-docker.yml` | Resolved value in Compose | Purpose |
-| --- | --- | --- | --- |
-| `DB_HOST` | `mysql` | default | Docker DNS name of the MySQL service. |
-| `DB_PORT` | `3306` | default | Internal MySQL port. |
-| `DB_NAME` | `trade_ledgerservice` | default | Ledger schema name. |
-| `DB_USERNAME` | `ledger` | `${LEDGER_DB_USERNAME:-ledger}` | JDBC username. |
-| `DB_PASSWORD` | `ledger-local` | `${LEDGER_DB_PASSWORD:-ledger-local}` | JDBC password. |
-| `REDIS_HOST` | `redis` | default | Docker DNS name of Redis. |
-| `REDIS_PORT` | `6379` | default | Internal Redis port. |
-| `KAFKA_BOOTSTRAP_SERVERS` | `kafka:29092` | default | Kafka's internal listener for the ledger container. |
-
-Do not change `DB_NAME` independently. The current initialization script, `standard/sql/ledger_service.sql`, explicitly creates `trade_ledgerservice`; changing the application database name without changing that SQL leaves the new database without tables.
-
-The custom `RedissonRegister` builds Redisson clients from Spring's `spring.redis.*` properties. Therefore `REDIS_HOST=redis` applies to both Spring Redis and Redisson; no Docker-specific `redisson.yml` change is required.
-
-## Docker Network And Startup Behavior
-
-All services join `z-exchange-net`. Docker provides DNS entries matching the Compose service names, so `mysql`, `redis`, `kafka`, and `ledger-service` are stable addresses. Container IPs are intentionally not used.
-
-Kafka has two listeners:
-
-| Client | Address | Reason |
+| Variable | Default | Used for |
 | --- | --- | --- |
-| Ledger container | `kafka:29092` | Internal Docker DNS and port; no traffic leaves the bridge network. |
-| Local wallet-service | `${KAFKA_EXTERNAL_HOST}:${KAFKA_EXTERNAL_PORT}` | Kafka metadata must advertise an address reachable from the local machine. |
+| `INFRA_PRIVATE_IP` | `172.31.18.211` | MySQL, Redis, and Kafka host. |
+| `LEDGER_PRIVATE_IP` | `172.31.16.37` | Ledger HTTP and gRPC bindings. |
+| `MONITOR_PRIVATE_IP` | `172.31.28.170` | Prometheus and Grafana bindings. |
+| `LEDGER_DB_USERNAME` | `ledger` | MySQL application user. |
+| `LEDGER_DB_PASSWORD` | `ledger-local` | MySQL application password. |
+| `KAFKA_BOOTSTRAP_SERVERS` | `172.31.18.211:9092` | Kafka client bootstrap endpoint. |
+| `K6_PROMETHEUS_RW_SERVER_URL` | `http://172.31.28.170:9290/api/v1/write` | k6 metric destination. |
 
-`ledger-service` waits for healthy MySQL, Redis, and Kafka before starting. This prevents a normal cold start from failing simply because a dependency has not finished initialization. `restart: unless-stopped` restarts services after host/container failures.
+Kafka advertises `172.31.18.211:9092` because VPC clients cannot resolve its
+Docker-only `kafka:29092` listener.
 
-`ledger-service-logs`, `mysql-data`, `redis-data`, `prometheus-data`, and `grafana-data` retain state across `docker compose down` and container recreation. `ledger-service-logs` stores `/app/logs/ledger-service` as a Docker-managed named volume, so no server-side log directory or `chown` setup is required. The schema SQL is run only when `mysql-data` is empty. Because that SQL begins by dropping the ledger database, never run `docker compose down -v` against data you need to keep.
+## Infrastructure EC2
 
-When MySQL initializes an empty `mysql-data` volume, the official image starts a temporary server and executes the mounted files in `/docker-entrypoint-initdb.d/` in filename order:
-
-1. `001-ledger-service.sql` creates the ledger schema and tables.
-2. `002-wallet-service.sql` creates the wallet schema and tables.
-3. `003-grant-service-users.sh` creates the wallet user when needed and grants the ledger and wallet users access to their respective schemas.
-
-These initialization files do not run again when the existing `mysql-data` volume is reused. Apply equivalent SQL manually when adding the wallet schema or service users to an already initialized MySQL volume.
-
-## Deploy On A Cloud Docker Host
-
-1. Install Docker Engine and the Compose plugin on the cloud server, then clone or upload this repository.
-
-2. Create a server-local `.env` beside `docker-compose.yml`. Do not commit it:
+Use `deploy/infra-test.env`:
 
 ```dotenv
+INFRA_PRIVATE_IP=172.31.18.211
 LEDGER_DB_USERNAME=ledger
 LEDGER_DB_PASSWORD=replace-with-a-long-random-password
 MYSQL_ROOT_PASSWORD=replace-with-a-different-long-random-password
-KAFKA_EXTERNAL_HOST=ledger.example.com
-KAFKA_EXTERNAL_PORT=19092
+KAFKA_EXTERNAL_PORT=9092
+MYSQL_MEMORY_LIMIT=1792m
+MYSQL_MEMORY_RESERVATION=1280m
 ```
 
-`KAFKA_EXTERNAL_HOST` must be a static public IP or DNS name that resolves from the local wallet machine. It must not be `localhost`, `kafka`, or a private Docker address.
-
-3. Permit only required inbound traffic in the cloud firewall/security group:
-
-| Port | Consumer | Restriction |
-| --- | --- | --- |
-| `19092` | Local wallet Kafka producer/consumer | Allow only the local wallet machine or VPN CIDR. |
-| `9191` | Local wallet gRPC clients | Allow only the local wallet machine or VPN CIDR. |
-| `8081` | Optional debugging/Prometheus access | Restrict to an operator/VPN network; Actuator metrics are not authenticated. |
-| `6379` | Local wallet Redis client, only for this split deployment | Allow only the local wallet machine or VPN CIDR. |
-| `3306` | Database administration | Not publicly exposed; Compose binds it to server loopback. |
-
-For a production system, prefer deploying wallet-service in the same private network as Redis and Kafka, or use a VPN with TLS/authentication. The current Redis and Kafka Compose configuration is suitable for controlled development/performance testing, not unrestricted internet exposure.
-
-4. Start the stack from the repository root:
+Start the infrastructure services from the repository root:
 
 ```bash
-docker compose up --build -d
-docker compose ps
-docker compose logs -f mysql kafka ledger-service
+docker compose --env-file deploy/infra-test.env -f deploy/docker-compose.infrastructure.yml up -d
+docker compose --env-file deploy/infra-test.env -f deploy/docker-compose.infrastructure.yml ps
+docker compose --env-file deploy/infra-test.env -f deploy/docker-compose.infrastructure.yml logs -f mysql redis kafka
 ```
 
-5. Verify ledger after startup:
+MySQL initialization runs only while creating an empty `mysql-data` volume.
+The mounted `001-ledger-service.sql` does not run on ordinary restarts.
+
+## Ledger EC2
+
+Use `deploy/ledger-test.env`. Its database password must match the infrastructure
+host:
+
+```dotenv
+LEDGER_PRIVATE_IP=172.31.16.37
+INFRA_PRIVATE_IP=172.31.18.211
+LEDGER_DB_USERNAME=ledger
+LEDGER_DB_PASSWORD=replace-with-the-infrastructure-value
+KAFKA_BOOTSTRAP_SERVERS=172.31.18.211:9092
+```
+
+Build and start ledger-service:
 
 ```bash
-curl http://127.0.0.1:8081/actuator/health
-curl http://127.0.0.1:8081/actuator/prometheus
+docker compose --env-file deploy/ledger-test.env -f deploy/docker-compose.ledger-service.yml up --build -d
+docker compose --env-file deploy/ledger-test.env -f deploy/docker-compose.ledger-service.yml ps
+docker compose --env-file deploy/ledger-test.env -f deploy/docker-compose.ledger-service.yml logs -f ledger-service
 ```
 
-Prometheus is available on host port `9290`; Grafana is available on `3000`.
+Verify the service:
 
-## Connect A Local Wallet-Service To Cloud Ledger
-
-The local wallet database remains local. Start it with its normal local JDBC settings, but override the remote Redis, Kafka, and ledger gRPC endpoints. In PowerShell:
-
-```powershell
-$env:SPRING_PROFILES_ACTIVE = "cloud"
-$env:SPRING_REDIS_HOST = "ledger.example.com"
-$env:SPRING_REDIS_PORT = "6379"
-$env:SPRING_KAFKA_BOOTSTRAP_SERVERS = "ledger.example.com:19092"
-$env:GRPC_CLIENT_LEDGER_CLIENT_ADDRESS = "static://ledger.example.com:9191"
-$env:GRPC_CLIENT_ACCOUNT_CLIENT_ADDRESS = "static://ledger.example.com:9191"
-
-mvn -pl wallet-service -am spring-boot:run
+```bash
+curl http://172.31.16.37:8081/actuator/health
+curl http://172.31.16.37:8081/actuator/prometheus
 ```
 
-Use the actual public DNS/IP in place of `ledger.example.com`. Environment variables override the addresses in `wallet-service/src/main/resources/application-cloud.yml`, so that profile's currently committed IP does not need to be edited for each deployment.
+## Monitoring EC2
 
-The two gRPC client values are both required for `CreateWallet`: `CreateWalletProcessor` calls ledger's account gRPC service synchronously. Transaction posting uses Kafka instead, so `SPRING_KAFKA_BOOTSTRAP_SERVERS` must also be correct or wallet transactions will remain in the wallet outbox.
+`deploy/monitor-test.env` configures the 2 GiB monitoring host:
 
-Send external test requests to the local wallet gRPC server at `127.0.0.1:9192`. The wallet server defines its gRPC port as `9192`; it is not Kafka's `9092`/`19092` port. The current `client-test` configuration points `wallet-client` to `127.0.0.1:9092`, which is incorrect for a local wallet gRPC request. Override it to `static://127.0.0.1:9192` before using that test client.
+```dotenv
+MONITOR_PRIVATE_IP=172.31.28.170
+PROMETHEUS_MEMORY_LIMIT=512m
+PROMETHEUS_MEMORY_RESERVATION=384m
+GRAFANA_MEMORY_LIMIT=768m
+GRAFANA_MEMORY_RESERVATION=512m
+```
 
-## Operational Checks
+Start Prometheus and Grafana:
 
-After a wallet transaction, inspect the asynchronous path in this order:
+```bash
+docker compose --env-file deploy/monitor-test.env -f deploy/docker-compose.monitoring.yml up -d
+docker compose --env-file deploy/monitor-test.env -f deploy/docker-compose.monitoring.yml ps
+docker compose --env-file deploy/monitor-test.env -f deploy/docker-compose.monitoring.yml logs -f prometheus grafana
+```
 
-1. Wallet outbox has sent `wallet.ledger.command.posting`.
-2. Ledger consumes that Kafka command and inserts ledger entries plus its reply outbox.
-3. Ledger publishes `ledger.wallet.reply.posting`.
-4. Local wallet consumes the reply and advances the wallet transaction.
+Verify:
 
-If the message stalls, check the wallet and ledger outbox tables, Kafka topic/consumer lag, and `docker compose logs ledger-service kafka` before manually changing transaction state. The flow is intentionally at-least-once and must retain its outbox/idempotency behavior.
+```text
+Prometheus targets: http://172.31.28.170:9290/targets
+Grafana:            http://172.31.28.170:3000
+```
+
+Grafana reaches Prometheus through `http://prometheus:9090` on their shared
+Docker network. Prometheus scrapes ledger-service through the VPC. k6 sends
+remote-write data to `http://172.31.28.170:9290/api/v1/write`.
+
+The named Prometheus and Grafana volumes are local to the monitoring EC2. A
+fresh deployment does not copy history from `172.31.18.211`. Dashboard JSON is
+reprovisioned from the repository; migrate or snapshot the old Prometheus volume
+separately only when its history must be retained.
+
+After the new targets and dashboards are verified, stop and remove the old
+monitoring containers on the infrastructure EC2. This leaves their volumes
+intact for rollback:
+
+```bash
+docker stop prometheus grafana
+docker rm prometheus grafana
+```
+
+## Stress-Test Endpoint
+
+The stress-test Compose files default to the new monitoring host. An explicit
+override remains supported:
+
+```bash
+export K6_PROMETHEUS_RW_SERVER_URL=http://172.31.28.170:9290/api/v1/write
+```
+
+Database fixture and reconciliation traffic still uses
+`INFRA_PRIVATE_IP=172.31.18.211`; gRPC traffic still uses
+`LEDGER_GRPC_HOST=172.31.16.37`.
+
+## Security Groups
+
+Permit only the required flows:
+
+| Source | Destination | TCP port | Purpose |
+| --- | --- | ---: | --- |
+| Ledger EC2 | Infrastructure EC2 | `3306`, `6379`, `9092` | MySQL, Redis, Kafka. |
+| Monitoring EC2 | Ledger EC2 | `8081` | Prometheus scrape. |
+| Stress-test EC2 | Ledger EC2 | `9191` | gRPC load. |
+| Stress-test EC2 | Infrastructure EC2 | `3306` | Fixture and reconciliation SQL. |
+| Stress-test EC2 | Monitoring EC2 | `9290` | k6 remote write. |
+| Approved operator network | Monitoring EC2 | `3000` | Grafana UI. |
+| Approved operator network, optional | Monitoring EC2 | `9290` | Prometheus UI/API. |
+
+Do not expose MySQL, Redis, Kafka, Prometheus, Grafana, or the ledger actuator
+to the public internet.

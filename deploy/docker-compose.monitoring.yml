@@ -1,0 +1,38 @@
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    mem_limit: ${PROMETHEUS_MEMORY_LIMIT:-512m}
+    mem_reservation: ${PROMETHEUS_MEMORY_RESERVATION:-384m}
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=3d
+      - --storage.tsdb.retention.size=1GB
+      # k6 runs on a separate EC2 host and streams load-test metrics here.
+      - --web.enable-remote-write-receiver
+    ports:
+      - "${MONITOR_PRIVATE_IP:-172.31.28.170}:9290:9090"
+    volumes:
+      - ../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    mem_limit: ${GRAFANA_MEMORY_LIMIT:-768m}
+    mem_reservation: ${GRAFANA_MEMORY_RESERVATION:-512m}
+    ports:
+      - "${MONITOR_PRIVATE_IP:-172.31.28.170}:3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ../monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+
+volumes:
+  prometheus-data:
+  grafana-data:

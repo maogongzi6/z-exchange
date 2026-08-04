@@ -1,0 +1,48 @@
+#!/bin/sh
+set -eu
+
+DB_HOST="${DB_HOST:-172.31.18.211}"
+DB_PORT="${DB_PORT:-3306}"
+DB_NAME="${DB_NAME:-trade_ledgerservice}"
+DB_USERNAME="${DB_USERNAME:-ledger}"
+DB_PASSWORD="${DB_PASSWORD:-ledger-local}"
+DB_READY_ATTEMPTS="${DB_READY_ATTEMPTS:-30}"
+DB_CONNECT_TIMEOUT_SECONDS="${DB_CONNECT_TIMEOUT_SECONDS:-5}"
+
+# MYSQL_PWD avoids placing the password in command arguments and therefore in
+# process listings. The container is short-lived and receives the same database
+# secret that ledger-service uses.
+export MYSQL_PWD="${DB_PASSWORD}"
+
+echo "Waiting for MySQL fixture database at ${DB_HOST}:${DB_PORT}/${DB_NAME}..."
+
+attempt=1
+until mysqladmin \
+  --protocol=TCP \
+  --host="${DB_HOST}" \
+  --port="${DB_PORT}" \
+  --user="${DB_USERNAME}" \
+  --connect-timeout="${DB_CONNECT_TIMEOUT_SECONDS}" \
+  ping --silent; do
+  if [ "${attempt}" -ge "${DB_READY_ATTEMPTS}" ]; then
+    echo "MySQL did not become ready after ${DB_READY_ATTEMPTS} attempts" >&2
+    exit 1
+  fi
+  echo "Waiting for MySQL fixture connection (${attempt}/${DB_READY_ATTEMPTS})..."
+  attempt=$((attempt + 1))
+  sleep 2
+done
+
+# Fixture creation is outside k6, so database setup time is not included in any
+# gRPC request latency or throughput metric.
+echo "MySQL is ready; applying the ledger smoke fixture..."
+mysql \
+  --protocol=TCP \
+  --host="${DB_HOST}" \
+  --port="${DB_PORT}" \
+  --user="${DB_USERNAME}" \
+  --connect-timeout="${DB_CONNECT_TIMEOUT_SECONDS}" \
+  "${DB_NAME}" < /fixtures/ledger-smoke-fixture.sql
+
+echo "Fixture applied; starting the k6 gRPC smoke test..."
+exec k6 run /scripts/ledger-grpc-smoke.js
