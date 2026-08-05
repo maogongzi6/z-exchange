@@ -2,6 +2,7 @@ package com.exchange.app.wallet.dao.cache;
 
 import com.exchange.app.wallet.constant.cache.CacheScope;
 import com.exchange.app.wallet.constant.cache.CacheTtlConfig;
+import com.exchange.app.wallet.metrics.WalletMetricTagValues;
 import com.exchange.app.wallet.po.wallet.BalanceSnapshot;
 import com.exchange.common.redis.cache.component.codec.impl.ValueCodec;
 import com.exchange.common.redis.cache.component.codec.impl.VersionCodec;
@@ -20,6 +21,9 @@ import com.exchange.common.redis.cache.strategy.model.CacheDescriptor;
 import com.exchange.common.redis.cache.strategy.RawCacheStrategy;
 import com.exchange.common.redis.cache.strategy.VersionCacheStrategy;
 import com.exchange.common.redis.cache.strategy.impl.StrategyFactory;
+import com.exchange.common.redis.cache.strategy.metrics.MetricRawCacheStrategy;
+import com.exchange.common.redis.cache.strategy.metrics.MetricVersionCacheStrategy;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,7 +36,8 @@ public class BalanceSnapshotCacheRegister {
             RawCacheWriter cacheWriter,
             RawCacheDeleter cacheDeleter,
             StrategyFactory factory,
-            CacheTtlConfig config) {
+            CacheTtlConfig config,
+            MeterRegistry meterRegistry) {
         CacheDescriptor<String> descriptor = new CacheDescriptor<>(String.class, CacheScope::balanceSnapshotRefIdKey);
         var ttlConfig = new RawStrategyConfig.TtlConfig(
                 config.getDefaultRefStrategy(),
@@ -46,7 +51,10 @@ public class BalanceSnapshotCacheRegister {
                 selfRecoverFeature,
                 negativeCacheFeature);
 
-        return factory.buildRawCacheSuppressExceptionStrategy(descriptor, cacheReader, cacheWriter, strategyConfig);
+        RawCacheStrategy<String> strategy = factory.buildRawCacheSuppressExceptionStrategy(
+                descriptor, cacheReader, cacheWriter, strategyConfig);
+        return new MetricRawCacheStrategy<>(
+                strategy, meterRegistry, WalletMetricTagValues.CacheTypes.BALANCE_REF_NORMAL);
     }
 
     @Bean("hotBalanceRefCache")
@@ -55,7 +63,8 @@ public class BalanceSnapshotCacheRegister {
             RawCacheWriter cacheWriter,
             RawCacheDeleter cacheDeleter,
             StrategyFactory factory,
-            CacheTtlConfig config) {
+            CacheTtlConfig config,
+            MeterRegistry meterRegistry) {
         CacheDescriptor<String> descriptor = new CacheDescriptor<>(String.class, CacheScope::balanceSnapshotRefIdKey);
         var ttlConfig = new RawStrategyConfig.TtlConfig(
                 config.getDefaultRefStrategy(),
@@ -69,7 +78,10 @@ public class BalanceSnapshotCacheRegister {
                 selfRecoverFeature,
                 negativeCacheFeature);
 
-        return factory.buildRawCacheSuppressExceptionStrategy(descriptor, cacheReader, cacheWriter, strategyConfig);
+        RawCacheStrategy<String> strategy = factory.buildRawCacheSuppressExceptionStrategy(
+                descriptor, cacheReader, cacheWriter, strategyConfig);
+        return new MetricRawCacheStrategy<>(
+                strategy, meterRegistry, WalletMetricTagValues.CacheTypes.BALANCE_REF_HOT);
     }
 
     @Bean("normalBalanceCache")
@@ -78,7 +90,8 @@ public class BalanceSnapshotCacheRegister {
             VersionCacheWriter cacheWriter,
             RawCacheDeleter cacheDeleter,
             StrategyFactory factory,
-            CacheTtlConfig config) {
+            CacheTtlConfig config,
+            MeterRegistry meterRegistry) {
         CacheDescriptor<BalanceSnapshot> descriptor = new CacheDescriptor<>(BalanceSnapshot.class, CacheScope::balanceSnapshotIdKey);
         SelfRecoverFeature recoverFeature = new RawDeleteSelfRecoverFeature(cacheDeleter);
         var ttlConfig = new VersionStrategyConfig.TtlConfig(
@@ -90,7 +103,10 @@ public class BalanceSnapshotCacheRegister {
                 ttlConfig,
                 recoverFeature,
                 NegativeCacheFeature.disable());
-        return factory.buildVersionCacheSuppressExceptionStrategy(descriptor, cacheReader, cacheWriter, versionStrategyConfig);
+        VersionCacheStrategy<BalanceSnapshot> strategy = factory.buildVersionCacheSuppressExceptionStrategy(
+                descriptor, cacheReader, cacheWriter, versionStrategyConfig);
+        return new MetricVersionCacheStrategy<>(
+                strategy, meterRegistry, WalletMetricTagValues.CacheTypes.BALANCE_SNAPSHOT_NORMAL);
     }
 
     @Bean("hotBalanceCache")
@@ -99,7 +115,8 @@ public class BalanceSnapshotCacheRegister {
             VersionCacheWriter cacheWriter,
             RawCacheDeleter cacheDeleter,
             StrategyFactory factory,
-            CacheTtlConfig config) {
+            CacheTtlConfig config,
+            MeterRegistry meterRegistry) {
         CacheDescriptor<BalanceSnapshot> descriptor = new CacheDescriptor<>(BalanceSnapshot.class, CacheScope::balanceSnapshotIdKey);
         SelfRecoverFeature recoverFeature = new RawDeleteSelfRecoverFeature(cacheDeleter);
         // enable negative cache for hot snapshot
@@ -113,6 +130,9 @@ public class BalanceSnapshotCacheRegister {
                 ttlConfig,
                 recoverFeature,
                 negativeCacheFeature);
-        return factory.buildVersionCacheSuppressExceptionStrategy(descriptor, cacheReader, cacheWriter, versionStrategyConfig);
+        VersionCacheStrategy<BalanceSnapshot> strategy = factory.buildVersionCacheSuppressExceptionStrategy(
+                descriptor, cacheReader, cacheWriter, versionStrategyConfig);
+        return new MetricVersionCacheStrategy<>(
+                strategy, meterRegistry, WalletMetricTagValues.CacheTypes.BALANCE_SNAPSHOT_HOT);
     }
 }

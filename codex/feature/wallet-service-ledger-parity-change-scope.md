@@ -109,42 +109,110 @@ changing wallet business flow, transaction boundaries, or metric semantics.
   already shared and covered by common-util unit tests.
 - Do not add wallet-specific DB timers or exception types.
 
-## 3. Metric Change Scope
+## Phase 3: API, Business, Cache, and Idempotency Metrics (P1)
 
-### API and Business Metrics
+### Goal
 
-Add `WalletMetricsConfig`, metric definitions/tags, and `WalletBusinessMetrics`. Instrument the
-explicit service boundary rather than applying general AOP to processors.
+Adopt ledger's explicit boundary instrumentation and shared Redis metric decorators without changing
+wallet business behavior, cache selection, or idempotency guarantees.
 
-| Metric | Type | Tags | Meaning |
-| --- | --- | --- | --- |
-| `zexchange.grpc.server.active` | Gauge | `service`, `method` | Current in-flight wallet gRPC calls. Reuse the common interceptor. |
-| `zexchange.grpc.server.duration` | Timer | `service`, `method`, `grpc_status` | Wallet gRPC latency and request count through timer `_count`. |
-| `zexchange.wallet.requests` | Counter | `operation`, `ingress`, `outcome`, `error_code` | Wallet business request count and error rate. |
-| `zexchange.wallet.processing.duration` | Timer | `operation`, `ingress`, `outcome` | Wallet processor latency, separate from transport framing. |
-| `zexchange.wallet.transactions.completed` | Counter | `source`, `transaction_type` | Successful guarded transition to `COMPLETED`; duplicates must not increment it. |
+### Already Sound
 
-Bounded values should cover the current gRPC operations and the Kafka completion path. Never tag
-wallet ID, transaction ID, reservation ID, reference ID, idempotency key, or error detail.
+- `GrpcServerMetricsInterceptor`, cache strategy decorators, and `IdempotencyClient` already exist in
+  `common-util`; ledger proves their intended registration and usage patterns.
+- Wallet already exposes Prometheus and receives common Redis, DB statement, and DB transaction
+  metrics. Do not add wallet-specific duplicates of those lower-level timers.
+- Keep metrics outside processor internals. The gRPC/Kafka boundary supplies operation and ingress;
+  common Redis components supply their own bounded context.
 
-### Shared Lower-Level Metrics
+### Required Changes
 
-- Wrap `balanceRefCache`, `hotBalanceRefCache`, `normalBalanceCache`, and `hotBalanceCache` with
-  `MetricRawCacheStrategy`/`MetricVersionCacheStrategy`, using four bounded cache-type values.
-- Replace direct `IdempRedisClient` use in `IdempPrecheckProcessor` and
-  `BeforePostLedgerProcessor` with `IdempotencyClient`, including wrapper-owned decode/hash checks.
-- Keep existing common metrics for Redis operation duration, DB statement duration/errors, and DB
-  transaction duration. Do not add duplicate wallet-specific timers for the same operations.
-- Add histogram/SLO configuration for gRPC, wallet processing, Redis, and DB timers.
+| Change point | Wallet scope |
+| --- | --- |
+| gRPC interceptor | Add `WalletMetricsConfig` and register `GrpcServerMetricsInterceptor` with `@GrpcGlobalServerInterceptor`, matching ledger. |
+| Metric definitions | Add wallet-owned metric definitions and bounded tag constants for operations, ingress, outcomes, and error codes. Never tag IDs, idempotency keys, references, or error details. |
+| Business wrapper | Add `WalletBusinessMetrics`. Wrap the six processor calls in `WalletServiceImpl` and the successful ledger-reply completion call in `WalletLedgerReplyMessageHandler`; do not use general processor AOP. Preserve return values and exceptions while recording failures in `finally`. |
+| Cache strategies | Inject `MeterRegistry` into `BalanceSnapshotCacheRegister`. Decorate all four existing beans with `MetricRawCacheStrategy` or `MetricVersionCacheStrategy` while preserving bean names, qualifiers, strategy type, TTLs, negative-cache behavior, and hot/normal routing. |
+| Idempotency client | Replace direct `IdempRedisClient` injection in `IdempPrecheckProcessor` and `BeforePostLedgerProcessor` with `IdempotencyClient`. Use its `Result` APIs and wrapper-owned decode/hash verification. |
+| Distribution config | Enable histograms and bounded SLOs for `zexchange.grpc.server.duration`, `zexchange.wallet.processing.duration`, `zexchange.redis.operation.duration`, `zexchange.db.operation.duration`, and `zexchange.db.transaction.duration`. |
 
-### Shared Gap, Not Wallet-Only Work
+### Metrics
 
-`ledger-service` config names Kafka listener/publisher and outbox timers, but current code does not
-emit those metrics. Implement them in `common-util` first and adopt them in both services; do not
-create a second wallet-only metric implementation. The same applies to outbox backlog and oldest
-pending-age collectors.
+| Metric | Type | Tags |
+| --- | --- | --- |
+| `zexchange.grpc.server.active` | Gauge | `service`, `method` |
+| `zexchange.grpc.server.duration` | Timer | `service`, `method`, `grpc_status` |
+| `zexchange.wallet.requests` | Counter | `operation`, `ingress`, `outcome`, `error_code` |
+| `zexchange.wallet.processing.duration` | Timer | `operation`, `ingress`, `outcome` |
+| `zexchange.cache.ops` | Counter | `cache_type`, `result` |
+| `zexchange.cache.errors` | Counter | `cache_type`, `operation`, `error_type` |
+| `zexchange.idempotency.errors` | Counter | `service`, `scope`, `operation`, `error_type` |
 
-## 4. Supporting Changes and Tests
+Business operations are bounded to `create_wallet`, `atomic_transaction`, `reserve_transaction`,
+`apply_reservation_transaction`, `get_snapshot_by_wallet_id`, `get_snapshot_by_ref_id`, and
+`complete_ledger_transaction`; ingress is `grpc` or `kafka`. Cache types must separately identify
+normal/hot reference and normal/hot snapshot strategies.
+
+Do not add `zexchange.wallet.transactions.completed` yet. `AfterPostLedgerProcessor` currently
+returns the same successful shape for a new completion and an idempotent replay, so the counter would
+overcount. Add it only after the processor exposes an explicit transition outcome.
+
+### Idempotency Behavior To Preserve
+
+- Claim/read infrastructure failures degrade to the DB idempotency check.
+- Hash conflict maps to `WalletServiceErrorCode.REQUEST_HASH_CONFLICT`.
+- A malformed value triggers best-effort force-delete, then DB fallback.
+- `mark_done`, release, or cleanup failures are logged and measured but must not replace an already
+  committed DB outcome.
+
+### Tests
+
+- Verify the global interceptor bean and wallet request/duration tags with `SimpleMeterRegistry`.
+- Verify success, returned business error, and thrown exception recording for every boundary shape.
+- Verify all four cache beans retain their qualifiers/behavior and emit bounded result/error series.
+- Verify idempotency claim, replay, hash conflict, malformed value, Redis downgrade, mark-done, and
+  release paths preserve current DB fallback and transaction behavior.
+
+### Explicitly Unchanged
+
+- No processor algorithm, DB transaction, cache promotion policy, Redis Lua script, or protobuf change.
+- No common-util implementation change and no Kafka publisher/outbox metric work in this phase.
+
+## Phase 4: Runtime Database Safeguards (P2)
+
+### Goal
+
+Bound wallet DB resource usage and slow operations without changing business flow. Wallet and ledger
+share the same MySQL instance (`max_connections=50`) and monitoring stack, so their connection pools
+must be budgeted together rather than configured independently.
+
+### Required Changes
+
+| Change point | Wallet scope |
+| --- | --- |
+| Hikari pool | Add environment-overridable initial defaults in common `application.yml`: maximum pool `12`, minimum idle `8`, connection timeout `2000ms`, validation timeout `1000ms`, max lifetime `1500000ms`, and keepalive `300000ms`. |
+| JDBC timeouts | Set MySQL `connectTimeout=2000ms` and `socketTimeout=5000ms`. These bound connection establishment and network reads independently of pool acquisition. |
+| Statement timeout | Add `mybatis-plus.configuration.default-statement-timeout=3` seconds to bound ordinary mapper execution. Explicit per-statement settings may override it where justified. |
+| Shared capacity | Keep ledger `32` plus wallet `12` at `44` maximum pooled connections, reserving six MySQL connections for operations and auxiliary clients. Do not raise either pool independently. |
+| Validation | Run wallet load and then combined wallet/ledger load. Inspect Hikari active/max, pending, acquisition latency, and timeouts together with DB transaction/operation latency and DB errors through the existing shared monitor server. |
+
+### Acceptance And Adjustment
+
+- Under the target sustained load, acquisition timeouts and sustained pending connections should
+  remain zero; acquisition latency should not dominate wallet transaction latency.
+- If wallet requires more than 12 connections, first measure concurrent ledger demand, MySQL CPU/I/O,
+  active sessions, and transaction latency. Rebalance the shared budget or increase verified MySQL
+  capacity before increasing the wallet pool.
+- Keep all values environment-overridable, but use the same bounded defaults in cloud and VMware
+  profiles unless a measured environment-specific override is required.
+
+### Explicitly Unchanged
+
+- No SQL, mapper, repository, transaction boundary, retry, or error-mapping change.
+- No Docker/Compose resource, MySQL server, Prometheus, Grafana, IP, or dashboard change. The existing
+  shared monitor is used only to validate the wallet runtime settings.
+
+## 5. Supporting Changes and Tests
 
 - Add unit tests for reply success, reply error, malformed payload, retryable DB failure,
   unexpected failure, duplicate completion, retry exhaustion, and ack-failure recovery.
@@ -154,7 +222,7 @@ pending-age collectors.
 - Add an Embedded Kafka test later for retry-topic/DLT routing. Unit tests alone cannot prove Spring
   topic routing.
 
-## 5. Explicitly Excluded or No Change
+## 6. Explicitly Excluded or No Change
 
 - No Docker, Compose, cloud profile, IP, DNS, security-group, or log deployment changes.
 - No wallet balance/reservation algorithm refactor in this scope.
@@ -169,4 +237,5 @@ pending-age collectors.
 2. Migrate wallet to the common retry-topic listener template and prove DLT behavior.
 3. Enable DB exception translation and migrate idempotency/cache wrappers.
 4. Add gRPC/business metrics and histogram configuration.
-5. Implement shared Kafka/outbox metrics for both services in a separate phase.
+5. Add bounded wallet DB runtime settings and validate the shared MySQL connection budget.
+6. Implement shared Kafka/outbox metrics for both services in a separate phase.
