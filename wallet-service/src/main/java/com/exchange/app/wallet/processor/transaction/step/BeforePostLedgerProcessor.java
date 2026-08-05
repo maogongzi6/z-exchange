@@ -25,7 +25,7 @@ import com.exchange.common.db.utils.DbTxnExecutor;
 import com.exchange.common.outbox.dao.repository.OutboxRepository;
 import com.exchange.common.outbox.po.Outbox;
 import com.exchange.common.outbox.po.enums.OutboxStatus;
-import com.exchange.common.redis.idemp.IdempRedisClient;
+import com.exchange.common.redis.idemp.IdempotencyClient;
 import com.exchange.common.redis.idemp.utils.CommonIdempHelper;
 import com.exchange.common.result.Result;
 import com.exchange.common.utils.time.LocalDateTimeHelper;
@@ -46,7 +46,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class BeforePostLedgerProcessor {
     private final DbTxnExecutor dbTxnExecutor;
-    private final IdempRedisClient idempRedisClient;
+    private final IdempotencyClient idempotencyClient;
 
     private final CustomCacheProperties.Idemp idempConfig;
 
@@ -159,8 +159,13 @@ public class BeforePostLedgerProcessor {
         postDbUpdateSnapshots(updateResult.getValue());
 
         // set idemp to DONE when found wallet txn
-        idempRedisClient.markIdempDone(GlobalServiceId.WALLET.code, Constant.SCOPE, requestInfo.idempotenceKey,
+        Result<Void> markDoneResult = idempotencyClient.markIdempDone(
+                GlobalServiceId.WALLET.code, Constant.SCOPE, requestInfo.idempotenceKey,
                 String.valueOf(requestInfo.getStableHash()), requestInfo.token, walletTxn.getTxnId(), idempConfig.getDoneTtl());
+        if (markDoneResult.isFailed()) {
+            // The wallet DB commit is authoritative; Redis refresh remains best effort.
+            log.warn("mark wallet idempotency done failed after DB commit, result={}", markDoneResult);
+        }
 
         if (needPostLedger) {
             postLedger(outbox);
@@ -171,7 +176,8 @@ public class BeforePostLedgerProcessor {
 
     private void releaseIdempBeforeReturnError(String IdempKey, String hash, String token) {
         String idempV = CommonIdempHelper.idempPendingValue(hash, token);
-        Result<String> releaseResult = idempRedisClient.releaseIdempIfOwned(GlobalServiceId.WALLET.code, Constant.SCOPE, IdempKey, idempV);
+        Result<String> releaseResult = idempotencyClient.releaseIdempIfOwned(
+                GlobalServiceId.WALLET.code, Constant.SCOPE, IdempKey, idempV);
         if (releaseResult.isFailed()) {
             // log the error
             log.error("release idemp failed, key:{} , result:{}", IdempKey, releaseResult);

@@ -1,64 +1,76 @@
 package com.exchange.app.wallet.kafka.consumer;
 
 import com.exchange.app.wallet.kafka.constant.WalletTopic;
-import com.exchange.app.wallet.po.transaction.WalletTransaction;
-import com.exchange.app.wallet.processor.transaction.step.AfterPostLedgerProcessor;
-import com.exchange.app.wallet.result.WalletServiceErrorCode;
-import com.exchange.common.exception.AbnormalProtoDataException;
-import com.exchange.common.exception.RetriableException;
-import com.exchange.common.result.Result;
-import com.exchange.proto.common.event.EventEnvelopePb;
-import com.exchange.proto.ledger.post.PostTransactionReplyPb;
-import com.exchange.proto.ledger.post.PostTransactionRequestPb;
-import com.google.protobuf.InvalidProtocolBufferException;
-import lombok.RequiredArgsConstructor;
+import com.exchange.common.kafka.listener.exception.KafkaListenerRetriableException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.header.Header;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.kafka.retrytopic.DltStrategy;
 import org.springframework.kafka.support.Acknowledgment;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Component;
+
+import java.nio.charset.StandardCharsets;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class DefaultListener {
-    private final AfterPostLedgerProcessor afterPostLedgerProcessor;
+    private final com.exchange.common.kafka.listener.DefaultListener delegate;
 
+    public DefaultListener(
+            @Qualifier("walletCommonListener") com.exchange.common.kafka.listener.DefaultListener delegate
+    ) {
+        this.delegate = delegate;
+    }
+
+    @RetryableTopic(
+            attempts = "${app.kafka.listener.retry.attempts:7}",
+            backoff = @Backoff(
+                    delayExpression = "${app.kafka.listener.retry.backoff-delay-ms:1000}",
+                    multiplierExpression = "${app.kafka.listener.retry.backoff-multiplier:1.0}",
+                    maxDelayExpression = "${app.kafka.listener.retry.backoff-max-delay-ms:25000}"
+            ),
+            include = {KafkaListenerRetriableException.class},
+            listenerContainerFactory = "concurrentRetryTopicCommandKafkaListenerContainerFactory",
+            autoCreateTopics = "${app.kafka.listener.retry.auto-create-topics:false}",
+            retryTopicSuffix = ".retry",
+            dltTopicSuffix = ".dlq",
+            dltStrategy = DltStrategy.FAIL_ON_ERROR
+    )
     @KafkaListener(
             topics = WalletTopic.LEDGER_REPLY,
             groupId = "ledger_reply",
-            containerFactory = "concurrentCommandKafkaListenerContainerFactory"
+            containerFactory = "concurrentRetryTopicCommandKafkaListenerContainerFactory"
     )
-    public void onMessage(byte[] envelopeBytes, Acknowledgment ack) {
-        try {
-            var envelope = EventEnvelopePb.parseFrom(envelopeBytes);
-            handleMessage(envelope);
-            ack.acknowledge();
-        } catch (InvalidProtocolBufferException e) {
-            log.error("Error parsing envelope", e);
-            throw new AbnormalProtoDataException(WalletServiceErrorCode.SERIALIZE_ERROR, "Error parsing envelope", e);
-        }
+    public void onMessage(ConsumerRecord<String, byte[]> record, Acknowledgment ack) {
+        // The common listener owns parsing, failure classification, and ack-failure recovery.
+        delegate.onMessage(record.value(), ack, record.headers());
     }
 
-    private void handleMessage(EventEnvelopePb envelope) throws InvalidProtocolBufferException {
-        log.info("handleMessage: {}", envelope);
-        switch (envelope.getEventType()) {
-            case "POST_LEDGER_REPLY":
-                handlePostLedgerReply(envelope);
-                break;
-            default:
-                throw new AbnormalProtoDataException(WalletServiceErrorCode.INVALID_ENUM_ERROR, "invalid event type" + envelope.getEventType());
-        }
+    @DltHandler
+    public void onDltMessage(ConsumerRecord<String, byte[]> record) {
+        log.error(
+                "wallet listener dlt message, topic={}, partition={}, offset={}, key={}, original_topic={}, exception_class={}, exception_message={}",
+                record.topic(),
+                record.partition(),
+                record.offset(),
+                record.key(),
+                headerString(record, KafkaHeaders.ORIGINAL_TOPIC, KafkaHeaders.DLT_ORIGINAL_TOPIC),
+                headerString(record, KafkaHeaders.EXCEPTION_FQCN, KafkaHeaders.DLT_EXCEPTION_FQCN),
+                headerString(record, KafkaHeaders.EXCEPTION_MESSAGE, KafkaHeaders.DLT_EXCEPTION_MESSAGE)
+        );
     }
 
-    private void handlePostLedgerReply(EventEnvelopePb envelope) throws InvalidProtocolBufferException{
-        var reply = PostTransactionReplyPb.parseFrom(envelope.getPayload());
-        log.info("handlePostLedgerReply: {}", reply);
-        Result<WalletTransaction> result = afterPostLedgerProcessor.afterPostLedger(reply.getReferenceId());
-        // TODO retry base on error
-        if (result.isFailed()) {
-            log.error("wait for retry: {}", reply.getError());
-            throw new RetriableException(WalletServiceErrorCode.SERVER_ERROR, "internal error, wait for retry," + reply.getError());
+    private String headerString(ConsumerRecord<String, byte[]> record, String primaryName, String fallbackName) {
+        Header header = record.headers().lastHeader(primaryName);
+        if (header == null) {
+            header = record.headers().lastHeader(fallbackName);
         }
+        return header == null ? null : new String(header.value(), StandardCharsets.UTF_8);
     }
 }

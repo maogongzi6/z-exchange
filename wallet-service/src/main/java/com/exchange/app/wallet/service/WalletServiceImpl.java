@@ -1,6 +1,8 @@
 package com.exchange.app.wallet.service;
 
 import com.exchange.app.wallet.po.enums.ServiceId;
+import com.exchange.app.wallet.metrics.WalletBusinessMetrics;
+import com.exchange.app.wallet.metrics.WalletMetricTagValues;
 import com.exchange.app.wallet.processor.transaction.ApplyReservationTransactionProcessor;
 import com.exchange.app.wallet.processor.transaction.AtomicTransactionProcessor;
 import com.exchange.app.wallet.processor.CreateWalletProcessor;
@@ -28,12 +30,18 @@ public class WalletServiceImpl extends WalletServiceGrpc.WalletServiceImplBase {
     final private ReserveTransactionProcessor reserveTransactionProcessor;
     private final ApplyReservationTransactionProcessor applyReservationTransactionProcessor;
     private final GetBalanceSnapshotProcessor getBalanceSnapshotProcessor;
+    private final WalletBusinessMetrics walletBusinessMetrics;
 
     @Override
     public void createWallet(CreateWalletRequestPb request, StreamObserver<CreateWalletReplyPb> responseObserver) {
         CreateWalletReplyPb reply;
         try {
-            reply = createWalletProcessor.createWallet(request);
+            reply = walletBusinessMetrics.recordProtobufRequest(
+                    WalletMetricTagValues.Operations.CREATE_WALLET,
+                    WalletMetricTagValues.Ingress.GRPC,
+                    () -> createWalletProcessor.createWallet(request),
+                    CreateWalletReplyPb::getError
+            );
         } catch (Exception e) {
             log.error("uncaught exception", e);
             reply = CreateWalletReplyPb.newBuilder().setError(PbErrorBuilder.build(WalletServiceErrorCode.SERVER_ERROR)).build();
@@ -47,7 +55,12 @@ public class WalletServiceImpl extends WalletServiceGrpc.WalletServiceImplBase {
     public void atomicTransaction(AtomicTransactionRequestPb request, StreamObserver<AtomicTransactionReplyPb> responseObserver) {
         AtomicTransactionReplyPb reply;
         try {
-            reply = atomicTransactionProcessor.executeAtomic(request);
+            reply = walletBusinessMetrics.recordProtobufRequest(
+                    WalletMetricTagValues.Operations.ATOMIC_TRANSACTION,
+                    WalletMetricTagValues.Ingress.GRPC,
+                    () -> atomicTransactionProcessor.executeAtomic(request),
+                    AtomicTransactionReplyPb::getError
+            );
         } catch (Exception e) {
             log.error("uncaught exception", e);
             reply = AtomicTransactionReplyPb.newBuilder().setError(PbErrorBuilder.build(WalletServiceErrorCode.SERVER_ERROR)).build();
@@ -60,7 +73,12 @@ public class WalletServiceImpl extends WalletServiceGrpc.WalletServiceImplBase {
     public void reserveTransaction(ReserveTransactionRequestPb request, StreamObserver<ReserveTransactionReplyPb> responseObserver) {
         ReserveTransactionReplyPb reply;
         try {
-            reply = reserveTransactionProcessor.reserve(request);
+            reply = walletBusinessMetrics.recordProtobufRequest(
+                    WalletMetricTagValues.Operations.RESERVE_TRANSACTION,
+                    WalletMetricTagValues.Ingress.GRPC,
+                    () -> reserveTransactionProcessor.reserve(request),
+                    ReserveTransactionReplyPb::getError
+            );
         } catch (Exception e) {
             log.error("uncaught exception", e);
             reply = ReserveTransactionReplyPb.newBuilder().setError(PbErrorBuilder.build(WalletServiceErrorCode.SERVER_ERROR)).build();
@@ -73,7 +91,12 @@ public class WalletServiceImpl extends WalletServiceGrpc.WalletServiceImplBase {
     public void applyReserveTransaction(ApplyReservationTransactionRequestPb request, StreamObserver<ApplyReservationTransactionReplyPb> responseObserver) {
         ApplyReservationTransactionReplyPb reply;
         try {
-            reply = applyReservationTransactionProcessor.apply(request);
+            reply = walletBusinessMetrics.recordProtobufRequest(
+                    WalletMetricTagValues.Operations.APPLY_RESERVATION_TRANSACTION,
+                    WalletMetricTagValues.Ingress.GRPC,
+                    () -> applyReservationTransactionProcessor.apply(request),
+                    ApplyReservationTransactionReplyPb::getError
+            );
         } catch (Exception e) {
             log.error("uncaught exception", e);
             reply = ApplyReservationTransactionReplyPb.newBuilder().setError(PbErrorBuilder.build(WalletServiceErrorCode.SERVER_ERROR)).build();
@@ -98,7 +121,11 @@ public class WalletServiceImpl extends WalletServiceGrpc.WalletServiceImplBase {
                                        String lookupValue,
                                        StreamObserver<GetSnapshotReplyPb> responseObserver) {
         try {
-            Result<com.exchange.app.wallet.po.wallet.BalanceSnapshot> result = getBalanceSnapshotProcessor.getBalanceSnapshot(lookupType, serviceId, lookupValue);
+            Result<com.exchange.app.wallet.po.wallet.BalanceSnapshot> result = walletBusinessMetrics.recordResult(
+                    operationFor(lookupType),
+                    WalletMetricTagValues.Ingress.GRPC,
+                    () -> getBalanceSnapshotProcessor.getBalanceSnapshot(lookupType, serviceId, lookupValue)
+            );
             if (result.isSuccess()) {
                 responseObserver.onNext(GetSnapshotReplyPb.newBuilder()
                         .setTransaction(PbConverter.convertToBalanceSnapshotPb(result.getValue()))
@@ -116,5 +143,11 @@ public class WalletServiceImpl extends WalletServiceGrpc.WalletServiceImplBase {
                     .build());
         }
         responseObserver.onCompleted();
+    }
+
+    private String operationFor(GetBalanceSnapshotProcessor.LookupType lookupType) {
+        return lookupType == GetBalanceSnapshotProcessor.LookupType.WALLET_ID
+                ? WalletMetricTagValues.Operations.GET_SNAPSHOT_BY_WALLET_ID
+                : WalletMetricTagValues.Operations.GET_SNAPSHOT_BY_REF_ID;
     }
 }

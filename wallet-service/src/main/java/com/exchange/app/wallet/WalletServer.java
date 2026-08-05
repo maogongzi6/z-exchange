@@ -10,12 +10,15 @@ import org.mybatis.spring.annotation.MapperScan;
 import org.mybatis.spring.annotation.MapperScans;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @MapperScans({
         @MapperScan("com.exchange.app.wallet.dao.mapper"),
         @MapperScan("com.exchange.common.outbox.dao.mapper")
 })
+// Common DB translation is implemented as repository/transaction boundary advice.
+@EnableAspectJAutoProxy
 @EnableScheduling
 @SpringBootApplication(
         scanBasePackages = {

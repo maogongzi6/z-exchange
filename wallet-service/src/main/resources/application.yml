@@ -10,6 +10,20 @@ spring:
     username: root
     password: "0000"
     driver-class-name: com.mysql.cj.jdbc.Driver
+    # Ledger and wallet share a MySQL max_connections budget of 50. The wallet cap of 12,
+    # together with ledger's cap of 32, leaves six connections for operations and auxiliary clients.
+    hikari:
+      maximum-pool-size: ${WALLET_DB_MAX_POOL_SIZE:12}
+      minimum-idle: ${WALLET_DB_MIN_IDLE:8}
+      connection-timeout: ${WALLET_DB_CONNECTION_TIMEOUT_MS:2000}
+      validation-timeout: ${WALLET_DB_VALIDATION_TIMEOUT_MS:1000}
+      max-lifetime: ${WALLET_DB_MAX_LIFETIME_MS:1500000}
+      keepalive-time: ${WALLET_DB_KEEPALIVE_TIME_MS:300000}
+      # Driver timeouts bound connection establishment and socket reads independently of
+      # Hikari's pool-acquisition timeout.
+      data-source-properties:
+        connectTimeout: ${WALLET_DB_CONNECT_TIMEOUT_MS:2000}
+        socketTimeout: ${WALLET_DB_SOCKET_TIMEOUT_MS:5000}
 
   cache:
     type: redis
@@ -58,6 +72,11 @@ grpc:
     account-client:
       address: static://127.0.0.1:9191
 
+mybatis-plus:
+  configuration:
+    # Bound mapper execution so a slow statement cannot retain a shared DB connection indefinitely.
+    default-statement-timeout: ${WALLET_DB_STATEMENT_TIMEOUT_SECONDS:3}
+
 management:
   endpoints:
     web:
@@ -69,10 +88,30 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        zexchange.grpc.server.duration: true
+        zexchange.wallet.processing.duration: true
+        zexchange.redis.operation.duration: true
+        zexchange.db.operation.duration: true
+        zexchange.db.transaction.duration: true
+      slo:
+        zexchange.grpc.server.duration: 5ms,10ms,25ms,50ms,100ms,250ms,500ms,1s,3s
+        zexchange.wallet.processing.duration: 5ms,10ms,25ms,50ms,100ms,250ms,500ms,1s,3s
+        zexchange.redis.operation.duration: 1ms,2ms,5ms,10ms,25ms,50ms,100ms,250ms,500ms,1s
+        zexchange.db.operation.duration: 1ms,2ms,5ms,10ms,25ms,50ms,100ms,250ms,500ms,1s,3s
+        zexchange.db.transaction.duration: 5ms,10ms,25ms,50ms,100ms,250ms,500ms,1s,3s,10s
 
 app:
   kafka:
     not-retriable-exceptions: com.exchange.common.exception.AbnormalProtoDataException
+    listener:
+      retry:
+        attempts: 7
+        backoff-delay-ms: 1000
+        backoff-multiplier: 1.0
+        backoff-max-delay-ms: 25000
+        auto-create-topics: false
 
   outbox:
     interval: "*/5 * * * * ?"
