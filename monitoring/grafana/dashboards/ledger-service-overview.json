@@ -180,14 +180,16 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
-      "description": "Connection-pool pressure. Pending above zero or active approaching max indicates DB connection saturation.",
+      "description": "Connection-pool state. Total is the current physical pool size, max is the configured ceiling, and pending above zero with no idle connections indicates pool pressure.",
       "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "short" }, "overrides": [] },
       "gridPos": { "h": 7, "w": 6, "x": 6, "y": 39 }, "id": 15,
       "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "targets": [
         { "editorMode": "code", "expr": "sum(hikaricp_connections_active{instance=~\"$instance\"})", "legendFormat": "active", "range": true, "refId": "A" },
-        { "editorMode": "code", "expr": "sum(hikaricp_connections_max{instance=~\"$instance\"})", "legendFormat": "max", "range": true, "refId": "B" },
-        { "editorMode": "code", "expr": "sum(hikaricp_connections_pending{instance=~\"$instance\"})", "legendFormat": "pending", "range": true, "refId": "C" }
+        { "editorMode": "code", "expr": "sum(hikaricp_connections_idle{instance=~\"$instance\"})", "legendFormat": "idle", "range": true, "refId": "B" },
+        { "editorMode": "code", "expr": "sum(hikaricp_connections_total{instance=~\"$instance\"})", "legendFormat": "total", "range": true, "refId": "C" },
+        { "editorMode": "code", "expr": "sum(hikaricp_connections_max{instance=~\"$instance\"})", "legendFormat": "max", "range": true, "refId": "D" },
+        { "editorMode": "code", "expr": "sum(hikaricp_connections_pending{instance=~\"$instance\"})", "legendFormat": "pending", "range": true, "refId": "E" }
       ],
       "title": "Hikari Connections", "type": "timeseries"
     },
