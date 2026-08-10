@@ -43,14 +43,18 @@ gRPC latency.
 
 ## 3. Workload Details
 
-The entry-count distribution is deterministic over every 20 new logical
-transactions:
+The entry-count distribution is deterministic over every 200 new logical
+transactions. By default:
 
 ```text
 45%: 2 entries
 45%: 4 entries
 10%: 20 entries
 ```
+
+Set `LEDGER_STRESS_BIG_TXN_PERCENT` to a whole-number percentage from `0` to
+`100`. That percentage uses 20 entries; the remaining transactions are split
+equally between 2 and 4 entries.
 
 Every transaction uses one asset and balanced debit/credit pairs. Asset and
 account selection rotate using the logical sequence. This spreads traffic over
@@ -223,6 +227,7 @@ reconciliation to run.
 | `LEDGER_DUPLICATE_DELAY_SECONDS` | `5` | Delay after immediate duplicate group |
 | `LEDGER_STRESS_BASE_AMOUNT` | `100` | Minimum entry amount in minor units |
 | `LEDGER_STRESS_AMOUNT_SPAN` | `900` | Deterministic amount variation range |
+| `LEDGER_STRESS_BIG_TXN_PERCENT` | `10` | Percentage of 20-entry transactions; the remainder is split equally between 2 and 4 entries |
 | `LEDGER_STRESS_MAX_UNEXPECTED_ERROR_RATE` | unset | Optional k6 rate threshold |
 | `LEDGER_STRESS_MAX_P95_MS` | unset | Optional overall attempt p95 threshold |
 | `LEDGER_GRPC_DEADLINE_SECONDS` | `5` | Per-RPC deadline |

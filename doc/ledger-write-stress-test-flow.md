@@ -70,13 +70,18 @@ Keep the reference within the database's 64-character limit.
 
 ## 4. Transaction Data Pattern
 
-Choose the entry count independently for every new logical transaction:
+Choose the entry count deterministically for every new logical transaction.
+The default distribution is:
 
 | Entry count | Percentage | Purpose |
 | ---: | ---: | --- |
 | 2 | 45% | Normal small transaction |
 | 4 | 45% | Normal multi-entry transaction |
 | 20 | 10% | Large transaction |
+
+`LEDGER_STRESS_BIG_TXN_PERCENT` configures the whole-number percentage of
+20-entry transactions. Split the remaining percentage equally between 2-entry
+and 4-entry transactions.
 
 Use one asset per transaction. Construct entries as balanced debit/credit
 pairs:

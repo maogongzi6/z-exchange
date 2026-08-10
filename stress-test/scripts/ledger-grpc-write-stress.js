@@ -44,6 +44,14 @@ function integerEnv(name, fallback, minimum = 1) {
     return value;
 }
 
+function percentageEnv(name, fallback) {
+    const value = integerEnv(name, fallback, 0);
+    if (value > 100) {
+        throw new Error(`${name} must be an integer between 0 and 100`);
+    }
+    return value;
+}
+
 function optionalRateEnv(name) {
     const raw = __ENV[name];
     if (raw === undefined || raw === '') {
@@ -66,6 +74,7 @@ const duplicateDelaySeconds = integerEnv(
 );
 const baseAmount = integerEnv('LEDGER_STRESS_BASE_AMOUNT', 100);
 const amountSpan = integerEnv('LEDGER_STRESS_AMOUNT_SPAN', 900);
+const bigTxnPercent = percentageEnv('LEDGER_STRESS_BIG_TXN_PERCENT', 10);
 const profile = (__ENV.LEDGER_STRESS_PROFILE || PROFILE_DISCOVERY).toLowerCase();
 const runId = __ENV.LEDGER_STRESS_RUN_ID;
 
@@ -182,13 +191,14 @@ export const options = {
 };
 
 function entryCountFor(sequence) {
-    // Twenty consecutive logical transactions produce the exact requested
-    // distribution: 9 x 2 entries, 9 x 4 entries, and 2 x 20 entries.
-    const bucket = sequence % 20;
-    if (bucket < 9) {
+    // A 200-transaction cycle represents every whole-number percentage while
+    // keeping the non-big remainder exactly split between 2 and 4 entries.
+    const bucket = sequence % 200;
+    const normalTxnCountPerSize = 100 - bigTxnPercent;
+    if (bucket < normalTxnCountPerSize) {
         return 2;
     }
-    if (bucket < 18) {
+    if (bucket < normalTxnCountPerSize * 2) {
         return 4;
     }
     return 20;
