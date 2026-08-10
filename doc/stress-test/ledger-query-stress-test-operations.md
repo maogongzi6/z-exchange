@@ -10,7 +10,10 @@
 | `deploy/docker-compose.ledger-query-stress-test.yml` | Standalone query-test deployment |
 
 Run only against a test database. The database user needs permission to insert
-and read the dedicated fixture rows.
+and read the dedicated fixture rows. Setting
+`LEDGER_STRESS_TRUNCATE_DB_BEFORE_RUN=true` first deletes all ledger-service
+table rows, including outbox data, and requires MySQL `DROP` privilege. It
+defaults to `false`; do not enable it with concurrent business traffic.
 
 ## Common Command
 
@@ -110,6 +113,7 @@ tests.
 | `LEDGER_QUERY_PROFILE` | `rpc-discovery` | `rpc-discovery`, `working-set-discovery`, or `soak` |
 | `LEDGER_QUERY_LOOKUP` | `txn-id` | `txn-id` or `ref-id`; run separately |
 | `LEDGER_QUERY_RUN_ID` | UTC timestamp | Run and Prometheus `testid`; maximum 24 characters |
+| `LEDGER_STRESS_TRUNCATE_DB_BEFORE_RUN` | `false` | When `true`, truncate all ledger-service tables before fixture setup |
 | `LEDGER_QUERY_FIXTURE_SIZE` | `10000` | SQL fixture rows; range 1-100000 |
 | `LEDGER_QUERY_WORKING_SET_SIZE` | `1000` | Fixed set for RPC discovery and soak |
 | `LEDGER_QUERY_WORKING_SET_START` | `100` | Initial set for working-set discovery |

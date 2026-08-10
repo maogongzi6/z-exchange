@@ -101,6 +101,11 @@ Before running:
 Use test infrastructure only. The fixture SQL writes dedicated `k6-write-*`
 records into the configured ledger database.
 
+Set `LEDGER_STRESS_TRUNCATE_DB_BEFORE_RUN=true` to delete all ledger-service
+table rows before provisioning fixtures. The default is `false`. This includes
+outbox rows and requires MySQL `DROP` privilege, so enable it only for an
+isolated test database with no concurrent business traffic.
+
 ## 5. Common Command
 
 Run commands from the repository root on the stress-test EC2:
@@ -215,6 +220,7 @@ reconciliation to run.
 | --- | ---: | --- |
 | `LEDGER_STRESS_PROFILE` | `discovery` | `discovery`, `recovery`, or `soak` |
 | `LEDGER_STRESS_RUN_ID` | UTC timestamp | Unique run and Prometheus `testid` |
+| `LEDGER_STRESS_TRUNCATE_DB_BEFORE_RUN` | `false` | When `true`, truncate all ledger-service tables before fixture setup |
 | `LEDGER_STRESS_WARM_RATE` | `5` | Initial logical transactions/s |
 | `LEDGER_STRESS_STAGE_SECONDS` | `30` | Standard stage duration |
 | `LEDGER_STRESS_DISCOVERY_RATE_STEP` | `10` | Logical rate added per discovery stage |

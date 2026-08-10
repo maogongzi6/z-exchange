@@ -8,8 +8,17 @@ DB_USERNAME="${DB_USERNAME:-ledger}"
 DB_PASSWORD="${DB_PASSWORD:-ledger-local}"
 DB_READY_ATTEMPTS="${DB_READY_ATTEMPTS:-30}"
 DB_CONNECT_TIMEOUT_SECONDS="${DB_CONNECT_TIMEOUT_SECONDS:-5}"
+LEDGER_STRESS_TRUNCATE_DB_BEFORE_RUN="${LEDGER_STRESS_TRUNCATE_DB_BEFORE_RUN:-false}"
 LEDGER_QUERY_RUN_ID="${LEDGER_QUERY_RUN_ID:-$(date -u +%Y%m%d%H%M%S)}"
 LEDGER_QUERY_FIXTURE_SIZE="${LEDGER_QUERY_FIXTURE_SIZE:-10000}"
+
+case "${LEDGER_STRESS_TRUNCATE_DB_BEFORE_RUN}" in
+  true|false) ;;
+  *)
+    echo "LEDGER_STRESS_TRUNCATE_DB_BEFORE_RUN must be true or false" >&2
+    exit 1
+    ;;
+esac
 
 case "${LEDGER_QUERY_RUN_ID}" in
   *[!A-Za-z0-9-]*|'')
@@ -54,6 +63,17 @@ until mysqladmin \
   attempt=$((attempt + 1))
   sleep 2
 done
+
+if [ "${LEDGER_STRESS_TRUNCATE_DB_BEFORE_RUN}" = "true" ]; then
+  echo "WARNING: truncating all ledger-service tables in ${DB_NAME} before the stress test..."
+  mysql \
+    --protocol=TCP \
+    --host="${DB_HOST}" \
+    --port="${DB_PORT}" \
+    --user="${DB_USERNAME}" \
+    --connect-timeout="${DB_CONNECT_TIMEOUT_SECONDS}" \
+    "${DB_NAME}" < /fixtures/truncate_ledger_service.sql
+fi
 
 echo "MySQL is ready; applying ${LEDGER_QUERY_FIXTURE_SIZE} query fixtures..."
 mysql_args="--protocol=TCP --host=${DB_HOST} --port=${DB_PORT} --user=${DB_USERNAME} --connect-timeout=${DB_CONNECT_TIMEOUT_SECONDS}"
