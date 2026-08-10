@@ -70,6 +70,9 @@ export LEDGER_QUERY_STAGE_SECONDS=30
 The largest set is `start + step * steps` and must not exceed the fixture size.
 RPC remains fixed for the entire profile.
 
+At the maximum fixture size, provisioning creates 5,000,000 transactions and
+10,000,000 ledger entries. Allow adequate database disk and setup time.
+
 ### Soak
 
 ```bash
@@ -114,7 +117,7 @@ tests.
 | `LEDGER_QUERY_LOOKUP` | `txn-id` | `txn-id` or `ref-id`; run separately |
 | `LEDGER_QUERY_RUN_ID` | UTC timestamp | Run and Prometheus `testid`; maximum 24 characters |
 | `LEDGER_STRESS_TRUNCATE_DB_BEFORE_RUN` | `false` | When `true`, truncate all ledger-service tables before fixture setup |
-| `LEDGER_QUERY_FIXTURE_SIZE` | `10000` | SQL fixture rows; range 1-100000 |
+| `LEDGER_QUERY_FIXTURE_SIZE` | `10000` | SQL fixture rows; range 1-5000000 |
 | `LEDGER_QUERY_WORKING_SET_SIZE` | `1000` | Fixed set for RPC discovery and soak |
 | `LEDGER_QUERY_WORKING_SET_START` | `100` | Initial set for working-set discovery |
 | `LEDGER_QUERY_WORKING_SET_STEP` | `100` | IDs added per working-set stage |

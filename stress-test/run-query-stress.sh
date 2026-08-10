@@ -32,12 +32,12 @@ if [ "${#LEDGER_QUERY_RUN_ID}" -gt 24 ]; then
 fi
 case "${LEDGER_QUERY_FIXTURE_SIZE}" in
   *[!0-9]*|'')
-    echo "LEDGER_QUERY_FIXTURE_SIZE must be an integer from 1 to 100000" >&2
+    echo "LEDGER_QUERY_FIXTURE_SIZE must be an integer from 1 to 5000000" >&2
     exit 1
     ;;
 esac
-if [ "${LEDGER_QUERY_FIXTURE_SIZE}" -lt 1 ] || [ "${LEDGER_QUERY_FIXTURE_SIZE}" -gt 100000 ]; then
-  echo "LEDGER_QUERY_FIXTURE_SIZE must be an integer from 1 to 100000" >&2
+if [ "${LEDGER_QUERY_FIXTURE_SIZE}" -lt 1 ] || [ "${LEDGER_QUERY_FIXTURE_SIZE}" -gt 5000000 ]; then
+  echo "LEDGER_QUERY_FIXTURE_SIZE must be an integer from 1 to 5000000" >&2
   exit 1
 fi
 

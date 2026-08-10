@@ -1,18 +1,27 @@
 -- Create deterministic immutable transactions for query-only stress tests.
--- @query_fixture_size is set by run-query-stress.sh and is limited to 100000.
+-- @query_fixture_size is set by run-query-stress.sh and is limited to 5000000.
 DROP TEMPORARY TABLE IF EXISTS k6_query_sequence;
 CREATE TEMPORARY TABLE k6_query_sequence (
     sequence_number int not null primary key
-) ENGINE=MEMORY;
+) ENGINE=InnoDB;
 
 INSERT INTO k6_query_sequence (sequence_number)
 SELECT
-    ten_thousands.n * 10000
+    millions.n * 1000000
+        + hundred_thousands.n * 100000
+        + ten_thousands.n * 10000
         + thousands.n * 1000
         + hundreds.n * 100
         + tens.n * 10
         + ones.n
 FROM (
+    SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
+) millions
+CROSS JOIN (
+    SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
+    UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9
+) hundred_thousands
+CROSS JOIN (
     SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
     UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9
 ) ten_thousands
@@ -32,7 +41,9 @@ CROSS JOIN (
     SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
     UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9
 ) ones
-WHERE ten_thousands.n * 10000
+WHERE millions.n * 1000000
+        + hundred_thousands.n * 100000
+        + ten_thousands.n * 10000
         + thousands.n * 1000
         + hundreds.n * 100
         + tens.n * 10
@@ -47,8 +58,8 @@ INSERT IGNORE INTO ledger_transactions (
     updated_at
 )
 SELECT
-    CONCAT('k6-query-txn-', LPAD(sequence_number, 6, '0')),
-    CONCAT('k6-query-ref-', LPAD(sequence_number, 6, '0')),
+    CONCAT('k6-query-txn-', LPAD(sequence_number, GREATEST(6, CHAR_LENGTH(sequence_number)), '0')),
+    CONCAT('k6-query-ref-', LPAD(sequence_number, GREATEST(6, CHAR_LENGTH(sequence_number)), '0')),
     JSON_OBJECT('fixture', 'k6-query'),
     1,
     TIMESTAMP('2026-01-01 00:00:00.000'),
@@ -64,8 +75,8 @@ INSERT IGNORE INTO ledger_entries (
     direction
 )
 SELECT
-    CONCAT('k6-query-entry-', LPAD(sequence_number, 6, '0'), '-d'),
-    CONCAT('k6-query-txn-', LPAD(sequence_number, 6, '0')),
+    CONCAT('k6-query-entry-', LPAD(sequence_number, GREATEST(6, CHAR_LENGTH(sequence_number)), '0'), '-d'),
+    CONCAT('k6-query-txn-', LPAD(sequence_number, GREATEST(6, CHAR_LENGTH(sequence_number)), '0')),
     'k6-write-asset-00',
     'k6-write-account-id-000',
     100,
@@ -73,8 +84,8 @@ SELECT
 FROM k6_query_sequence
 UNION ALL
 SELECT
-    CONCAT('k6-query-entry-', LPAD(sequence_number, 6, '0'), '-c'),
-    CONCAT('k6-query-txn-', LPAD(sequence_number, 6, '0')),
+    CONCAT('k6-query-entry-', LPAD(sequence_number, GREATEST(6, CHAR_LENGTH(sequence_number)), '0'), '-c'),
+    CONCAT('k6-query-txn-', LPAD(sequence_number, GREATEST(6, CHAR_LENGTH(sequence_number)), '0')),
     'k6-write-asset-00',
     'k6-write-account-id-001',
     100,
