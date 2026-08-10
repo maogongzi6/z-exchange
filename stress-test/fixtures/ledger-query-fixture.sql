@@ -81,8 +81,17 @@ SELECT
     'k6-write-account-id-000',
     100,
     1
-FROM k6_query_sequence
-UNION ALL
+FROM k6_query_sequence;
+
+-- MySQL cannot read the same temporary table twice within one UNION query.
+INSERT IGNORE INTO ledger_entries (
+    entry_id,
+    txn_id,
+    asset_id,
+    account_id,
+    amount,
+    direction
+)
 SELECT
     CONCAT('k6-query-entry-', LPAD(sequence_number, GREATEST(6, CHAR_LENGTH(sequence_number)), '0'), '-c'),
     CONCAT('k6-query-txn-', LPAD(sequence_number, GREATEST(6, CHAR_LENGTH(sequence_number)), '0')),
