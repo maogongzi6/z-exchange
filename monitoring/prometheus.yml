@@ -3,6 +3,8 @@ global:
 
 scrape_configs:
   - job_name: "ledger-service"
+    scrape_interval: 500ms
+    scrape_timeout: 400ms
     metrics_path: "/actuator/prometheus"
     static_configs:
       - targets: ["172.31.16.37:8081"]
