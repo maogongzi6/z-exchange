@@ -95,6 +95,9 @@ if (!runId || !/^[A-Za-z0-9-]{1,24}$/.test(runId)) {
         'LEDGER_QUERY_RUN_ID is required and must contain 1-24 letters, digits, or hyphens',
     );
 }
+if (fixtureSize > 5000000) {
+    throw new Error('LEDGER_QUERY_FIXTURE_SIZE must be an integer from 1 to 5000000');
+}
 if (![PROFILE_RPC_DISCOVERY, PROFILE_WORKING_SET_DISCOVERY, PROFILE_SOAK].includes(profile)) {
     throw new Error(
         'LEDGER_QUERY_PROFILE must be rpc-discovery, working-set-discovery, or soak',
