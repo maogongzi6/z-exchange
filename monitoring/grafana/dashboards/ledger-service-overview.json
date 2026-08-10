@@ -116,8 +116,9 @@
       "gridPos": { "h": 7, "w": 8, "x": 0, "y": 25 }, "id": 14,
       "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "targets": [
-        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le) (rate(zexchange_grpc_server_duration_seconds_bucket{instance=~\"$instance\",service=\"ledger.PostService\",method=\"postTransaction\",grpc_status=\"OK\"}[$__rate_interval])))", "legendFormat": "p95", "range": true, "refId": "A" },
-        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.99, sum by (le) (rate(zexchange_grpc_server_duration_seconds_bucket{instance=~\"$instance\",service=\"ledger.PostService\",method=\"postTransaction\",grpc_status=\"OK\"}[$__rate_interval])))", "legendFormat": "p99", "range": true, "refId": "B" }
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.50, sum by (le) (rate(zexchange_grpc_server_duration_seconds_bucket{instance=~\"$instance\",service=\"ledger.PostService\",method=\"postTransaction\",grpc_status=\"OK\"}[$__rate_interval])))", "legendFormat": "p50", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le) (rate(zexchange_grpc_server_duration_seconds_bucket{instance=~\"$instance\",service=\"ledger.PostService\",method=\"postTransaction\",grpc_status=\"OK\"}[$__rate_interval])))", "legendFormat": "p95", "range": true, "refId": "B" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.99, sum by (le) (rate(zexchange_grpc_server_duration_seconds_bucket{instance=~\"$instance\",service=\"ledger.PostService\",method=\"postTransaction\",grpc_status=\"OK\"}[$__rate_interval])))", "legendFormat": "p99", "range": true, "refId": "C" }
       ],
       "title": "Ledger Write gRPC Latency (OK)", "type": "timeseries"
     },
@@ -128,8 +129,9 @@
       "gridPos": { "h": 7, "w": 8, "x": 8, "y": 25 }, "id": 18,
       "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "targets": [
-        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le) (rate(zexchange_ledger_processing_duration_seconds_bucket{instance=~\"$instance\",operation=\"post_transaction\",ingress=\"grpc\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "p95", "range": true, "refId": "A" },
-        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.99, sum by (le) (rate(zexchange_ledger_processing_duration_seconds_bucket{instance=~\"$instance\",operation=\"post_transaction\",ingress=\"grpc\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "p99", "range": true, "refId": "B" }
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.50, sum by (le) (rate(zexchange_ledger_processing_duration_seconds_bucket{instance=~\"$instance\",operation=\"post_transaction\",ingress=\"grpc\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "p50", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le) (rate(zexchange_ledger_processing_duration_seconds_bucket{instance=~\"$instance\",operation=\"post_transaction\",ingress=\"grpc\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "p95", "range": true, "refId": "B" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.99, sum by (le) (rate(zexchange_ledger_processing_duration_seconds_bucket{instance=~\"$instance\",operation=\"post_transaction\",ingress=\"grpc\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "p99", "range": true, "refId": "C" }
       ],
       "title": "Ledger Write Business Latency", "type": "timeseries"
     },
@@ -140,8 +142,9 @@
       "gridPos": { "h": 7, "w": 8, "x": 16, "y": 25 }, "id": 19,
       "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "targets": [
-        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le) (rate(zexchange_db_transaction_duration_seconds_bucket{instance=~\"$instance\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "p95", "range": true, "refId": "A" },
-        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.99, sum by (le) (rate(zexchange_db_transaction_duration_seconds_bucket{instance=~\"$instance\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "p99", "range": true, "refId": "B" }
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.50, sum by (le) (rate(zexchange_db_transaction_duration_seconds_bucket{instance=~\"$instance\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "p50", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le) (rate(zexchange_db_transaction_duration_seconds_bucket{instance=~\"$instance\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "p95", "range": true, "refId": "B" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.99, sum by (le) (rate(zexchange_db_transaction_duration_seconds_bucket{instance=~\"$instance\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "p99", "range": true, "refId": "C" }
       ],
       "title": "DB Transaction Latency", "type": "timeseries"
     },
