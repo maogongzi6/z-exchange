@@ -37,6 +37,12 @@ Fixture setup is completed before k6 starts, so it is excluded from gRPC
 latency. Run this only against a test database. The database credentials must
 permit `INSERT` and `UPDATE` on `assets` and `accounts`.
 
+Write and query stress runners can start from an empty ledger database by
+setting `LEDGER_STRESS_TRUNCATE_DB_BEFORE_RUN=true`. It defaults to `false`.
+This deletes all rows from ledger-service tables, including outbox data, before
+fixtures are applied. Use it only on isolated test infrastructure; the MySQL
+user also needs the `DROP` privilege required by `TRUNCATE TABLE`.
+
 ## Run With Docker
 
 From the repository root:
@@ -117,6 +123,7 @@ No inbound port is required on the load-generator EC2.
 - `fixtures/ledger-write-fixture.sql`: 10 assets and 100 distributed accounts.
 - `fixtures/ledger-write-verification.sql`: deterministic journal reconciliation.
 - `fixtures/ledger-query-fixture.sql`: immutable transactions for query tests.
+- `fixtures/truncate_ledger_service.sql`: optional full ledger test-data reset.
 - `run-smoke.sh`: waits for MySQL, applies the fixture, then starts k6.
 - `run-write-stress.sh`: provisions, runs a write profile, and reconciles rows.
 - `run-query-stress.sh`: provisions and verifies query fixtures, then runs k6.
