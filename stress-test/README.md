@@ -1,7 +1,7 @@
 # Ledger Stress Test
 
-This directory contains k6 gRPC smoke and write stress tests and is not a Maven
-or Spring module. The smoke verifies one dependent workflow:
+This directory contains k6 gRPC smoke, write, and query stress tests and is not
+a Maven or Spring module. The smoke verifies one dependent workflow:
 
 1. `PostService/postTransaction`
 2. `PostService/getTxnByRefId`
@@ -12,8 +12,14 @@ transaction created by the write call and require the two ledger entries.
 
 The write stress test exercises `postTransaction` with open arrival-rate
 profiles for capacity discovery, overload recovery, and stable-load soak. See
-`doc/ledger-write-stress-test-operations.md` for its commands, configuration,
-metrics, and reconciliation flow.
+`doc/stress-test/ledger-write-stress-test-operations.md` for its commands,
+configuration, metrics, and reconciliation flow.
+
+The query stress test exercises `getTxnById` and `getTxnByRefId` separately
+with `includeEntries=true`. Its RPC-discovery, working-set-discovery, and soak
+profiles keep load and data-cardinality experiments isolated. See
+`doc/stress-test/ledger-query-stress-test-flow.md` and
+`doc/stress-test/ledger-query-stress-test-operations.md`.
 
 ## Fixture Provisioning
 
@@ -64,6 +70,17 @@ line-oriented.
 `LEDGER_GRPC_HOST` overrides the gRPC target directly. If it is not set, the
 Compose default is `172.31.16.37`.
 
+Run the standalone query workload with:
+
+```bash
+docker compose -f deploy/docker-compose.ledger-query-stress-test.yml up --build \
+  --abort-on-container-exit --exit-code-from ledger-query-stress-test
+```
+
+Set `LEDGER_QUERY_PROFILE`, `LEDGER_QUERY_LOOKUP`, and a unique
+`LEDGER_QUERY_RUN_ID` before running. The complete configuration is documented
+in `doc/stress-test/ledger-query-stress-test-operations.md`.
+
 ## Configuration
 
 | Variable | Default | Purpose |
@@ -95,9 +112,12 @@ No inbound port is required on the load-generator EC2.
 
 - `scripts/ledger-grpc-smoke.js`: commented k6 workflow and assertions.
 - `scripts/ledger-grpc-write-stress.js`: commented distributed write workload.
+- `scripts/ledger-grpc-query-stress.js`: commented query and miss workload.
 - `fixtures/ledger-smoke-fixture.sql`: idempotent Asset and Account fixture.
 - `fixtures/ledger-write-fixture.sql`: 10 assets and 100 distributed accounts.
 - `fixtures/ledger-write-verification.sql`: deterministic journal reconciliation.
+- `fixtures/ledger-query-fixture.sql`: immutable transactions for query tests.
 - `run-smoke.sh`: waits for MySQL, applies the fixture, then starts k6.
 - `run-write-stress.sh`: provisions, runs a write profile, and reconciles rows.
+- `run-query-stress.sh`: provisions and verifies query fixtures, then runs k6.
 - `Dockerfile`: combines the pinned k6 binary with MySQL 8.4's native client.
