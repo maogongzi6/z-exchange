@@ -17,7 +17,6 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -34,30 +33,20 @@ public class OutboxRetryHandler {
     // TODO maybe add a execute time limit
     public void retry() {
         LocalDateTime now = LocalDateTime.now();
-        AtomicLong lastId = new AtomicLong();
+        long lastId = 0L;
         int successCount = 0, failedCount = 0;
         while (true) {
-            final List<Outbox> outboxes = new ArrayList<>();
-            List<Outbox> successOutboxes = new ArrayList<>(), failedOutboxes = new ArrayList<>();
-            // select for update skip lock + update next_attempt_at to claim
-            Result<Void> result = dbTxnExecutor.executeWithDefault(() -> {
-                List<Outbox> locked = outboxManager.selectForClaimSkipLock(now, outboxConfig.getMaxRetries(), lastId.get(), outboxConfig.getPageLimit());
-                outboxes.addAll(locked);
-                if (outboxes.isEmpty()) {
-                    return Result.success();
-                }
-                lastId.set(locked.get(locked.size() - 1).getId());
-                int claimedCount = outboxManager.batchClaim(locked.stream().map(Outbox::getId).collect(Collectors.toList()), now.plusSeconds(outboxConfig.getAttemptIntervalSec()));
-                if (claimedCount != locked.size()) {
-                    log.error("unexpected claim outbox failure, claimed: {}, locked: {}", claimedCount, locked);
-                    return Result.failure(OutboxErrorCode.UNEXPECTED_DB_ERROR, "unexpected claim outbox failure");
-                }
-                return Result.success();
-            });
+            Result<List<Outbox>> result = claimPage(now, lastId);
             if (!result.isSuccess()) {
-                log.error("claim failed, outbox: {}", outboxes);
-                continue;
+                log.error("claim failed, stopping current retry cycle, lastId: {}, result: {}", lastId, result);
+                break;
             }
+            List<Outbox> outboxes = result.getValue();
+            if (!outboxes.isEmpty()) {
+                lastId = outboxes.getLast().getId();
+            }
+
+            List<Outbox> successOutboxes = new ArrayList<>(), failedOutboxes = new ArrayList<>();
             // retry publish
             for (Outbox outbox : outboxes) {
                 Result<Void> publishResult = publisher.publish(outbox);
@@ -85,5 +74,21 @@ public class OutboxRetryHandler {
             }
         }
         log.info("outbox retry success: {}, failed: {}", successCount, failedCount);
+    }
+
+    private Result<List<Outbox>> claimPage(LocalDateTime now, long lastId) {
+        // select for update skip lock + update next_attempt_at to claim
+        return dbTxnExecutor.executeWithDefault(() -> {
+            List<Outbox> locked = outboxManager.selectForClaimSkipLock(now, outboxConfig.getMaxRetries(), lastId, outboxConfig.getPageLimit());
+            if (locked.isEmpty()) {
+                return Result.success(List.of());
+            }
+            int claimedCount = outboxManager.batchClaim(locked.stream().map(Outbox::getId).collect(Collectors.toList()), now.plusSeconds(outboxConfig.getAttemptIntervalSec()));
+            if (claimedCount != locked.size()) {
+                log.error("unexpected claim outbox failure, claimed: {}, locked: {}", claimedCount, locked);
+                return Result.failure(OutboxErrorCode.UNEXPECTED_DB_ERROR, "unexpected claim outbox failure");
+            }
+            return Result.success(List.copyOf(locked));
+        });
     }
 }

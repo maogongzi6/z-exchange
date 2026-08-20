@@ -82,7 +82,7 @@ public class OutboxRepository extends DbBaseRepository<Outbox, OutboxMapper> {
                 .eq(Outbox::getOutboxStatus, OutboxStatus.PENDING)
                 .lt(Outbox::getAttemptCount, maxRetries)
                 .le(Outbox::getNextAttemptAt, attemptAt)
-                .ge(Outbox::getId, lastId)
+                .gt(Outbox::getId, lastId)
                 .orderByAsc(Outbox::getId)
                 .last("limit " + limit + " for update skip locked");
         return mapper.selectList(query);
