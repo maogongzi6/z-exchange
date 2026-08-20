@@ -9,4 +9,4 @@ spring:
     port: ${REDIS_PORT:6379}
 
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:172.31.18.211:9092}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:TODO_SET_KAFKA_PRIVATE_IP:9092}
