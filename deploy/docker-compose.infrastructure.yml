@@ -10,6 +10,8 @@ services:
       MYSQL_USER: ${LEDGER_DB_USERNAME:-ledger}
       MYSQL_PASSWORD: ${LEDGER_DB_PASSWORD:-ledger-local}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root-local}
+      WALLET_DB_USERNAME: ${WALLET_DB_USERNAME:-wallet}
+      WALLET_DB_PASSWORD: ${WALLET_DB_PASSWORD:-wallet-local}
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_0900_ai_ci
@@ -21,6 +23,8 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql
       - ../standard/sql/ledger_service.sql:/docker-entrypoint-initdb.d/001-ledger-service.sql:ro
+      - ../standard/sql/wallet_service.sql:/docker-entrypoint-initdb.d/002-wallet-service.sql:ro
+      - ../standard/docker/mysql/grant-service-users.sh:/docker-entrypoint-initdb.d/003-grant-service-users.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot --password=\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
       interval: 5s

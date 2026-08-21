@@ -1,0 +1,31 @@
+services:
+  wallet-service:
+    build:
+      context: ..
+      dockerfile: wallet-service/Dockerfile
+    image: z-exchange/wallet-service:local
+    container_name: wallet-service
+    restart: unless-stopped
+    mem_limit: ${WALLET_MEMORY_LIMIT:-3g}
+    mem_reservation: ${WALLET_MEMORY_RESERVATION:-2g}
+    environment:
+      JAVA_TOOL_OPTIONS: "${WALLET_JAVA_TOOL_OPTIONS:--Xms1g -Xmx2g}"
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: ${INFRA_PRIVATE_IP:-172.31.18.211}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${WALLET_DB_NAME:-trade_walletservice}
+      DB_USERNAME: ${WALLET_DB_USERNAME:-wallet}
+      DB_PASSWORD: ${WALLET_DB_PASSWORD:-wallet-local}
+      REDIS_HOST: ${INFRA_PRIVATE_IP:-172.31.18.211}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-172.31.28.6:9092}
+      LEDGER_GRPC_ADDRESS: ${LEDGER_GRPC_ADDRESS:-static://172.31.16.37:9191}
+      ACCOUNT_GRPC_ADDRESS: ${ACCOUNT_GRPC_ADDRESS:-static://172.31.16.37:9191}
+    ports:
+      - "${WALLET_PRIVATE_IP:-172.31.23.255}:8082:8082"
+      - "${WALLET_PRIVATE_IP:-172.31.23.255}:9192:9192"
+    volumes:
+      - wallet-service-logs:/app/logs/wallet-service
+
+volumes:
+  wallet-service-logs:

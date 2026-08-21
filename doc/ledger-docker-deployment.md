@@ -2,17 +2,18 @@
 
 ## Topology
 
-This deployment uses four EC2 instances in one AWS VPC:
+Ledger and wallet use five EC2 instances in one AWS VPC:
 
 ```text
-ledger EC2             infrastructure EC2       Kafka EC2                 monitoring EC2
-172.31.16.37           172.31.18.211            172.31.28.6               172.31.28.170
---------------------   ---------------------     ----------------------   ------------------
-ledger-service:8081 <- Prometheus scrape -------------------------------- Prometheus:9290
-ledger-service:9191    MySQL:3306                Kafka:9092                Grafana:3000
-        |              Redis:6379                    ^                         |
-        +------------> MySQL/Redis                   |                         +-> Prometheus:9090
-        +--------------------------------------------+
+ledger EC2       wallet EC2       infrastructure EC2    Kafka EC2       monitoring EC2
+172.31.16.37     172.31.23.255    172.31.18.211         172.31.28.6     172.31.28.170
+---------------  ---------------  -------------------    -------------   ------------------
+ledger :8081 <----------------------------------------------------------- Prometheus :9290
+wallet :8082 <----------------------------------------------------------- Prometheus :9290
+ledger :9191 <--- wallet              MySQL :3306          Kafka :9092    Grafana :3000
+       |              |------------> Redis :6379              ^
+       +--------------+------------> MySQL/Redis               |
+       +--------------------------- wallet/ledger -------------+
 ```
 
 The VPC security groups are the network boundary. Compose binds published ports
@@ -26,13 +27,15 @@ same EC2 instance.
 | `deploy/docker-compose.infrastructure.yml` | `172.31.18.211` | MySQL, Redis, and MySQL data. |
 | `deploy/docker-compose.kafka.yml` | `172.31.28.6` | Kafka, persistent broker data, and idempotent topic initialization. |
 | `deploy/docker-compose.ledger-service.yml` | `172.31.16.37` | Ledger application and ledger logs. |
+| `deploy/docker-compose.wallet-service.yml` | `172.31.23.255` | Wallet application and wallet logs. |
 | `deploy/docker-compose.monitoring.yml` | `172.31.28.170` | Prometheus, Grafana, and monitoring data. |
 | `deploy/infra-test.env` | Infrastructure host | Infrastructure IP and database credentials. |
 | `deploy/kafka-test.env` | Kafka host | Kafka advertised address, memory, and topic settings. |
 | `deploy/ledger-test.env` | Ledger host | Ledger and infrastructure endpoints. |
+| `deploy/wallet-test.env` | Wallet host | Wallet and remote service endpoints. |
 | `deploy/monitor-test.env` | Monitoring host | Monitoring IP and container memory budgets. |
 | `ledger-service/src/main/resources/application-docker.yml` | Ledger image | Docker profile defaults, overridable by Compose. |
-| `monitoring/prometheus.yml` | Monitoring host | Scrapes `172.31.16.37:8081/actuator/prometheus`. |
+| `monitoring/prometheus.yml` | Monitoring host | Scrapes ledger and wallet actuator metrics. |
 
 The root `docker-compose.yml` remains the legacy all-in-one configuration for
 local development. Do not use it for this AWS deployment.
@@ -44,9 +47,12 @@ local development. Do not use it for this AWS deployment.
 | `INFRA_PRIVATE_IP` | `172.31.18.211` | MySQL and Redis host. |
 | `KAFKA_PRIVATE_IP` | `172.31.28.6` | Address advertised by Kafka to VPC clients. |
 | `LEDGER_PRIVATE_IP` | `172.31.16.37` | Ledger HTTP and gRPC bindings. |
+| `WALLET_PRIVATE_IP` | `172.31.23.255` | Wallet HTTP and gRPC bindings. |
 | `MONITOR_PRIVATE_IP` | `172.31.28.170` | Prometheus and Grafana bindings. |
 | `LEDGER_DB_USERNAME` | `ledger` | MySQL application user. |
 | `LEDGER_DB_PASSWORD` | `ledger-local` | MySQL application password. |
+| `WALLET_DB_USERNAME` | `wallet` | Wallet MySQL application user. |
+| `WALLET_DB_PASSWORD` | `wallet-local` | Wallet MySQL application password. |
 | `KAFKA_BOOTSTRAP_SERVERS` | `172.31.28.6:9092` | Kafka client bootstrap endpoint. |
 | `K6_PROMETHEUS_RW_SERVER_URL` | `http://172.31.28.170:9290/api/v1/write` | k6 metric destination. |
 
@@ -61,6 +67,8 @@ Use `deploy/infra-test.env`:
 INFRA_PRIVATE_IP=172.31.18.211
 LEDGER_DB_USERNAME=ledger
 LEDGER_DB_PASSWORD=replace-with-a-long-random-password
+WALLET_DB_USERNAME=wallet
+WALLET_DB_PASSWORD=replace-with-a-different-long-random-password
 MYSQL_ROOT_PASSWORD=replace-with-a-different-long-random-password
 MYSQL_MEMORY_LIMIT=2560m
 MYSQL_MEMORY_RESERVATION=2048m
@@ -78,8 +86,10 @@ docker compose --env-file deploy/infra-test.env -f deploy/docker-compose.infrast
 docker compose --env-file deploy/infra-test.env -f deploy/docker-compose.infrastructure.yml logs -f mysql redis
 ```
 
-MySQL initialization runs only while creating an empty `mysql-data` volume.
-The mounted `001-ledger-service.sql` does not run on ordinary restarts.
+MySQL initialization runs only while creating an empty `mysql-data` volume. It
+creates ledger schema, wallet schema, and service-user grants in numbered order.
+For an existing volume, use `bash deploy/provision-wallet-database.sh`; the
+mounted initialization files do not run on ordinary restarts.
 
 ## Kafka EC2
 
@@ -239,7 +249,10 @@ Permit only the required flows:
 | Ledger EC2 | Infrastructure EC2 | `3306`, `6379` | MySQL and Redis. |
 | Ledger EC2 | Kafka EC2 | `9092` | Kafka commands and replies. |
 | Wallet EC2 | Kafka EC2 | `9092` | Kafka commands and replies. |
+| Wallet EC2 | Infrastructure EC2 | `3306`, `6379` | MySQL and Redis. |
+| Wallet EC2 | Ledger EC2 | `9191` | Current account/ledger gRPC clients. |
 | Monitoring EC2 | Ledger EC2 | `8081` | Prometheus scrape. |
+| Monitoring EC2 | Wallet EC2 | `8082` | Prometheus scrape. |
 | Stress-test EC2 | Ledger EC2 | `9191` | gRPC load. |
 | Stress-test EC2 | Infrastructure EC2 | `3306` | Fixture and reconciliation SQL. |
 | Stress-test EC2 | Monitoring EC2 | `9290` | k6 remote write. |

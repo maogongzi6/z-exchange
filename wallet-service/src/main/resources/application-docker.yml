@@ -1,4 +1,6 @@
 spring:
+  # Docker DNS defaults preserve the local all-in-one stack. Split cloud
+  # deployments override every remote endpoint through Compose environment.
   datasource:
     url: "jdbc:mysql://${DB_HOST:mysql}:${DB_PORT:3306}/${DB_NAME:trade_walletservice}?serverTimezone=GMT%2B8&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true"
     username: ${DB_USERNAME:wallet}

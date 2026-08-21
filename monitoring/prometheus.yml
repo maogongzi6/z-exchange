@@ -6,3 +6,8 @@ scrape_configs:
     metrics_path: "/actuator/prometheus"
     static_configs:
       - targets: ["172.31.16.37:8081"]
+
+  - job_name: "wallet-service"
+    metrics_path: "/actuator/prometheus"
+    static_configs:
+      - targets: ["172.31.23.255:8082"]
