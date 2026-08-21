@@ -10,9 +10,6 @@ import com.exchange.common.result.Result;
 import com.exchange.common.result.error.OutboxErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -32,9 +29,7 @@ import java.util.stream.Collectors;
  * is published again later. Consumers therefore must process event identifiers idempotently.</p>
  */
 @Slf4j
-@Component
-@EnableConfigurationProperties(OutboxProperties.class)
-@RequiredArgsConstructor(onConstructor_ = @Autowired)
+@RequiredArgsConstructor
 public class OutboxRetryHandler {
     private final OutboxProperties outboxConfig;
     private final OutboxRepository outboxManager;
