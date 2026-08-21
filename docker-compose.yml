@@ -89,6 +89,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       DB_USERNAME: ${LEDGER_DB_USERNAME:-ledger}
       DB_PASSWORD: ${LEDGER_DB_PASSWORD:-ledger-local}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     ports:
       - "8081:8081"
       - "9191:9191"
@@ -115,6 +116,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       DB_USERNAME: ${WALLET_DB_USERNAME:-wallet}
       DB_PASSWORD: ${WALLET_DB_PASSWORD:-wallet-local}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     ports:
       - "8082:8082"
       - "9192:9192"

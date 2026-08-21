@@ -6,7 +6,7 @@ This deployment uses four EC2 instances in one AWS VPC:
 
 ```text
 ledger EC2             infrastructure EC2       Kafka EC2                 monitoring EC2
-172.31.16.37           172.31.18.211            TODO: private IP          172.31.28.170
+172.31.16.37           172.31.18.211            172.31.28.6               172.31.28.170
 --------------------   ---------------------     ----------------------   ------------------
 ledger-service:8081 <- Prometheus scrape -------------------------------- Prometheus:9290
 ledger-service:9191    MySQL:3306                Kafka:9092                Grafana:3000
@@ -24,7 +24,7 @@ same EC2 instance.
 | File | Host | Responsibility |
 | --- | --- | --- |
 | `deploy/docker-compose.infrastructure.yml` | `172.31.18.211` | MySQL, Redis, and MySQL data. |
-| `deploy/docker-compose.kafka.yml` | Kafka private IP: TODO | Kafka, persistent broker data, and idempotent topic initialization. |
+| `deploy/docker-compose.kafka.yml` | `172.31.28.6` | Kafka, persistent broker data, and idempotent topic initialization. |
 | `deploy/docker-compose.ledger-service.yml` | `172.31.16.37` | Ledger application and ledger logs. |
 | `deploy/docker-compose.monitoring.yml` | `172.31.28.170` | Prometheus, Grafana, and monitoring data. |
 | `deploy/infra-test.env` | Infrastructure host | Infrastructure IP and database credentials. |
@@ -42,12 +42,12 @@ local development. Do not use it for this AWS deployment.
 | Variable | Default | Used for |
 | --- | --- | --- |
 | `INFRA_PRIVATE_IP` | `172.31.18.211` | MySQL and Redis host. |
-| `KAFKA_PRIVATE_IP` | TODO | Address advertised by Kafka to VPC clients. |
+| `KAFKA_PRIVATE_IP` | `172.31.28.6` | Address advertised by Kafka to VPC clients. |
 | `LEDGER_PRIVATE_IP` | `172.31.16.37` | Ledger HTTP and gRPC bindings. |
 | `MONITOR_PRIVATE_IP` | `172.31.28.170` | Prometheus and Grafana bindings. |
 | `LEDGER_DB_USERNAME` | `ledger` | MySQL application user. |
 | `LEDGER_DB_PASSWORD` | `ledger-local` | MySQL application password. |
-| `KAFKA_BOOTSTRAP_SERVERS` | `TODO_SET_KAFKA_PRIVATE_IP:9092` | Kafka client bootstrap endpoint; replace before deployment. |
+| `KAFKA_BOOTSTRAP_SERVERS` | `172.31.28.6:9092` | Kafka client bootstrap endpoint. |
 | `K6_PROMETHEUS_RW_SERVER_URL` | `http://172.31.28.170:9290/api/v1/write` | k6 metric destination. |
 
 Kafka must advertise its assigned private IP or VPC DNS name because clients on
@@ -79,11 +79,10 @@ The mounted `001-ledger-service.sql` does not run on ordinary restarts.
 
 ## Kafka EC2
 
-Before deployment, replace `TODO_SET_KAFKA_PRIVATE_IP` in
-`deploy/kafka-test.env` with the Kafka host's private IP or VPC DNS name:
+Use the Kafka host's private IP in `deploy/kafka-test.env`:
 
 ```dotenv
-KAFKA_PRIVATE_IP=TODO_SET_KAFKA_PRIVATE_IP
+KAFKA_PRIVATE_IP=172.31.28.6
 KAFKA_EXTERNAL_PORT=9092
 KAFKA_MEMORY_LIMIT=896m
 KAFKA_MEMORY_RESERVATION=512m
@@ -129,8 +128,8 @@ environment, use this controlled cutover:
    Kafka consumer lag reach zero.
 2. Start the dedicated Kafka stack and verify `kafka-topic-init` exits with code
    `0`.
-3. Replace the TODO endpoint in every ledger/wallet deployment and restart both
-   applications.
+3. Configure `172.31.28.6:9092` in every ledger/wallet deployment and restart
+   both applications.
 4. Verify publishing, consumption, retry topics, and DLT handling before
    removing the old infrastructure-host Kafka container.
 
@@ -148,7 +147,7 @@ LEDGER_PRIVATE_IP=172.31.16.37
 INFRA_PRIVATE_IP=172.31.18.211
 LEDGER_DB_USERNAME=ledger
 LEDGER_DB_PASSWORD=replace-with-the-infrastructure-value
-KAFKA_BOOTSTRAP_SERVERS=TODO_SET_KAFKA_PRIVATE_IP:9092
+KAFKA_BOOTSTRAP_SERVERS=172.31.28.6:9092
 ```
 
 Build and start ledger-service:
