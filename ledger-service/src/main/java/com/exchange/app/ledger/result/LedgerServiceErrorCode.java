@@ -10,7 +10,6 @@ public enum LedgerServiceErrorCode implements ErrorCode {
     SERIALIZE_ERROR(12, ErrorCategory.INTERNAL, "serialize_error"),
     INVALID_VALUE_ERROR(13, ErrorCategory.INTERNAL, "invalid_value_error"),
     INVALID_ENUM_ERROR(14, ErrorCategory.INTERNAL, "invalid_enum_error"),
-    PUBLISH_KAFKA_ERROR(15, ErrorCategory.INTERNAL, "publish_kafka_error"),
     INVALID_REQUEST_PARAMETER(100, ErrorCategory.INVALID_ARGUMENT, "invalid_request_parameter"),
     REQUEST_HASH_CONFLICT(200, ErrorCategory.FAILED_PRECONDITION, "request_hash_conflict"),
     REQUEST_IN_PROCESSING(201, ErrorCategory.PROCESSING, "request_in_processing"),

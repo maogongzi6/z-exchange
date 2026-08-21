@@ -4,7 +4,6 @@ import com.exchange.app.wallet.config.CustomCacheProperties;
 import com.exchange.app.wallet.cronjob.outbox.constant.OutboxConstant;
 import com.exchange.app.wallet.dao.repository.*;
 import com.exchange.app.wallet.dao.store.BalanceSnapshotStore;
-import com.exchange.app.wallet.kafka.producer.DefaultPublisher;
 import com.exchange.app.wallet.po.enums.BusinessType;
 import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.enums.transaction.*;
@@ -22,6 +21,7 @@ import com.exchange.app.wallet.result.WalletServiceErrorCode;
 import com.exchange.app.wallet.utils.*;
 import com.exchange.common.constant.GlobalServiceId;
 import com.exchange.common.db.utils.DbTxnExecutor;
+import com.exchange.common.kafka.producer.IPublisher;
 import com.exchange.common.outbox.dao.repository.OutboxRepository;
 import com.exchange.common.outbox.po.Outbox;
 import com.exchange.common.outbox.po.enums.OutboxStatus;
@@ -57,7 +57,7 @@ public class BeforePostLedgerProcessor {
     private final WalletActionRepository walletActionManager;
     private final WalletAccountMappingRepository walletAccountMappingManager;
     private final OutboxRepository outboxManager;
-    private final DefaultPublisher postLedgerPublisher;
+    private final IPublisher postLedgerPublisher;
     private final UpdateReservationProcessor updateReservationProcessor;
     private final UpdateBalanceSnapshotProcessor updateBalanceSnapshotProcessor;
 

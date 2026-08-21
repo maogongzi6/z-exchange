@@ -11,8 +11,13 @@ import com.exchange.common.kafka.listener.retry.ListenerAttemptResolver;
 import com.exchange.common.kafka.producer.IPublisher;
 import com.exchange.common.outbox.dao.repository.OutboxRepository;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.concurrent.Executor;
+
+import static com.exchange.common.kafka.container.CommandContainerRegister.OUTBOX_PUBLISH_CALLBACK_EXECUTOR;
 
 @Configuration
 @EnableConfigurationProperties(LedgerListenerRetryProperties.class)
@@ -36,7 +41,8 @@ public class LedgerListenerConfig {
             OutboxRepository outboxRepository,
             IPublisher replyWalletPublisher,
             ListenerAttemptResolver listenerAttemptResolver,
-            LedgerListenerRetryProperties retryProperties
+            LedgerListenerRetryProperties retryProperties,
+            @Qualifier(OUTBOX_PUBLISH_CALLBACK_EXECUTOR) Executor publishCallbackExecutor
     ) {
         retryProperties.validate();
         ListenerRetryPolicy retryPolicy = new ListenerRetryPolicy(
@@ -49,7 +55,8 @@ public class LedgerListenerConfig {
                 replyWalletPublisher,
                 listenerAttemptResolver,
                 retryPolicy,
-                LedgerServiceErrorCode.SERVER_ERROR
+                LedgerServiceErrorCode.SERVER_ERROR,
+                publishCallbackExecutor
         );
     }
 }

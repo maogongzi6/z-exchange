@@ -87,7 +87,6 @@ public class LedgerCommandMessageHandler implements Function<EventEnvelopePb, Ou
     }
 
     private boolean isExplicitRetryable(LedgerServiceErrorCode errorCode) {
-        return errorCode == LedgerServiceErrorCode.REQUEST_IN_PROCESSING
-                || errorCode == LedgerServiceErrorCode.PUBLISH_KAFKA_ERROR;
+        return errorCode == LedgerServiceErrorCode.REQUEST_IN_PROCESSING;
     }
 }

@@ -6,9 +6,12 @@ import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 @Configuration
 public class CommandContainerRegister {
+    public static final String OUTBOX_PUBLISH_CALLBACK_EXECUTOR = "outboxPublishCallbackExecutor";
+
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, byte[]> concurrentCommandKafkaListenerContainerFactory(
             ConsumerFactory<String, byte[]> consumerFactory,
@@ -36,5 +39,17 @@ public class CommandContainerRegister {
         containerProperties.setAckMode(ContainerProperties.AckMode.MANUAL);
         containerProperties.setDeliveryAttemptHeader(true);
         return factory;
+    }
+
+    @Bean(name = OUTBOX_PUBLISH_CALLBACK_EXECUTOR)
+    public ThreadPoolTaskExecutor outboxPublishCallbackExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(8);
+        executor.setQueueCapacity(512);
+        executor.setThreadNamePrefix("outbox-publish-callback-");
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(10);
+        return executor;
     }
 }

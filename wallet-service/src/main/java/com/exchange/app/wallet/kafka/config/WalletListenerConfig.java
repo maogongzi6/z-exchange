@@ -18,6 +18,10 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.concurrent.Executor;
+
+import static com.exchange.common.kafka.container.CommandContainerRegister.OUTBOX_PUBLISH_CALLBACK_EXECUTOR;
+
 @Configuration
 @EnableConfigurationProperties(WalletListenerRetryProperties.class)
 public class WalletListenerConfig {
@@ -42,7 +46,8 @@ public class WalletListenerConfig {
             OutboxRepository outboxRepository,
             IPublisher publisher,
             @Qualifier("walletListenerAttemptResolver") ListenerAttemptResolver attemptResolver,
-            WalletListenerRetryProperties retryProperties
+            WalletListenerRetryProperties retryProperties,
+            @Qualifier(OUTBOX_PUBLISH_CALLBACK_EXECUTOR) Executor publishCallbackExecutor
     ) {
         retryProperties.validate();
         /*
@@ -57,7 +62,8 @@ public class WalletListenerConfig {
                 publisher,
                 attemptResolver,
                 retryPolicy,
-                WalletServiceErrorCode.SERVER_ERROR
+                WalletServiceErrorCode.SERVER_ERROR,
+                publishCallbackExecutor
         );
     }
 

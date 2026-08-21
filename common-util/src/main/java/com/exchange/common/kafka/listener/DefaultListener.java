@@ -26,6 +26,8 @@ import org.springframework.kafka.support.Acknowledgment;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @Slf4j
 public class DefaultListener {
@@ -42,6 +44,8 @@ public class DefaultListener {
     private final ListenerRetryPolicy retryPolicy;
     // Public error used when an unexpected exception can still be converted into a reply.
     private final ErrorCode unexpectedErrorCode;
+    // Keeps callback-side DB finalization off Kafka producer network threads.
+    private final Executor publishCallbackExecutor;
 
     public DefaultListener(
             MessageHandler messageHandler,
@@ -49,7 +53,8 @@ public class DefaultListener {
             IPublisher replyPublisher,
             ListenerAttemptResolver attemptResolver,
             ListenerRetryPolicy retryPolicy,
-            ErrorCode unexpectedErrorCode
+            ErrorCode unexpectedErrorCode,
+            Executor publishCallbackExecutor
     ) {
         this.messageHandler = Objects.requireNonNull(messageHandler, "messageHandler");
         this.outboxRepository = Objects.requireNonNull(outboxRepository, "outboxRepository");
@@ -57,6 +62,7 @@ public class DefaultListener {
         this.attemptResolver = Objects.requireNonNull(attemptResolver, "attemptResolver");
         this.retryPolicy = Objects.requireNonNull(retryPolicy, "retryPolicy");
         this.unexpectedErrorCode = Objects.requireNonNull(unexpectedErrorCode, "unexpectedErrorCode");
+        this.publishCallbackExecutor = Objects.requireNonNull(publishCallbackExecutor, "publishCallbackExecutor");
     }
 
     /*
@@ -103,6 +109,11 @@ public class DefaultListener {
             outboxToPublish = persistActionOrThrow(action);
         }
 
+        /*
+         * Business/reply state is durable before acknowledging the consumed record. Immediate
+         * publishing happens afterward as a latency optimization; the durable outbox retry worker
+         * remains responsible for recovery if that attempt fails.
+         */
         acknowledgeOrThrowRetriable(ack, headers);
         tryImmediatePublishSuppressingErrors(outboxToPublish);
     }
@@ -242,11 +253,17 @@ public class DefaultListener {
     }
 
     /*
-     * Immediate publish is best-effort because the source message has already been acked
-     * and the outbox row is durable. Throwing here would create a Kafka retry for work the
-     * outbox retry worker already owns.
+     * Immediate publish is best-effort because the source record has already been acknowledged
+     * and the reply outbox row is durable. The asynchronous callback runs on a dedicated executor
+     * so database work never blocks Kafka producer network threads. A broker-acknowledged send is
+     * finalized as SENT; every timeout, producer error, callback error, or finalization error is
+     * logged and left for the outbox retry worker.
+     *
+     * At-least-once delivery still applies: a broker acknowledgment followed by a failed status
+     * update can cause a later retry and duplicate delivery. Reply consumers must be idempotent.
      */
     private void tryImmediatePublishSuppressingErrors(Outbox outbox) {
+        // TODO Carry the insert decision here if existing rows should skip this immediate attempt.
         if (outbox == null) {
             return;
         }
@@ -260,26 +277,66 @@ public class DefaultListener {
         }
 
         try {
-            Result<Void> result = replyPublisher.publish(outbox);
-            if (result.isSuccess()) {
-                finalizeSentSuppressingErrors(outbox);
-            } else {
+            CompletableFuture<Result<Void>> publishFuture = replyPublisher.publishAsync(outbox);
+            if (publishFuture == null) {
                 log.error(
-                        "immediate reply publish failed, eventId={}, commandId={}, errorCode={}, detail={}",
+                        "immediate reply publish returned null future, eventId={}, commandId={}",
+                        outbox.getEventId(),
+                        outbox.getCommandId()
+                );
+                return;
+            }
+            publishFuture.whenCompleteAsync(
+                    (result, throwable) -> handleImmediatePublishCompletion(outbox, result, throwable),
+                    publishCallbackExecutor
+            ).exceptionally(throwable -> {
+                log.error(
+                        "immediate reply publish callback failed, eventId={}, commandId={}",
                         outbox.getEventId(),
                         outbox.getCommandId(),
-                        result.getErrorCode(),
-                        result.getDetail()
+                        throwable
                 );
-            }
+                return null;
+            });
         } catch (Exception e) {
             log.error(
-                    "immediate reply publish threw exception, eventId={}, commandId={}",
+                    "immediate reply publish setup threw exception, eventId={}, commandId={}",
                     outbox.getEventId(),
                     outbox.getCommandId(),
                     e
             );
         }
+    }
+
+    private void handleImmediatePublishCompletion(Outbox outbox, Result<Void> result, Throwable throwable) {
+        if (throwable != null) {
+            log.error(
+                    "immediate reply publish completed exceptionally, eventId={}, commandId={}",
+                    outbox.getEventId(),
+                    outbox.getCommandId(),
+                    throwable
+            );
+            return;
+        }
+        if (result == null) {
+            log.error(
+                    "immediate reply publish completed with null result, eventId={}, commandId={}",
+                    outbox.getEventId(),
+                    outbox.getCommandId()
+            );
+            return;
+        }
+        if (result.isSuccess()) {
+            finalizeSentSuppressingErrors(outbox);
+            return;
+        }
+        log.error(
+                "immediate reply publish failed, eventId={}, commandId={}, errorCode={}, detail={}",
+                outbox.getEventId(),
+                outbox.getCommandId(),
+                result.getErrorCode(),
+                result.getDetail()
+        );
     }
 
     private void finalizeSentSuppressingErrors(Outbox outbox) {

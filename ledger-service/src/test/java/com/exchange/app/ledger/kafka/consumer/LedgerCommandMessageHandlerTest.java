@@ -139,20 +139,6 @@ class LedgerCommandMessageHandlerTest {
         assertEquals(LedgerServiceErrorCode.REQUEST_IN_PROCESSING, thrown.getErrorCode());
     }
 
-    @Test
-    void publishKafkaErrorIsExplicitlyRetryable() {
-        // KL-LH-007: legacy publish failure is still treated as retryable at the listener boundary.
-        when(postLedgerProcessor.postTransaction(any(PostTransactionRequestPb.class)))
-                .thenReturn(PostTransactionResult.failure(LedgerServiceErrorCode.PUBLISH_KAFKA_ERROR, "producer down"));
-
-        KafkaListenerRetriableException thrown = assertThrows(
-                KafkaListenerRetriableException.class,
-                () -> handler.apply(envelope(EventType.POST_LEDGER, request().toByteString()))
-        );
-
-        assertEquals(LedgerServiceErrorCode.PUBLISH_KAFKA_ERROR, thrown.getErrorCode());
-    }
-
     private EventEnvelopePb envelope(String eventType, ByteString payload) {
         return EventEnvelopePb.newBuilder()
                 .setEventId(REQUEST_EVENT_ID)

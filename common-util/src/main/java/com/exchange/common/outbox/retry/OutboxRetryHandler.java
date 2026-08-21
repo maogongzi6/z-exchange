@@ -17,8 +17,20 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+/**
+ * Recovers pending outbox events through bounded, page-oriented publish attempts.
+ *
+ * <p>A short database transaction claims each page by advancing its next-attempt time. All sends
+ * in the page are started before waiting for results, allowing broker acknowledgments to arrive
+ * concurrently. Only acknowledged sends are finalized as {@link OutboxStatus#SENT}; failed or
+ * timed-out sends remain pending for a later retry cycle.</p>
+ *
+ * <p>Delivery is at-least-once: if Kafka accepts an event but database finalization fails, the row
+ * is published again later. Consumers therefore must process event identifiers idempotently.</p>
+ */
 @Slf4j
 @Component
 @EnableConfigurationProperties(OutboxProperties.class)
@@ -47,16 +59,19 @@ public class OutboxRetryHandler {
             }
 
             List<Outbox> successOutboxes = new ArrayList<>(), failedOutboxes = new ArrayList<>();
-            // retry publish
-            for (Outbox outbox : outboxes) {
-                Result<Void> publishResult = publisher.publish(outbox);
-                if (publishResult.isSuccess()) {
-                    successOutboxes.add(outbox);
+            // Start the whole page before joining so broker acknowledgment waits overlap.
+            List<CompletableFuture<PublishAttempt>> publishFutures = outboxes.stream()
+                    .map(this::publishAsync)
+                    .toList();
+            for (CompletableFuture<PublishAttempt> publishFuture : publishFutures) {
+                PublishAttempt attempt = publishFuture.join();
+                if (attempt.success()) {
+                    successOutboxes.add(attempt.outbox());
                 } else {
-                    failedOutboxes.add(outbox);
+                    failedOutboxes.add(attempt.outbox());
                 }
             }
-            // update to SENT
+            // Finalize only broker-acknowledged attempts; every other row remains retryable.
             if (!successOutboxes.isEmpty()) {
                 int updatedCount = outboxManager.batchUpdateStatusToFinalize(successOutboxes.stream().map(Outbox::getId).collect(Collectors.toList()), OutboxStatus.PENDING, OutboxStatus.SENT, now);
                 if (updatedCount != successOutboxes.size()) {
@@ -76,6 +91,38 @@ public class OutboxRetryHandler {
         log.info("outbox retry success: {}, failed: {}", successCount, failedCount);
     }
 
+    private CompletableFuture<PublishAttempt> publishAsync(Outbox outbox) {
+        try {
+            CompletableFuture<Result<Void>> publishFuture = publisher.publishAsync(outbox);
+            if (publishFuture == null) {
+                log.error("outbox publish returned null future, eventId={}, commandId={}", outbox.getEventId(), outbox.getCommandId());
+                return CompletableFuture.completedFuture(PublishAttempt.failed(outbox));
+            }
+            return publishFuture.handle((result, throwable) -> {
+                if (throwable != null) {
+                    log.error(
+                            "outbox publish completed exceptionally, eventId={}, commandId={}",
+                            outbox.getEventId(),
+                            outbox.getCommandId(),
+                            throwable
+                    );
+                    return PublishAttempt.failed(outbox);
+                }
+                return result != null && result.isSuccess()
+                        ? PublishAttempt.succeeded(outbox)
+                        : PublishAttempt.failed(outbox);
+            });
+        } catch (Exception e) {
+            log.error(
+                    "outbox publish setup threw exception, eventId={}, commandId={}",
+                    outbox.getEventId(),
+                    outbox.getCommandId(),
+                    e
+            );
+            return CompletableFuture.completedFuture(PublishAttempt.failed(outbox));
+        }
+    }
+
     private Result<List<Outbox>> claimPage(LocalDateTime now, long lastId) {
         // select for update skip lock + update next_attempt_at to claim
         return dbTxnExecutor.executeWithDefault(() -> {
@@ -90,5 +137,15 @@ public class OutboxRetryHandler {
             }
             return Result.success(List.copyOf(locked));
         });
+    }
+
+    private record PublishAttempt(Outbox outbox, boolean success) {
+        private static PublishAttempt succeeded(Outbox outbox) {
+            return new PublishAttempt(outbox, true);
+        }
+
+        private static PublishAttempt failed(Outbox outbox) {
+            return new PublishAttempt(outbox, false);
+        }
     }
 }

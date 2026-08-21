@@ -11,7 +11,6 @@ public enum WalletServiceErrorCode implements ErrorCode {
     DB_STATE_BROKEN(5, ErrorCategory.INTERNAL, "db_state_broken"),
     INVALID_VALUE_ERROR(6, ErrorCategory.INTERNAL, "invalid_value_error"),
     INVALID_ENUM_ERROR(7, ErrorCategory.INTERNAL, "invalid_enum_error"),
-    PUBLISH_KAFKA_ERROR(8, ErrorCategory.INTERNAL, "publish_kafka_error"),
     SERIALIZE_ERROR(9, ErrorCategory.INTERNAL, "serialize_error"),
 
     INVALID_REQUEST_PARAMETER(100, ErrorCategory.INVALID_ARGUMENT, "invalid_request_parameter"),

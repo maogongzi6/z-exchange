@@ -31,6 +31,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.support.Acknowledgment;
 
 import java.time.LocalDateTime;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.StreamSupport;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -80,7 +82,8 @@ class DefaultListenerTest {
                 replyPublisher,
                 attemptResolver,
                 new ListenerRetryPolicy(1000, REPLY_FAILURE_AFTER_ATTEMPTS),
-                KafkaListenerErrorCode.LISTENER_INTERNAL_ERROR
+                KafkaListenerErrorCode.LISTENER_INTERNAL_ERROR,
+                Runnable::run
         );
         headers = new RecordHeaders();
         envelope = envelope();
@@ -106,14 +109,16 @@ class DefaultListenerTest {
         when(messageHandler.handle(envelope)).thenReturn(ListenerAction.reply(replyOutbox));
         when(outboxRepository.insertWithClaimAndVerify(eq(replyOutbox), any(LocalDateTime.class)))
                 .thenReturn(OutboxInsertDecision.inserted(replyOutbox));
-        when(replyPublisher.publish(replyOutbox)).thenReturn(Result.<Void>failure(KafkaListenerErrorCode.LISTENER_INTERNAL_ERROR));
+        when(replyPublisher.publishAsync(replyOutbox)).thenReturn(CompletableFuture.completedFuture(
+                Result.<Void>failure(KafkaListenerErrorCode.LISTENER_INTERNAL_ERROR)
+        ));
 
         listener.onMessage(envelopeBytes, ack, headers);
 
         InOrder order = inOrder(outboxRepository, ack, replyPublisher);
         order.verify(outboxRepository).insertWithClaimAndVerify(eq(replyOutbox), any(LocalDateTime.class));
         order.verify(ack).acknowledge();
-        order.verify(replyPublisher).publish(replyOutbox);
+        order.verify(replyPublisher).publishAsync(replyOutbox);
     }
 
     @Test
@@ -140,7 +145,9 @@ class DefaultListenerTest {
                 .thenReturn(ListenerAction.reply(failedOutbox));
         when(outboxRepository.insertWithClaimAndVerify(eq(failedOutbox), any(LocalDateTime.class)))
                 .thenReturn(OutboxInsertDecision.inserted(failedOutbox));
-        when(replyPublisher.publish(failedOutbox)).thenReturn(Result.<Void>failure(KafkaListenerErrorCode.LISTENER_INTERNAL_ERROR));
+        when(replyPublisher.publishAsync(failedOutbox)).thenReturn(CompletableFuture.completedFuture(
+                Result.<Void>failure(KafkaListenerErrorCode.LISTENER_INTERNAL_ERROR)
+        ));
 
         listener.onMessage(envelopeBytes, ack, headers);
 
@@ -149,7 +156,7 @@ class DefaultListenerTest {
         assertEquals(ListenerFailureType.NON_RETRYABLE, captor.getValue().type());
         assertEquals(KafkaListenerErrorCode.LISTENER_INTERNAL_ERROR, captor.getValue().errorCode());
         verify(ack).acknowledge();
-        verify(replyPublisher).publish(failedOutbox);
+        verify(replyPublisher).publishAsync(failedOutbox);
     }
 
     @Test
@@ -161,7 +168,9 @@ class DefaultListenerTest {
                 .thenReturn(ListenerAction.reply(failedOutbox));
         when(outboxRepository.insertWithClaimAndVerify(eq(failedOutbox), any(LocalDateTime.class)))
                 .thenReturn(OutboxInsertDecision.inserted(failedOutbox));
-        when(replyPublisher.publish(failedOutbox)).thenReturn(Result.<Void>failure(KafkaListenerErrorCode.LISTENER_INTERNAL_ERROR));
+        when(replyPublisher.publishAsync(failedOutbox)).thenReturn(CompletableFuture.completedFuture(
+                Result.<Void>failure(KafkaListenerErrorCode.LISTENER_INTERNAL_ERROR)
+        ));
 
         listener.onMessage(envelopeBytes, ack, headers);
 
@@ -206,7 +215,9 @@ class DefaultListenerTest {
                 .thenReturn(ListenerAction.reply(failedOutbox));
         when(outboxRepository.insertWithClaimAndVerify(eq(failedOutbox), any(LocalDateTime.class)))
                 .thenReturn(OutboxInsertDecision.inserted(failedOutbox));
-        when(replyPublisher.publish(failedOutbox)).thenReturn(Result.<Void>failure(KafkaListenerErrorCode.LISTENER_INTERNAL_ERROR));
+        when(replyPublisher.publishAsync(failedOutbox)).thenReturn(CompletableFuture.completedFuture(
+                Result.<Void>failure(KafkaListenerErrorCode.LISTENER_INTERNAL_ERROR)
+        ));
 
         listener.onMessage(envelopeBytes, ack, headers);
 
@@ -215,7 +226,7 @@ class DefaultListenerTest {
         assertEquals(ListenerFailureType.RETRY_EXHAUSTED, captor.getValue().type());
         assertEquals(KafkaListenerErrorCode.RETRY_EXHAUSTED, captor.getValue().errorCode());
         verify(ack).acknowledge();
-        verify(replyPublisher).publish(failedOutbox);
+        verify(replyPublisher).publishAsync(failedOutbox);
     }
 
     @Test
@@ -232,12 +243,14 @@ class DefaultListenerTest {
                 .thenReturn(ListenerAction.reply(failedOutbox));
         when(outboxRepository.insertWithClaimAndVerify(eq(failedOutbox), any(LocalDateTime.class)))
                 .thenReturn(OutboxInsertDecision.inserted(failedOutbox));
-        when(replyPublisher.publish(failedOutbox)).thenReturn(Result.<Void>failure(KafkaListenerErrorCode.LISTENER_INTERNAL_ERROR));
+        when(replyPublisher.publishAsync(failedOutbox)).thenReturn(CompletableFuture.completedFuture(
+                Result.<Void>failure(KafkaListenerErrorCode.LISTENER_INTERNAL_ERROR)
+        ));
 
         listener.onMessage(envelopeBytes, ack, headers);
 
         verify(ack).acknowledge();
-        verify(replyPublisher).publish(failedOutbox);
+        verify(replyPublisher).publishAsync(failedOutbox);
     }
 
     @Test
@@ -270,12 +283,14 @@ class DefaultListenerTest {
         when(messageHandler.handle(envelope)).thenReturn(ListenerAction.reply(replyOutbox));
         when(outboxRepository.insertWithClaimAndVerify(eq(replyOutbox), any(LocalDateTime.class)))
                 .thenReturn(OutboxInsertDecision.existingSameIntent(replyOutbox, existing));
-        when(replyPublisher.publish(existing)).thenReturn(Result.<Void>failure(KafkaListenerErrorCode.LISTENER_INTERNAL_ERROR));
+        when(replyPublisher.publishAsync(existing)).thenReturn(CompletableFuture.completedFuture(
+                Result.<Void>failure(KafkaListenerErrorCode.LISTENER_INTERNAL_ERROR)
+        ));
 
         listener.onMessage(envelopeBytes, ack, headers);
 
         verify(ack).acknowledge();
-        verify(replyPublisher).publish(existing);
+        verify(replyPublisher).publishAsync(existing);
     }
 
     @Test
@@ -389,7 +404,9 @@ class DefaultListenerTest {
     void immediatePublishFailureResultIsSuppressed() {
         // KL-DL-019: once the source is acked, outbox retry owns publish recovery.
         stubInsertedReply();
-        when(replyPublisher.publish(replyOutbox)).thenReturn(Result.<Void>failure(KafkaListenerErrorCode.LISTENER_INTERNAL_ERROR));
+        when(replyPublisher.publishAsync(replyOutbox)).thenReturn(CompletableFuture.completedFuture(
+                Result.<Void>failure(KafkaListenerErrorCode.LISTENER_INTERNAL_ERROR)
+        ));
 
         assertDoesNotThrow(() -> listener.onMessage(envelopeBytes, ack, headers));
 
@@ -397,10 +414,43 @@ class DefaultListenerTest {
     }
 
     @Test
+    void immediatePublishDoesNotWaitForBrokerAcknowledgment() {
+        // The Kafka listener thread must return while the producer send is still in flight.
+        stubInsertedReply();
+        CompletableFuture<Result<Void>> publishFuture = new CompletableFuture<>();
+        when(replyPublisher.publishAsync(replyOutbox)).thenReturn(publishFuture);
+
+        listener.onMessage(envelopeBytes, ack, headers);
+
+        verify(ack).acknowledge();
+        verify(outboxRepository, never())
+                .updateStatusToFinalize(any(), eq(OutboxStatus.SENT), any(LocalDateTime.class));
+
+        publishFuture.complete(Result.success());
+
+        verify(outboxRepository)
+                .updateStatusToFinalize(eq(replyOutbox), eq(OutboxStatus.SENT), any(LocalDateTime.class));
+    }
+
+    @Test
+    void immediatePublishExceptionalCompletionLeavesOutboxPending() {
+        // Timeout/producer exceptions are observed asynchronously; the outbox retry worker owns recovery.
+        stubInsertedReply();
+        when(replyPublisher.publishAsync(replyOutbox)).thenReturn(
+                CompletableFuture.failedFuture(new TimeoutException("broker acknowledgment timed out"))
+        );
+
+        assertDoesNotThrow(() -> listener.onMessage(envelopeBytes, ack, headers));
+
+        verify(outboxRepository, never())
+                .updateStatusToFinalize(any(), eq(OutboxStatus.SENT), any(LocalDateTime.class));
+    }
+
+    @Test
     void immediatePublishExceptionIsSuppressed() {
         // KL-DL-020: publisher exceptions after ack are logged and left to outbox retry.
         stubInsertedReply();
-        doThrow(new RuntimeException("producer down")).when(replyPublisher).publish(replyOutbox);
+        doThrow(new RuntimeException("producer down")).when(replyPublisher).publishAsync(replyOutbox);
 
         assertDoesNotThrow(() -> listener.onMessage(envelopeBytes, ack, headers));
 
@@ -411,7 +461,7 @@ class DefaultListenerTest {
     void immediatePublishSuccessFinalizesOutbox() {
         // KL-DL-021: successful immediate publish should mark the durable reply as sent.
         stubInsertedReply();
-        when(replyPublisher.publish(replyOutbox)).thenReturn(Result.success());
+        when(replyPublisher.publishAsync(replyOutbox)).thenReturn(CompletableFuture.completedFuture(Result.success()));
 
         listener.onMessage(envelopeBytes, ack, headers);
 
@@ -422,7 +472,7 @@ class DefaultListenerTest {
     void finalizeSentFailureIsSuppressed() {
         // KL-DL-022: finalization failure must not turn an already-published reply into source retry.
         stubInsertedReply();
-        when(replyPublisher.publish(replyOutbox)).thenReturn(Result.success());
+        when(replyPublisher.publishAsync(replyOutbox)).thenReturn(CompletableFuture.completedFuture(Result.success()));
         doThrow(new RuntimeException("db down"))
                 .when(outboxRepository)
                 .updateStatusToFinalize(eq(replyOutbox), eq(OutboxStatus.SENT), any(LocalDateTime.class));
