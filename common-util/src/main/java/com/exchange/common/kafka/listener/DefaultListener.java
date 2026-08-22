@@ -7,6 +7,8 @@ import com.exchange.common.kafka.listener.exception.DlqException;
 import com.exchange.common.kafka.listener.exception.KafkaListenerRetriableException;
 import com.exchange.common.kafka.listener.failure.ListenerFailure;
 import com.exchange.common.kafka.listener.handler.MessageHandler;
+import com.exchange.common.kafka.listener.metrics.KafkaListenerMetrics;
+import com.exchange.common.kafka.listener.metrics.KafkaListenerRequestOutcome;
 import com.exchange.common.kafka.listener.outbox.OutboxInsertDecision;
 import com.exchange.common.kafka.listener.retry.ListenerAttemptResolver;
 import com.exchange.common.kafka.producer.IPublisher;
@@ -46,6 +48,7 @@ public class DefaultListener {
     private final ErrorCode unexpectedErrorCode;
     // Keeps callback-side DB finalization off Kafka producer network threads.
     private final Executor publishCallbackExecutor;
+    private final KafkaListenerMetrics listenerMetrics;
 
     public DefaultListener(
             MessageHandler messageHandler,
@@ -56,6 +59,28 @@ public class DefaultListener {
             ErrorCode unexpectedErrorCode,
             Executor publishCallbackExecutor
     ) {
+        this(
+                messageHandler,
+                outboxRepository,
+                replyPublisher,
+                attemptResolver,
+                retryPolicy,
+                unexpectedErrorCode,
+                publishCallbackExecutor,
+                KafkaListenerMetrics.noop()
+        );
+    }
+
+    public DefaultListener(
+            MessageHandler messageHandler,
+            OutboxRepository outboxRepository,
+            IPublisher replyPublisher,
+            ListenerAttemptResolver attemptResolver,
+            ListenerRetryPolicy retryPolicy,
+            ErrorCode unexpectedErrorCode,
+            Executor publishCallbackExecutor,
+            KafkaListenerMetrics listenerMetrics
+    ) {
         this.messageHandler = Objects.requireNonNull(messageHandler, "messageHandler");
         this.outboxRepository = Objects.requireNonNull(outboxRepository, "outboxRepository");
         this.replyPublisher = Objects.requireNonNull(replyPublisher, "replyPublisher");
@@ -63,6 +88,7 @@ public class DefaultListener {
         this.retryPolicy = Objects.requireNonNull(retryPolicy, "retryPolicy");
         this.unexpectedErrorCode = Objects.requireNonNull(unexpectedErrorCode, "unexpectedErrorCode");
         this.publishCallbackExecutor = Objects.requireNonNull(publishCallbackExecutor, "publishCallbackExecutor");
+        this.listenerMetrics = Objects.requireNonNull(listenerMetrics, "listenerMetrics");
     }
 
     /*
@@ -73,8 +99,74 @@ public class DefaultListener {
      * produced yet, or where the message cannot identify a request.
      */
     public void onMessage(byte[] envelopeBytes, Acknowledgment ack, Headers headers) {
+        onMessage(envelopeBytes, ack, headers, System.currentTimeMillis());
+    }
+
+    public void onMessage(byte[] envelopeBytes, Acknowledgment ack, Headers headers, long recordTimestamp) {
+        long startedAtNanos = System.nanoTime();
+        KafkaListenerRequestOutcome outcome = null;
+        ListenerProcessingResult processingResult;
+        recordProcessingDelaySafely(recordTimestamp, headers);
+        try {
+            processingResult = processMessage(envelopeBytes, ack, headers);
+            outcome = processingResult.outcome();
+        } catch (DlqException e) {
+            /*
+             * DLQ is a later Spring Kafka routing result, not an outcome known here. This
+             * invocation only knows that the failure cannot be retried by the listener; the
+             * service DLT handler records the separate DLT metric after delivery is confirmed.
+             */
+            outcome = KafkaListenerRequestOutcome.NON_RETRYABLE;
+            log.error("listener dlq, errorCode={}, detail={}", e.getErrorCode(), e.getMessage(), e);
+            throw e;
+        } catch (KafkaListenerRetriableException e) {
+            outcome = e.getErrorCode() == KafkaListenerErrorCode.ACK_FAILED
+                    ? KafkaListenerRequestOutcome.ACK_FAILURE
+                    : KafkaListenerRequestOutcome.RETRYABLE;
+            throw e;
+        } catch (RuntimeException e) {
+            // An unclassified escaped failure is non-retryable under the listener contract.
+            outcome = KafkaListenerRequestOutcome.NON_RETRYABLE;
+            throw e;
+        } finally {
+            recordCompletionSafely(outcome, System.nanoTime() - startedAtNanos);
+        }
+
+        /*
+         * Immediate publishing is a best-effort latency optimization after the durable listener
+         * outcome has been acknowledged and measured. Keeping it outside the listener metric
+         * boundary prevents publisher latency or future publisher failures from contaminating
+         * listener duration and outcome metrics.
+         */
+        tryImmediatePublishSuppressingErrors(processingResult.outboxToPublish());
+    }
+
+    private void recordProcessingDelaySafely(long recordTimestamp, Headers headers) {
+        try {
+            listenerMetrics.recordProcessingDelay(recordTimestamp, headers);
+        } catch (RuntimeException e) {
+            log.error("failed to record Kafka listener processing delay metric", e);
+            // Observability failures must not affect listener processing or acknowledgment.
+        }
+    }
+
+    private void recordCompletionSafely(KafkaListenerRequestOutcome outcome, long durationNanos) {
+        try {
+            listenerMetrics.recordCompletion(outcome, durationNanos);
+        } catch (RuntimeException e) {
+            log.error("failed to record Kafka listener completion metric, outcome={}", outcome, e);
+            // In particular, never mask the original retry/DLQ exception from the listener.
+        }
+    }
+
+    private ListenerProcessingResult processMessage(
+            byte[] envelopeBytes,
+            Acknowledgment ack,
+            Headers headers
+    ) {
         EventEnvelopePb envelope = null;
         Outbox outboxToPublish;
+        KafkaListenerRequestOutcome outcome = KafkaListenerRequestOutcome.SUCCESS;
 
         if (isAckFailureRetry(headers)) {
             /*
@@ -83,7 +175,7 @@ public class DefaultListener {
              * of re-running idempotent business and outbox logic just to recover the offset.
              */
             acknowledgeOrThrowRetriable(ack, headers);
-            return;
+            return new ListenerProcessingResult(KafkaListenerRequestOutcome.SUCCESS, null);
         }
 
         try {
@@ -91,14 +183,15 @@ public class DefaultListener {
             ListenerAction action = messageHandler.handle(envelope);
             outboxToPublish = persistActionOrThrow(action);
         } catch (DlqException e) {
-            log.error("listener dlq, errorCode={}, detail={}", e.getErrorCode(), e.getMessage(), e);
             throw e;
         } catch (KafkaListenerRetriableException e) {
             outboxToPublish = handleRetriableFailureOrThrow(envelope, e, headers);
+            outcome = KafkaListenerRequestOutcome.FAILURE_REPLIED;
         } catch (CustomizedException e) {
             ListenerFailure failure = ListenerFailure.nonRetryable(e.getErrorCode(), e.getMessage(), e);
             ListenerAction action = messageHandler.handleFailure(requireEnvelope(envelope), failure);
             outboxToPublish = persistActionOrThrow(action);
+            outcome = KafkaListenerRequestOutcome.FAILURE_REPLIED;
         } catch (Exception e) {
             ListenerFailure failure = ListenerFailure.unexpected(
                     unexpectedErrorCode,
@@ -107,15 +200,21 @@ public class DefaultListener {
             );
             ListenerAction action = messageHandler.handleFailure(requireEnvelope(envelope), failure);
             outboxToPublish = persistActionOrThrow(action);
+            outcome = KafkaListenerRequestOutcome.FAILURE_REPLIED;
         }
 
         /*
-         * Business/reply state is durable before acknowledging the consumed record. Immediate
-         * publishing happens afterward as a latency optimization; the durable outbox retry worker
-         * remains responsible for recovery if that attempt fails.
+         * Business/reply state is durable before acknowledging the consumed record. The caller
+         * performs best-effort immediate publishing only after listener metrics are finalized.
          */
         acknowledgeOrThrowRetriable(ack, headers);
-        tryImmediatePublishSuppressingErrors(outboxToPublish);
+        return new ListenerProcessingResult(outcome, outboxToPublish);
+    }
+
+    private record ListenerProcessingResult(
+            KafkaListenerRequestOutcome outcome,
+            Outbox outboxToPublish
+    ) {
     }
 
     /*

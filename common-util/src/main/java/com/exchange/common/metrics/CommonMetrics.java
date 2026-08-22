@@ -47,4 +47,39 @@ public final class CommonMetrics {
             "zexchange.db.operation.errors",
             "MyBatis statement execution error count"
     );
+
+    public static final MetricDef KAFKA_PUBLISHER_REQUESTS = new MetricDef(
+            "zexchange.kafka.publisher.requests",
+            "Kafka publisher attempt count completed by broker outcome"
+    );
+
+    public static final MetricDef KAFKA_PUBLISHER_DURATION = new MetricDef(
+            "zexchange.kafka.publisher.duration",
+            "Client-observed Kafka publish duration through broker acknowledgment"
+    );
+
+    public static final MetricDef OUTBOX_DELIVERY_DELAY = new MetricDef(
+            "zexchange.outbox.delivery.delay",
+            "Elapsed time from outbox creation to completion of a Kafka publish attempt"
+    );
+
+    public static final MetricDef KAFKA_LISTENER_REQUESTS = new MetricDef(
+            "zexchange.kafka.listener.requests",
+            "Kafka listener invocation count by final handling outcome"
+    );
+
+    public static final MetricDef KAFKA_LISTENER_DURATION = new MetricDef(
+            "zexchange.kafka.listener.duration",
+            "Kafka listener invocation duration"
+    );
+
+    public static final MetricDef KAFKA_LISTENER_PROCESSING_DELAY = new MetricDef(
+            "zexchange.kafka.listener.processing.delay",
+            "Elapsed time from the original Kafka record timestamp to listener processing"
+    );
+
+    public static final MetricDef KAFKA_LISTENER_DLT = new MetricDef(
+            "zexchange.kafka.listener.dlt",
+            "Kafka records consumed by a listener's dead-letter handler"
+    );
 }

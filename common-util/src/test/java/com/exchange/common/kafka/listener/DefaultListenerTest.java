@@ -8,6 +8,8 @@ import com.exchange.common.kafka.listener.exception.KafkaListenerRetriableExcept
 import com.exchange.common.kafka.listener.failure.ListenerFailure;
 import com.exchange.common.kafka.listener.failure.ListenerFailureType;
 import com.exchange.common.kafka.listener.handler.MessageHandler;
+import com.exchange.common.kafka.listener.metrics.KafkaListenerMetrics;
+import com.exchange.common.kafka.listener.metrics.KafkaListenerRequestOutcome;
 import com.exchange.common.kafka.listener.outbox.OutboxInsertDecision;
 import com.exchange.common.kafka.listener.retry.ListenerAttemptResolver;
 import com.exchange.common.kafka.producer.IPublisher;
@@ -42,6 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
@@ -66,6 +69,8 @@ class DefaultListenerTest {
     @Mock
     private ListenerAttemptResolver attemptResolver;
     @Mock
+    private KafkaListenerMetrics listenerMetrics;
+    @Mock
     private Acknowledgment ack;
 
     private DefaultListener listener;
@@ -83,7 +88,8 @@ class DefaultListenerTest {
                 attemptResolver,
                 new ListenerRetryPolicy(1000, REPLY_FAILURE_AFTER_ATTEMPTS),
                 KafkaListenerErrorCode.LISTENER_INTERNAL_ERROR,
-                Runnable::run
+                Runnable::run,
+                listenerMetrics
         );
         headers = new RecordHeaders();
         envelope = envelope();
@@ -101,6 +107,7 @@ class DefaultListenerTest {
 
         assertEquals(KafkaListenerErrorCode.ENVELOPE_PARSE_ERROR, thrown.getErrorCode());
         verifyNoInteractions(messageHandler, outboxRepository, replyPublisher, ack);
+        verify(listenerMetrics).recordCompletion(eq(KafkaListenerRequestOutcome.NON_RETRYABLE), anyLong());
     }
 
     @Test
@@ -115,9 +122,10 @@ class DefaultListenerTest {
 
         listener.onMessage(envelopeBytes, ack, headers);
 
-        InOrder order = inOrder(outboxRepository, ack, replyPublisher);
+        InOrder order = inOrder(outboxRepository, ack, listenerMetrics, replyPublisher);
         order.verify(outboxRepository).insertWithClaimAndVerify(eq(replyOutbox), any(LocalDateTime.class));
         order.verify(ack).acknowledge();
+        order.verify(listenerMetrics).recordCompletion(eq(KafkaListenerRequestOutcome.SUCCESS), anyLong());
         order.verify(replyPublisher).publishAsync(replyOutbox);
     }
 
@@ -130,6 +138,22 @@ class DefaultListenerTest {
 
         verify(ack).acknowledge();
         verifyNoInteractions(outboxRepository, replyPublisher);
+    }
+
+    @Test
+    void metricFailureDoesNotChangeListenerBehavior() {
+        // Observability is best-effort and cannot block a valid acknowledgment.
+        when(messageHandler.handle(envelope)).thenReturn(ListenerAction.ack());
+        doThrow(new RuntimeException("registry unavailable"))
+                .when(listenerMetrics)
+                .recordProcessingDelay(anyLong(), eq(headers));
+        doThrow(new RuntimeException("registry unavailable"))
+                .when(listenerMetrics)
+                .recordCompletion(eq(KafkaListenerRequestOutcome.SUCCESS), anyLong());
+
+        assertDoesNotThrow(() -> listener.onMessage(envelopeBytes, ack, headers));
+
+        verify(ack).acknowledge();
     }
 
     @Test
@@ -156,6 +180,7 @@ class DefaultListenerTest {
         assertEquals(ListenerFailureType.NON_RETRYABLE, captor.getValue().type());
         assertEquals(KafkaListenerErrorCode.LISTENER_INTERNAL_ERROR, captor.getValue().errorCode());
         verify(ack).acknowledge();
+        verify(listenerMetrics).recordCompletion(eq(KafkaListenerRequestOutcome.FAILURE_REPLIED), anyLong());
         verify(replyPublisher).publishAsync(failedOutbox);
     }
 
@@ -179,6 +204,23 @@ class DefaultListenerTest {
         assertEquals(ListenerFailureType.UNEXPECTED, captor.getValue().type());
         assertEquals(KafkaListenerErrorCode.LISTENER_INTERNAL_ERROR, captor.getValue().errorCode());
         verify(ack).acknowledge();
+        verify(listenerMetrics).recordCompletion(eq(KafkaListenerRequestOutcome.FAILURE_REPLIED), anyLong());
+    }
+
+    @Test
+    void escapedUnclassifiedExceptionIsRecordedAsNonRetryable() {
+        // No durable failure reply exists when the failure handler itself escapes unexpectedly.
+        when(messageHandler.handle(envelope)).thenThrow(new NullPointerException("business bug"));
+        when(messageHandler.handleFailure(eq(envelope), any(ListenerFailure.class)))
+                .thenThrow(new IllegalStateException("failure conversion bug"));
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> listener.onMessage(envelopeBytes, ack, headers)
+        );
+
+        verify(listenerMetrics).recordCompletion(eq(KafkaListenerRequestOutcome.NON_RETRYABLE), anyLong());
+        verifyNoInteractions(outboxRepository, replyPublisher, ack);
     }
 
     @Test
@@ -197,6 +239,7 @@ class DefaultListenerTest {
         );
 
         assertSame(retryable, thrown);
+        verify(listenerMetrics).recordCompletion(eq(KafkaListenerRequestOutcome.RETRYABLE), anyLong());
         verify(messageHandler, never()).handleFailure(eq(envelope), any());
         verifyNoInteractions(outboxRepository, replyPublisher, ack);
     }
@@ -226,6 +269,7 @@ class DefaultListenerTest {
         assertEquals(ListenerFailureType.RETRY_EXHAUSTED, captor.getValue().type());
         assertEquals(KafkaListenerErrorCode.RETRY_EXHAUSTED, captor.getValue().errorCode());
         verify(ack).acknowledge();
+        verify(listenerMetrics).recordCompletion(eq(KafkaListenerRequestOutcome.FAILURE_REPLIED), anyLong());
         verify(replyPublisher).publishAsync(failedOutbox);
     }
 
@@ -366,6 +410,7 @@ class DefaultListenerTest {
         );
 
         assertEquals(KafkaListenerErrorCode.ACK_FAILED, thrown.getErrorCode());
+        verify(listenerMetrics).recordCompletion(eq(KafkaListenerRequestOutcome.ACK_FAILURE), anyLong());
         Header header = headers.lastHeader(ACK_FAILED_HEADER);
         assertNotNull(header);
         assertEquals("true", new String(header.value()));

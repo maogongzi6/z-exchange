@@ -13,6 +13,25 @@ public final class CommonMetricTagValues {
         }
     }
 
+    public static final class KafkaSources {
+        public static final String IMMEDIATE = "immediate";
+        public static final String RETRY = "retry";
+
+        private KafkaSources() {
+        }
+    }
+
+    public static final class KafkaListenerOutcomes {
+        public static final String SUCCESS = "success";
+        public static final String FAILURE_REPLIED = "failure_replied";
+        public static final String ACK_FAILURE = "ack_failure";
+        public static final String RETRYABLE = "retryable";
+        public static final String NON_RETRYABLE = "non_retryable";
+
+        private KafkaListenerOutcomes() {
+        }
+    }
+
     public static final class CacheOperations {
         public static final String GET = "get";
         public static final String AFTER_DB_HIT = "after_db_hit";

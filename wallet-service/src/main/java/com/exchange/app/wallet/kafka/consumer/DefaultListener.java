@@ -2,6 +2,7 @@ package com.exchange.app.wallet.kafka.consumer;
 
 import com.exchange.app.wallet.kafka.constant.WalletTopic;
 import com.exchange.common.kafka.listener.exception.KafkaListenerRetriableException;
+import com.exchange.common.kafka.listener.metrics.KafkaListenerDltMetrics;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Header;
@@ -21,11 +22,14 @@ import java.nio.charset.StandardCharsets;
 @Component
 public class DefaultListener {
     private final com.exchange.common.kafka.listener.DefaultListener delegate;
+    private final KafkaListenerDltMetrics dltMetrics;
 
     public DefaultListener(
-            @Qualifier("walletCommonListener") com.exchange.common.kafka.listener.DefaultListener delegate
+            @Qualifier("walletCommonListener") com.exchange.common.kafka.listener.DefaultListener delegate,
+            KafkaListenerDltMetrics dltMetrics
     ) {
         this.delegate = delegate;
+        this.dltMetrics = dltMetrics;
     }
 
     @RetryableTopic(
@@ -49,18 +53,24 @@ public class DefaultListener {
     )
     public void onMessage(ConsumerRecord<String, byte[]> record, Acknowledgment ack) {
         // The common listener owns parsing, failure classification, and ack-failure recovery.
-        delegate.onMessage(record.value(), ack, record.headers());
+        delegate.onMessage(record.value(), ack, record.headers(), record.timestamp());
     }
 
     @DltHandler
     public void onDltMessage(ConsumerRecord<String, byte[]> record) {
+        String originalTopic = headerString(record, KafkaHeaders.ORIGINAL_TOPIC, KafkaHeaders.DLT_ORIGINAL_TOPIC);
+        /*
+         * Record DLT only here, where Spring has actually routed and delivered the record.
+         * The common listener can classify a failure as non-retryable but cannot prove DLT delivery.
+         */
+        dltMetrics.record(originalTopic);
         log.error(
                 "wallet listener dlt message, topic={}, partition={}, offset={}, key={}, original_topic={}, exception_class={}, exception_message={}",
                 record.topic(),
                 record.partition(),
                 record.offset(),
                 record.key(),
-                headerString(record, KafkaHeaders.ORIGINAL_TOPIC, KafkaHeaders.DLT_ORIGINAL_TOPIC),
+                originalTopic,
                 headerString(record, KafkaHeaders.EXCEPTION_FQCN, KafkaHeaders.DLT_EXCEPTION_FQCN),
                 headerString(record, KafkaHeaders.EXCEPTION_MESSAGE, KafkaHeaders.DLT_EXCEPTION_MESSAGE)
         );

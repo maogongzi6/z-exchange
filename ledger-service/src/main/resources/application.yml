@@ -79,7 +79,9 @@ management:
         zexchange.grpc.server.duration: true
         zexchange.ledger.processing.duration: true
         zexchange.kafka.listener.duration: true
-        zexchange.kafka.publish.duration: true
+        zexchange.kafka.listener.processing.delay: true
+        zexchange.kafka.publisher.duration: true
+        zexchange.outbox.delivery.delay: true
         zexchange.outbox.dispatch.duration: true
         zexchange.redis.operation.duration: true
         zexchange.db.operation.duration: true
@@ -88,7 +90,9 @@ management:
         zexchange.grpc.server.duration: 5ms,10ms,25ms,50ms,100ms,250ms,500ms,1s,3s
         zexchange.ledger.processing.duration: 5ms,10ms,25ms,50ms,100ms,250ms,500ms,1s,3s
         zexchange.kafka.listener.duration: 10ms,25ms,50ms,100ms,250ms,500ms,1s,3s,10s
-        zexchange.kafka.publish.duration: 5ms,10ms,25ms,50ms,100ms,250ms,500ms,1s,3s
+        zexchange.kafka.listener.processing.delay: 10ms,25ms,50ms,100ms,250ms,500ms,1s,3s,10s,30s,1m
+        zexchange.kafka.publisher.duration: 5ms,10ms,25ms,50ms,100ms,250ms,500ms,1s,3s
+        zexchange.outbox.delivery.delay: 10ms,25ms,50ms,100ms,250ms,500ms,1s,3s,10s,30s,1m,5m
         zexchange.outbox.dispatch.duration: 10ms,25ms,50ms,100ms,250ms,500ms,1s,3s,10s,30s
         zexchange.redis.operation.duration: 1ms,2ms,5ms,10ms,25ms,50ms,100ms,250ms,500ms,1s
         zexchange.db.operation.duration: 1ms,2ms,5ms,10ms,25ms,50ms,100ms,250ms,500ms,1s,3s

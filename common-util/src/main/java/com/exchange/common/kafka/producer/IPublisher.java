@@ -16,7 +16,14 @@ public interface IPublisher {
     /**
      * Starts a non-blocking publish attempt for one outbox event.
      */
-    CompletableFuture<Result<Void>> publishAsync(Outbox outbox);
+    CompletableFuture<Result<Void>> publishAsync(Outbox outbox, PublishSource source);
+
+    /**
+     * Normal business and listener reply paths are immediate publish attempts.
+     */
+    default CompletableFuture<Result<Void>> publishAsync(Outbox outbox) {
+        return publishAsync(outbox, PublishSource.IMMEDIATE);
+    }
 
     /**
      * Blocking adapter for call sites that cannot use the asynchronous contract.

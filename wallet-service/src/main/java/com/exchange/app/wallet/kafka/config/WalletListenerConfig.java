@@ -8,11 +8,15 @@ import com.exchange.common.kafka.listener.exception.DlqException;
 import com.exchange.common.kafka.listener.failure.ListenerFailure;
 import com.exchange.common.kafka.listener.handler.AckOnlyDefaultMessageHandler;
 import com.exchange.common.kafka.listener.handler.MessageHandler;
+import com.exchange.common.kafka.listener.metrics.KafkaListenerMetrics;
+import com.exchange.common.kafka.listener.metrics.KafkaListenerDltMetrics;
+import com.exchange.common.kafka.listener.metrics.MicrometerKafkaListenerMetrics;
 import com.exchange.common.kafka.listener.retry.KafkaHeaderListenerAttemptResolver;
 import com.exchange.common.kafka.listener.retry.ListenerAttemptResolver;
 import com.exchange.common.kafka.producer.IPublisher;
 import com.exchange.common.outbox.dao.repository.OutboxRepository;
 import com.exchange.proto.common.event.EventEnvelopePb;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -25,6 +29,8 @@ import static com.exchange.common.kafka.container.CommandContainerRegister.OUTBO
 @Configuration
 @EnableConfigurationProperties(WalletListenerRetryProperties.class)
 public class WalletListenerConfig {
+    private static final String WALLET_LEDGER_REPLY_LISTENER = "ledger_reply";
+
     @Bean
     public ListenerAttemptResolver walletListenerAttemptResolver() {
         return new KafkaHeaderListenerAttemptResolver();
@@ -41,13 +47,24 @@ public class WalletListenerConfig {
     }
 
     @Bean
+    public KafkaListenerMetrics walletKafkaListenerMetrics(MeterRegistry meterRegistry) {
+        return new MicrometerKafkaListenerMetrics(meterRegistry, WALLET_LEDGER_REPLY_LISTENER);
+    }
+
+    @Bean
+    public KafkaListenerDltMetrics walletKafkaListenerDltMetrics(MeterRegistry meterRegistry) {
+        return new KafkaListenerDltMetrics(meterRegistry, WALLET_LEDGER_REPLY_LISTENER);
+    }
+
+    @Bean
     public com.exchange.common.kafka.listener.DefaultListener walletCommonListener(
             @Qualifier("walletAckOnlyMessageHandler") MessageHandler messageHandler,
             OutboxRepository outboxRepository,
             IPublisher publisher,
             @Qualifier("walletListenerAttemptResolver") ListenerAttemptResolver attemptResolver,
             WalletListenerRetryProperties retryProperties,
-            @Qualifier(OUTBOX_PUBLISH_CALLBACK_EXECUTOR) Executor publishCallbackExecutor
+            @Qualifier(OUTBOX_PUBLISH_CALLBACK_EXECUTOR) Executor publishCallbackExecutor,
+            @Qualifier("walletKafkaListenerMetrics") KafkaListenerMetrics listenerMetrics
     ) {
         retryProperties.validate();
         /*
@@ -63,7 +80,8 @@ public class WalletListenerConfig {
                 attemptResolver,
                 retryPolicy,
                 WalletServiceErrorCode.SERVER_ERROR,
-                publishCallbackExecutor
+                publishCallbackExecutor,
+                listenerMetrics
         );
     }
 

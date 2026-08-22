@@ -2,6 +2,7 @@ package com.exchange.common.outbox.retry;
 
 import com.exchange.common.db.utils.DbTxnExecutor;
 import com.exchange.common.kafka.producer.IPublisher;
+import com.exchange.common.kafka.producer.PublishSource;
 import com.exchange.common.outbox.config.OutboxProperties;
 import com.exchange.common.outbox.dao.repository.OutboxRepository;
 import com.exchange.common.outbox.po.Outbox;
@@ -36,9 +37,14 @@ public class OutboxRetryHandler {
     private final DbTxnExecutor dbTxnExecutor;
     private final IPublisher publisher;
 
-
     // TODO maybe add a execute time limit
     public void retry() {
+        /*
+         * TODO: exhausted rows currently remain PENDING after maxRetries and are no longer
+         *  selected. Before exposing pending count/oldest-age/dead-count gauges, add an atomic
+         *  PENDING-to-DEAD transition; otherwise one exhausted ancient row permanently distorts
+         *  the pending backlog and oldest-age signals.
+         */
         LocalDateTime now = LocalDateTime.now();
         long lastId = 0L;
         int successCount = 0, failedCount = 0;
@@ -88,7 +94,7 @@ public class OutboxRetryHandler {
 
     private CompletableFuture<PublishAttempt> publishAsync(Outbox outbox) {
         try {
-            CompletableFuture<Result<Void>> publishFuture = publisher.publishAsync(outbox);
+            CompletableFuture<Result<Void>> publishFuture = publisher.publishAsync(outbox, PublishSource.RETRY);
             if (publishFuture == null) {
                 log.error("outbox publish returned null future, eventId={}, commandId={}", outbox.getEventId(), outbox.getCommandId());
                 return CompletableFuture.completedFuture(PublishAttempt.failed(outbox));

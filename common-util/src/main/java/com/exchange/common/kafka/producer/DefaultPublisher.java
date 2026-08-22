@@ -56,8 +56,9 @@ public class DefaultPublisher implements IPublisher {
     }
 
     @Override
-    public CompletableFuture<Result<Void>> publishAsync(Outbox outbox) {
+    public CompletableFuture<Result<Void>> publishAsync(Outbox outbox, PublishSource source) {
         Objects.requireNonNull(outbox, "outbox");
+        Objects.requireNonNull(source, "source");
 
         CompletableFuture<Void> sendCompletion = new CompletableFuture<>();
         try {
