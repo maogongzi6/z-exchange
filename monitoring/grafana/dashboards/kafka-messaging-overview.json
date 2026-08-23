@@ -1,0 +1,147 @@
+{
+  "annotations": { "list": [] },
+  "description": "Kafka publisher, outbox delivery, listener processing, and confirmed dead-letter signals for Z-Exchange services.",
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "id": 100, "panels": [], "title": "Summary", "type": "row" },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "decimals": 1, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }] }, "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 }, "id": 1,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showPercentChange": false, "textMode": "auto", "wideLayout": true },
+      "targets": [{ "editorMode": "code", "expr": "sum(rate(zexchange_kafka_publisher_requests_total{application=~\"$application\",instance=~\"$instance\",topic=~\"$topic\"}[$__rate_interval]))", "legendFormat": "publish attempts", "range": true, "refId": "A" }],
+      "title": "Publisher Request Rate", "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Broker-acknowledged publisher failures divided by all completed publish attempts.",
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "decimals": 2, "mappings": [], "max": 100, "min": 0, "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "yellow", "value": 0.1 }, { "color": "red", "value": 1 }] }, "unit": "percent" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 }, "id": 2,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showPercentChange": false, "textMode": "auto", "wideLayout": true },
+      "targets": [{ "editorMode": "code", "expr": "100 * sum(rate(zexchange_kafka_publisher_requests_total{application=~\"$application\",instance=~\"$instance\",topic=~\"$topic\",outcome=\"error\"}[$__rate_interval])) / clamp_min(sum(rate(zexchange_kafka_publisher_requests_total{application=~\"$application\",instance=~\"$instance\",topic=~\"$topic\"}[$__rate_interval])), 0.000001)", "legendFormat": "publisher errors", "range": true, "refId": "A" }],
+      "title": "Publisher Error Rate", "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "decimals": 1, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }] }, "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 }, "id": 3,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showPercentChange": false, "textMode": "auto", "wideLayout": true },
+      "targets": [{ "editorMode": "code", "expr": "sum(rate(zexchange_kafka_listener_requests_total{application=~\"$application\",instance=~\"$instance\",listener=~\"$listener\"}[$__rate_interval]))", "legendFormat": "handled records", "range": true, "refId": "A" }],
+      "title": "Listener Request Rate", "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Records observed by a service DLT handler. This is confirmed DLT consumption, not an inferred listener failure.",
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "decimals": 2, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "red", "value": 0.001 }] }, "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 }, "id": 4,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showPercentChange": false, "textMode": "auto", "wideLayout": true },
+      "targets": [{ "editorMode": "code", "expr": "sum(rate(zexchange_kafka_listener_dlt_total{application=~\"$application\",instance=~\"$instance\",listener=~\"$listener\"}[$__rate_interval])) or vector(0)", "legendFormat": "DLT", "range": true, "refId": "A" }],
+      "title": "Confirmed DLT Rate", "type": "stat"
+    },
+
+    { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 }, "id": 101, "panels": [], "title": "Publisher and Outbox", "type": "row" },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Completed publish attempts by destination, immediate/retry source, and broker outcome.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 6 }, "id": 5,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "editorMode": "code", "expr": "sum by (topic, source, outcome) (rate(zexchange_kafka_publisher_requests_total{application=~\"$application\",instance=~\"$instance\",topic=~\"$topic\"}[$__rate_interval]))", "legendFormat": "{{topic}} / {{source}} / {{outcome}}", "range": true, "refId": "A" }],
+      "title": "Publisher Outcomes", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Client-observed time through broker acknowledgment for successful publishes.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 6 }, "id": 6,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.50, sum by (le, topic, source) (rate(zexchange_kafka_publisher_duration_seconds_bucket{application=~\"$application\",instance=~\"$instance\",topic=~\"$topic\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "{{topic}} / {{source}} p50", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le, topic, source) (rate(zexchange_kafka_publisher_duration_seconds_bucket{application=~\"$application\",instance=~\"$instance\",topic=~\"$topic\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "{{topic}} / {{source}} p95", "range": true, "refId": "B" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.99, sum by (le, topic, source) (rate(zexchange_kafka_publisher_duration_seconds_bucket{application=~\"$application\",instance=~\"$instance\",topic=~\"$topic\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "{{topic}} / {{source}} p99", "range": true, "refId": "C" }
+      ],
+      "title": "Publisher Latency (Success)", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Elapsed time from outbox row creation to successful broker acknowledgment. Immediate and retry paths are kept separate.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 13 }, "id": 7,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.50, sum by (le, event_type, source) (rate(zexchange_outbox_delivery_delay_seconds_bucket{application=~\"$application\",instance=~\"$instance\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "{{event_type}} / {{source}} p50", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le, event_type, source) (rate(zexchange_outbox_delivery_delay_seconds_bucket{application=~\"$application\",instance=~\"$instance\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "{{event_type}} / {{source}} p95", "range": true, "refId": "B" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.99, sum by (le, event_type, source) (rate(zexchange_outbox_delivery_delay_seconds_bucket{application=~\"$application\",instance=~\"$instance\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "{{event_type}} / {{source}} p99", "range": true, "refId": "C" }
+      ],
+      "title": "Outbox Delivery Delay (Success)", "type": "timeseries"
+    },
+
+    { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 20 }, "id": 102, "panels": [], "title": "Listener", "type": "row" },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Final common-listener classification. failure_replied means an error reply was durably persisted; DLT delivery is reported separately.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 21 }, "id": 8,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "editorMode": "code", "expr": "sum by (listener, outcome) (rate(zexchange_kafka_listener_requests_total{application=~\"$application\",instance=~\"$instance\",listener=~\"$listener\"}[$__rate_interval]))", "legendFormat": "{{listener}} / {{outcome}}", "range": true, "refId": "A" }],
+      "title": "Listener Outcomes", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Listener execution latency split into successful and failed handling paths.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 21 }, "id": 9,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le, listener, outcome) (rate(zexchange_kafka_listener_duration_seconds_bucket{application=~\"$application\",instance=~\"$instance\",listener=~\"$listener\"}[$__rate_interval])))", "legendFormat": "{{listener}} / {{outcome}} p95", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.99, sum by (le, listener, outcome) (rate(zexchange_kafka_listener_duration_seconds_bucket{application=~\"$application\",instance=~\"$instance\",listener=~\"$listener\"}[$__rate_interval])))", "legendFormat": "{{listener}} / {{outcome}} p99", "range": true, "refId": "B" }
+      ],
+      "title": "Listener Processing Latency", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Age from the original Kafka record timestamp to listener processing. Producer/broker and consumer clocks must be synchronized; clock skew directly biases this measurement.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 16, "x": 0, "y": 28 }, "id": 10,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.50, sum by (le, listener, source) (rate(zexchange_kafka_listener_processing_delay_seconds_bucket{application=~\"$application\",instance=~\"$instance\",listener=~\"$listener\"}[$__rate_interval])))", "legendFormat": "{{listener}} / {{source}} p50", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le, listener, source) (rate(zexchange_kafka_listener_processing_delay_seconds_bucket{application=~\"$application\",instance=~\"$instance\",listener=~\"$listener\"}[$__rate_interval])))", "legendFormat": "{{listener}} / {{source}} p95", "range": true, "refId": "B" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.99, sum by (le, listener, source) (rate(zexchange_kafka_listener_processing_delay_seconds_bucket{application=~\"$application\",instance=~\"$instance\",listener=~\"$listener\"}[$__rate_interval])))", "legendFormat": "{{listener}} / {{source}} p99", "range": true, "refId": "C" }
+      ],
+      "title": "Listener Processing Delay", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Confirmed records consumed by service DLT handlers, grouped by the original request topic.",
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "red", "value": 0.001 }] }, "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 28 }, "id": 11,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "editorMode": "code", "expr": "sum by (listener, original_topic) (rate(zexchange_kafka_listener_dlt_total{application=~\"$application\",instance=~\"$instance\",listener=~\"$listener\"}[$__rate_interval]))", "legendFormat": "{{listener}} / {{original_topic}}", "range": true, "refId": "A" }],
+      "title": "Confirmed DLT by Original Topic", "type": "timeseries"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "tags": ["zexchange", "kafka", "messaging"],
+  "templating": {
+    "list": [
+      { "allValue": ".*", "current": { "selected": true, "text": "All", "value": "$__all" }, "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" }, "definition": "label_values(zexchange_kafka_listener_requests_total, application)", "hide": 0, "includeAll": true, "label": "application", "multi": true, "name": "application", "options": [], "query": "label_values(zexchange_kafka_listener_requests_total, application)", "refresh": 1, "regex": "", "skipUrlSync": false, "sort": 1, "type": "query" },
+      { "allValue": ".*", "current": { "selected": true, "text": "All", "value": "$__all" }, "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" }, "definition": "label_values(zexchange_kafka_listener_requests_total{application=~\"$application\"}, instance)", "hide": 0, "includeAll": true, "label": "instance", "multi": true, "name": "instance", "options": [], "query": "label_values(zexchange_kafka_listener_requests_total{application=~\"$application\"}, instance)", "refresh": 1, "regex": "", "skipUrlSync": false, "sort": 1, "type": "query" },
+      { "allValue": ".*", "current": { "selected": true, "text": "All", "value": "$__all" }, "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" }, "definition": "label_values(zexchange_kafka_publisher_requests_total{application=~\"$application\",instance=~\"$instance\"}, topic)", "hide": 0, "includeAll": true, "label": "topic", "multi": true, "name": "topic", "options": [], "query": "label_values(zexchange_kafka_publisher_requests_total{application=~\"$application\",instance=~\"$instance\"}, topic)", "refresh": 1, "regex": "", "skipUrlSync": false, "sort": 1, "type": "query" },
+      { "allValue": ".*", "current": { "selected": true, "text": "All", "value": "$__all" }, "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" }, "definition": "label_values(zexchange_kafka_listener_requests_total{application=~\"$application\",instance=~\"$instance\"}, listener)", "hide": 0, "includeAll": true, "label": "listener", "multi": true, "name": "listener", "options": [], "query": "label_values(zexchange_kafka_listener_requests_total{application=~\"$application\",instance=~\"$instance\"}, listener)", "refresh": 1, "regex": "", "skipUrlSync": false, "sort": 1, "type": "query" }
+    ]
+  },
+  "time": { "from": "now-30m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Kafka Messaging Overview",
+  "uid": "kafka-messaging-overview",
+  "version": 1,
+  "weekStart": ""
+}

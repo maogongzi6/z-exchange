@@ -1,0 +1,183 @@
+{
+  "annotations": { "list": [] },
+  "description": "Reusable database, Redis, cache, and idempotency dashboard for Z-Exchange services. Signals are separated by layer because their operational meaning and severity differ.",
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "id": 100, "panels": [], "title": "Summary", "type": "row" },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Successful transaction latency including connection acquisition, transaction work, and commit.",
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "decimals": 1, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }] }, "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 }, "id": 1,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showPercentChange": false, "textMode": "auto", "wideLayout": true },
+      "targets": [{ "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le) (rate(zexchange_db_transaction_duration_seconds_bucket{application=~\"$application\",instance=~\"$instance\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "DB transaction p95", "range": true, "refId": "A" }],
+      "title": "DB Transaction p95", "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "decimals": 3, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "red", "value": 0.001 }] }, "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 }, "id": 2,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showPercentChange": false, "textMode": "auto", "wideLayout": true },
+      "targets": [{ "editorMode": "code", "expr": "sum(rate(zexchange_db_operation_errors_total{application=~\"$application\",instance=~\"$instance\"}[$__rate_interval])) or vector(0)", "legendFormat": "DB errors", "range": true, "refId": "A" }],
+      "title": "DB Operation Errors", "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Threads waiting for a database connection. Sustained pending work with no idle connections indicates pool pressure.",
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "decimals": 0, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "yellow", "value": 1 }] }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 }, "id": 3,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showPercentChange": false, "textMode": "auto", "wideLayout": true },
+      "targets": [{ "editorMode": "code", "expr": "sum(hikaricp_connections_pending{application=~\"$application\",instance=~\"$instance\"}) or vector(0)", "legendFormat": "pending", "range": true, "refId": "A" }],
+      "title": "Hikari Pending", "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "decimals": 3, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "red", "value": 0.001 }] }, "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 }, "id": 4,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showPercentChange": false, "textMode": "auto", "wideLayout": true },
+      "targets": [{ "editorMode": "code", "expr": "sum(rate(zexchange_redis_operation_duration_seconds_count{application=~\"$application\",instance=~\"$instance\",outcome=\"error\"}[$__rate_interval])) or vector(0)", "legendFormat": "Redis errors", "range": true, "refId": "A" }],
+      "title": "Redis Operation Errors", "type": "stat"
+    },
+
+    { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 }, "id": 101, "panels": [], "title": "Database", "type": "row" },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Successful database transaction latency including connection acquisition, transactional work, and commit.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 6 }, "id": 5,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.50, sum by (le, application) (rate(zexchange_db_transaction_duration_seconds_bucket{application=~\"$application\",instance=~\"$instance\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "{{application}} p50", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le, application) (rate(zexchange_db_transaction_duration_seconds_bucket{application=~\"$application\",instance=~\"$instance\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "{{application}} p95", "range": true, "refId": "B" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.99, sum by (le, application) (rate(zexchange_db_transaction_duration_seconds_bucket{application=~\"$application\",instance=~\"$instance\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "{{application}} p99", "range": true, "refId": "C" }
+      ],
+      "title": "DB Transaction Latency", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Successful MyBatis statement execution latency grouped by mapper method. Connection acquisition and commit are excluded.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 16, "x": 8, "y": 6 }, "id": 6,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le, application, statement) (rate(zexchange_db_operation_duration_seconds_bucket{application=~\"$application\",instance=~\"$instance\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "{{application}} / {{statement}} p95", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.99, sum by (le, application, statement) (rate(zexchange_db_operation_duration_seconds_bucket{application=~\"$application\",instance=~\"$instance\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "{{application}} / {{statement}} p99", "range": true, "refId": "B" }
+      ],
+      "title": "DB Operation Latency", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "MyBatis statement failures classified by command and normalized database error type.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 13 }, "id": 7,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "editorMode": "code", "expr": "sum by (application, statement, command, error_type) (rate(zexchange_db_operation_errors_total{application=~\"$application\",instance=~\"$instance\"}[$__rate_interval]))", "legendFormat": "{{application}} / {{statement}} / {{command}} / {{error_type}}", "range": true, "refId": "A" }],
+      "title": "DB Operation Errors", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Current physical pool state. Pending with no idle connections indicates database pool pressure.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 13 }, "id": 8,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "editorMode": "code", "expr": "sum by (application, pool) (hikaricp_connections_active{application=~\"$application\",instance=~\"$instance\"})", "legendFormat": "{{application}} / {{pool}} active", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "sum by (application, pool) (hikaricp_connections_idle{application=~\"$application\",instance=~\"$instance\"})", "legendFormat": "{{application}} / {{pool}} idle", "range": true, "refId": "B" },
+        { "editorMode": "code", "expr": "sum by (application, pool) (hikaricp_connections_total{application=~\"$application\",instance=~\"$instance\"})", "legendFormat": "{{application}} / {{pool}} total", "range": true, "refId": "C" },
+        { "editorMode": "code", "expr": "sum by (application, pool) (hikaricp_connections_max{application=~\"$application\",instance=~\"$instance\"})", "legendFormat": "{{application}} / {{pool}} max", "range": true, "refId": "D" },
+        { "editorMode": "code", "expr": "sum by (application, pool) (hikaricp_connections_pending{application=~\"$application\",instance=~\"$instance\"})", "legendFormat": "{{application}} / {{pool}} pending", "range": true, "refId": "E" }
+      ],
+      "title": "Hikari Connections", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Average connection wait shows sustained pressure; rolling max preserves short acquisition stalls.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 13 }, "id": 9,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "editorMode": "code", "expr": "1000 * sum by (application, pool) (rate(hikaricp_connections_acquire_seconds_sum{application=~\"$application\",instance=~\"$instance\"}[$__rate_interval])) / clamp_min(sum by (application, pool) (rate(hikaricp_connections_acquire_seconds_count{application=~\"$application\",instance=~\"$instance\"}[$__rate_interval])), 0.000001)", "legendFormat": "{{application}} / {{pool}} average", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "1000 * max by (application, pool) (max_over_time(hikaricp_connections_acquire_seconds_max{application=~\"$application\",instance=~\"$instance\"}[$__rate_interval]))", "legendFormat": "{{application}} / {{pool}} max", "range": true, "refId": "B" }
+      ],
+      "title": "Hikari Acquisition Latency", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Failures to obtain a connection before the configured pool timeout.",
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "red", "value": 0.001 }] }, "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 20 }, "id": 10,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "editorMode": "code", "expr": "sum by (application, pool) (rate(hikaricp_connections_timeout_total{application=~\"$application\",instance=~\"$instance\"}[$__rate_interval]))", "legendFormat": "{{application}} / {{pool}}", "range": true, "refId": "A" }],
+      "title": "Hikari Connection Timeouts", "type": "timeseries"
+    },
+
+    { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 26 }, "id": 102, "panels": [], "title": "Redis, Cache, and Idempotency", "type": "row" },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 27 }, "id": 11,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "editorMode": "code", "expr": "sum by (application, component, operation, outcome) (rate(zexchange_redis_operation_duration_seconds_count{application=~\"$application\",instance=~\"$instance\"}[$__rate_interval]))", "legendFormat": "{{application}} / {{component}} / {{operation}} / {{outcome}}", "range": true, "refId": "A" }],
+      "title": "Redis Operation Outcomes", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 27 }, "id": 12,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.95, sum by (le, application, component, operation) (rate(zexchange_redis_operation_duration_seconds_bucket{application=~\"$application\",instance=~\"$instance\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "{{application}} / {{component}} / {{operation}} p95", "range": true, "refId": "A" },
+        { "editorMode": "code", "expr": "1000 * histogram_quantile(0.99, sum by (le, application, component, operation) (rate(zexchange_redis_operation_duration_seconds_bucket{application=~\"$application\",instance=~\"$instance\",outcome=\"success\"}[$__rate_interval])))", "legendFormat": "{{application}} / {{component}} / {{operation}} p99", "range": true, "refId": "B" }
+      ],
+      "title": "Redis Operation Latency (Success)", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Strategy-level cache read results. Misses and negative/tombstone hits are outcomes, not infrastructure errors.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 34 }, "id": 13,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "editorMode": "code", "expr": "sum by (application, cache_type, result) (rate(zexchange_cache_ops_total{application=~\"$application\",instance=~\"$instance\"}[$__rate_interval]))", "legendFormat": "{{application}} / {{cache_type}} / {{result}}", "range": true, "refId": "A" }],
+      "title": "Cache Read Results", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Cache strategy failures. The business flow should fall back to the database, so correlate sustained errors with DB load and latency.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 34 }, "id": 14,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "editorMode": "code", "expr": "sum by (application, cache_type, operation, error_type) (rate(zexchange_cache_errors_total{application=~\"$application\",instance=~\"$instance\"}[$__rate_interval]))", "legendFormat": "{{application}} / {{cache_type}} / {{operation}} / {{error_type}}", "range": true, "refId": "A" }],
+      "title": "Cache Errors", "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" },
+      "description": "Idempotency infrastructure and semantic errors grouped by bounded labels. Request identifiers are never labels.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 2, "pointSize": 5, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" } }, "mappings": [], "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 34 }, "id": 15,
+      "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "editorMode": "code", "expr": "sum by (application, scope, operation, error_type) (rate(zexchange_idempotency_errors_total{application=~\"$application\",instance=~\"$instance\"}[$__rate_interval]))", "legendFormat": "{{application}} / {{scope}} / {{operation}} / {{error_type}}", "range": true, "refId": "A" }],
+      "title": "Idempotency Errors", "type": "timeseries"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "tags": ["zexchange", "service", "database", "redis", "cache", "idempotency", "shared"],
+  "templating": {
+    "list": [
+      { "allValue": ".*", "current": { "selected": true, "text": "ledger-service", "value": "ledger-service" }, "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" }, "definition": "label_values(up{job=~\".*-service\"}, job)", "hide": 0, "includeAll": true, "label": "application", "multi": true, "name": "application", "options": [], "query": "label_values(up{job=~\".*-service\"}, job)", "refresh": 1, "regex": "", "skipUrlSync": false, "sort": 1, "type": "query" },
+      { "allValue": ".*", "current": { "selected": true, "text": "All", "value": "$__all" }, "datasource": { "type": "prometheus", "uid": "zexchange-prometheus" }, "definition": "label_values(up{job=~\"$application\"}, instance)", "hide": 0, "includeAll": true, "label": "instance", "multi": true, "name": "instance", "options": [], "query": "label_values(up{job=~\"$application\"}, instance)", "refresh": 1, "regex": "", "skipUrlSync": false, "sort": 1, "type": "query" }
+    ]
+  },
+  "time": { "from": "now-30m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Service Data Access and Resilience",
+  "uid": "service-data-access-overview",
+  "version": 1,
+  "weekStart": ""
+}
