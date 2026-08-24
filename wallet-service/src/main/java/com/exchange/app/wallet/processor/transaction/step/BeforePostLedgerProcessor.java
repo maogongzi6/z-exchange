@@ -87,7 +87,7 @@ public class BeforePostLedgerProcessor {
                 .distinct().map(TransactionLinePb::getReservationRef).collect(Collectors.toSet());
         List<WalletReservation> reservationsInRequest = new ArrayList<>();
         if (!reservationRefs.isEmpty()) {
-            reservationsInRequest = walletReservationManager.selectByRefs(new ArrayList<>(reservationRefs));
+            reservationsInRequest = walletReservationManager.selectByRefs(walletTxn.getInitiator(), new ArrayList<>(reservationRefs));
             if (reservationsInRequest.size() != reservationRefs.size()) {
                 log.error("reservations not found, requested_reservation: {}, reservation_in_db: {}", reservationRefs, reservationsInRequest);
                 releaseIdempBeforeReturnError(requestInfo.idempotenceKey, requestInfo.getStableHash(), requestInfo.token);

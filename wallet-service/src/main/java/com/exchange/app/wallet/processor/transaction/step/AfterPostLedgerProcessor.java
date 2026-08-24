@@ -107,7 +107,7 @@ public class AfterPostLedgerProcessor {
         List<WalletReservation> consumeReservations = new ArrayList<>();
         if (!consumeActions.isEmpty()) {
             List<String> consumeReservationRefs = consumeActions.stream().map(WalletAction::getReservationId).distinct().collect(Collectors.toList());
-            consumeReservations = walletReservationManager.selectByRefs(consumeReservationRefs);
+            consumeReservations = walletReservationManager.selectByRefs(txn.getInitiator(), consumeReservationRefs);
             if (consumeReservationRefs.size() != consumeReservations.size()) {
                 log.error("reservation size mismatch, reservationFromDb: {}, reservationRefs: {}", consumeReservationRefs, consumeReservations);
                 return Result.failure(WalletServiceErrorCode.WALLET_RESERVATION_NOT_FOUND, "reservation size mismatch");

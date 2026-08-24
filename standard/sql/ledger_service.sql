@@ -77,6 +77,7 @@ create table outbox (
     updated_at timestamp(3) not null,
     unique key(event_id),
     key(command_id),
-    key(event_type, outbox_status, next_attempt_at, id) /* id for pagination */
+    /* Oldest-due-first claim filtering, ordering, and tuple-cursor pagination. */
+    key idx_outbox_claim(outbox_status, next_attempt_at, id)
 );
 

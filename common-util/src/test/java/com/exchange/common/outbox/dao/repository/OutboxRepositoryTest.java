@@ -1,13 +1,17 @@
 package com.exchange.common.outbox.dao.repository;
 
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.exchange.common.kafka.listener.outbox.OutboxInsertDecisionType;
 import com.exchange.common.outbox.dao.mapper.OutboxMapper;
 import com.exchange.common.outbox.po.Outbox;
 import com.exchange.common.outbox.po.enums.OutboxStatus;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -17,6 +21,7 @@ import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -33,6 +38,9 @@ class OutboxRepositoryTest {
 
     @BeforeEach
     void setUp() {
+        MapperBuilderAssistant assistant = new MapperBuilderAssistant(new MybatisConfiguration(), "");
+        assistant.setCurrentNamespace(OutboxMapper.class.getName());
+        TableInfoHelper.initTableInfo(assistant, Outbox.class);
         repository = new OutboxRepository(mapper);
     }
 
@@ -132,6 +140,26 @@ class OutboxRepositoryTest {
         assertEquals(1, intended.getAttemptCount());
         assertEquals(nextAttemptAt, intended.getNextAttemptAt());
         verify(mapper).insert(eq(intended));
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    @Test
+    void claimQueryUsesDueTimeTupleCursorAndMatchingOrder() {
+        LocalDateTime rightBoundary = LocalDateTime.of(2026, 8, 24, 12, 0);
+        LocalDateTime lastNextAttemptAt = rightBoundary.minusMinutes(1);
+        when(mapper.selectList(anyWrapper())).thenReturn(List.of());
+
+        repository.selectForClaimSkipLock(rightBoundary, 5, lastNextAttemptAt, 42L, 10);
+
+        ArgumentCaptor<Wrapper<Outbox>> wrapperCaptor = ArgumentCaptor.forClass((Class) Wrapper.class);
+        verify(mapper).selectList(wrapperCaptor.capture());
+        String sql = wrapperCaptor.getValue().getSqlSegment().replaceAll("\\s+", " ").toLowerCase();
+        assertTrue(sql.contains("next_attempt_at <="));
+        assertTrue(sql.contains("next_attempt_at >"));
+        assertTrue(sql.contains("next_attempt_at ="));
+        assertTrue(sql.contains("id >"));
+        assertTrue(sql.contains("order by next_attempt_at asc,id asc"));
+        assertTrue(sql.contains("for update skip locked"));
     }
 
     private Wrapper<Outbox> anyWrapper() {

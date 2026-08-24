@@ -77,13 +77,41 @@ public class OutboxRepository extends DbBaseRepository<Outbox, OutboxMapper> {
         return mapper.update(updateWrapper);
     }
 
-    public List<Outbox> selectForClaimSkipLock(LocalDateTime attemptAt, int maxRetries, long lastId, int limit) {
+    /**
+     * Claims are read oldest-due-first using the same column order as idx_outbox_claim.
+     * The exclusive (nextAttemptAt, id) cursor is required because id alone is not monotonic
+     * in next-attempt order. The upper boundary stays fixed for one retry cycle so the worker
+     * scans a bounded due-time window instead of chasing newly eligible rows.
+     *
+     * <pre>{@code
+     * SELECT *
+     * FROM outbox
+     * WHERE outbox_status = :pending
+     *   AND attempt_count < :maxRetries
+     *   AND next_attempt_at <= :rightBoundary
+     *   AND (
+     *       next_attempt_at > :lastNextAttemptAt
+     *       OR (next_attempt_at = :lastNextAttemptAt AND id > :lastId)
+     *   )
+     * ORDER BY next_attempt_at ASC, id ASC
+     * LIMIT :limit
+     * FOR UPDATE SKIP LOCKED
+     * }</pre>
+     *
+     * The tuple-cursor predicate is omitted for the first page when lastNextAttemptAt is null.
+     */
+    public List<Outbox> selectForClaimSkipLock(LocalDateTime rightBoundary, int maxRetries,
+                                                LocalDateTime lastNextAttemptAt, long lastId, int limit) {
         var query = Wrappers.<Outbox>lambdaQuery()
                 .eq(Outbox::getOutboxStatus, OutboxStatus.PENDING)
                 .lt(Outbox::getAttemptCount, maxRetries)
-                .le(Outbox::getNextAttemptAt, attemptAt)
-                .gt(Outbox::getId, lastId)
-                .orderByAsc(Outbox::getId)
+                .le(Outbox::getNextAttemptAt, rightBoundary)
+                .and(lastNextAttemptAt != null, cursor -> cursor
+                        .gt(Outbox::getNextAttemptAt, lastNextAttemptAt)
+                        .or(sameAttemptAt -> sameAttemptAt
+                                .eq(Outbox::getNextAttemptAt, lastNextAttemptAt)
+                                .gt(Outbox::getId, lastId)))
+                .orderByAsc(Outbox::getNextAttemptAt, Outbox::getId)
                 .last("limit " + limit + " for update skip locked");
         return mapper.selectList(query);
     }

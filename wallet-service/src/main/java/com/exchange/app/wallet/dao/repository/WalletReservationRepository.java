@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.exchange.app.wallet.dao.mapper.WalletReservationMapper;
 import com.exchange.app.wallet.exception.WalletExceptionFactory;
+import com.exchange.app.wallet.po.enums.ServiceId;
 import com.exchange.app.wallet.po.transaction.WalletReservation;
 import com.exchange.common.db.manager.DbBaseRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -32,12 +33,16 @@ public class WalletReservationRepository extends DbBaseRepository<WalletReservat
         return mapper.selectList(queryWrapper);
     }
 
-    public List<WalletReservation> selectByRefs(List<String> refs) {
+    // Reservation references are owned by an initiator. Keep the lookup aligned with the
+    // unique key so a caller can never resolve another initiator's reservation by collision.
+    public List<WalletReservation> selectByRefs(ServiceId initiator, List<String> refs) {
         if (refs.isEmpty()) {
             return new ArrayList<>();
         }
 
-        var wrapper = queryLambdaWrapper().in(WalletReservation::getReferenceId, refs);
+        var wrapper = queryLambdaWrapper()
+                .eq(WalletReservation::getInitiator, initiator)
+                .in(WalletReservation::getReferenceId, refs);
         return mapper.selectList(wrapper);
     }
 

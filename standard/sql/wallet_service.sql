@@ -58,7 +58,7 @@ create table wallet_reservations (
     reserve_txn_id varchar(64) not null,
     unique key(reservation_id),
     key(wallet_id),
-    key(initiator, reference_id),
+    unique key uk_wallet_reservation_initiator_ref(initiator, reference_id),
     key(reserve_txn_id)
 );
 
@@ -124,5 +124,6 @@ create table outbox (
     updated_at timestamp(3) not null,
     unique key(event_id),
     key(command_id),
-    key(event_type, outbox_status, next_attempt_at, id) /* id for pagination */
+    /* Oldest-due-first claim filtering, ordering, and tuple-cursor pagination. */
+    key idx_outbox_claim(outbox_status, next_attempt_at, id)
 );

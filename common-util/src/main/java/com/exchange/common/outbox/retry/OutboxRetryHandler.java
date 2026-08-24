@@ -46,17 +46,23 @@ public class OutboxRetryHandler {
          *  the pending backlog and oldest-age signals.
          */
         LocalDateTime now = LocalDateTime.now();
+        LocalDateTime lastNextAttemptAt = null;
         long lastId = 0L;
         int successCount = 0, failedCount = 0;
         while (true) {
-            Result<List<Outbox>> result = claimPage(now, lastId);
+            Result<List<Outbox>> result = claimPage(now, lastNextAttemptAt, lastId);
             if (!result.isSuccess()) {
-                log.error("claim failed, stopping current retry cycle, lastId: {}, result: {}", lastId, result);
+                log.error("claim failed, stopping current retry cycle, lastNextAttemptAt: {}, lastId: {}, result: {}",
+                        lastNextAttemptAt, lastId, result);
                 break;
             }
             List<Outbox> outboxes = result.getValue();
             if (!outboxes.isEmpty()) {
-                lastId = outboxes.getLast().getId();
+                Outbox last = outboxes.getLast();
+                // batchClaim updates the database directly, so these are the pre-claim values.
+                // Advancing both fields preserves keyset pagination when timestamps are equal.
+                lastNextAttemptAt = last.getNextAttemptAt();
+                lastId = last.getId();
             }
 
             List<Outbox> successOutboxes = new ArrayList<>(), failedOutboxes = new ArrayList<>();
@@ -124,10 +130,11 @@ public class OutboxRetryHandler {
         }
     }
 
-    private Result<List<Outbox>> claimPage(LocalDateTime now, long lastId) {
+    private Result<List<Outbox>> claimPage(LocalDateTime now, LocalDateTime lastNextAttemptAt, long lastId) {
         // select for update skip lock + update next_attempt_at to claim
         return dbTxnExecutor.executeWithDefault(() -> {
-            List<Outbox> locked = outboxManager.selectForClaimSkipLock(now, outboxConfig.getMaxRetries(), lastId, outboxConfig.getPageLimit());
+            List<Outbox> locked = outboxManager.selectForClaimSkipLock(
+                    now, outboxConfig.getMaxRetries(), lastNextAttemptAt, lastId, outboxConfig.getPageLimit());
             if (locked.isEmpty()) {
                 return Result.success(List.of());
             }
