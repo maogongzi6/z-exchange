@@ -96,7 +96,7 @@
       "title": "JVM Threads", "type": "timeseries"
     }
   ],
-  "refresh": "5s",
+  "refresh": "15s",
   "schemaVersion": 39,
   "tags": ["zexchange", "service", "jvm", "runtime", "shared"],
   "templating": {

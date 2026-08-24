@@ -89,7 +89,7 @@
       "title": "Non-OK Percentage by Method", "type": "timeseries"
     }
   ],
-  "refresh": "5s",
+  "refresh": "15s",
   "schemaVersion": 39,
   "tags": ["zexchange", "service", "grpc", "shared"],
   "templating": {

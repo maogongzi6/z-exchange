@@ -125,7 +125,7 @@
       "title": "Kafka Publisher Error Rate", "type": "stat"
     }
   ],
-  "refresh": "5s",
+  "refresh": "15s",
   "schemaVersion": 39,
   "tags": ["zexchange", "ledger", "service", "overview"],
   "templating": {

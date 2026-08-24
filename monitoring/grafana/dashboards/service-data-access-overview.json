@@ -164,7 +164,7 @@
       "title": "Idempotency Errors", "type": "timeseries"
     }
   ],
-  "refresh": "5s",
+  "refresh": "15s",
   "schemaVersion": 39,
   "tags": ["zexchange", "service", "database", "redis", "cache", "idempotency", "shared"],
   "templating": {

@@ -141,7 +141,7 @@
       "title": "Ledger Reply Listener Failure Rate", "type": "stat"
     }
   ],
-  "refresh": "5s",
+  "refresh": "15s",
   "schemaVersion": 39,
   "tags": ["zexchange", "wallet", "service", "overview"],
   "templating": {
