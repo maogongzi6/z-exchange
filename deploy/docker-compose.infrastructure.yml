@@ -17,7 +17,7 @@ services:
       - --collation-server=utf8mb4_0900_ai_ci
       - --performance-schema=ON
       - --innodb-buffer-pool-size=${MYSQL_INNODB_BUFFER_POOL_SIZE:-1536M}
-      - --max-connections=50
+      - --max-connections=80
     ports:
       - "${INFRA_PRIVATE_IP:-172.31.18.211}:3306:3306"
     volumes:
