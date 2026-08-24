@@ -1,1 +1,2 @@
-stress-test/run-smoke.sh text eol=lf
+stress-test/*.sh text eol=lf
+stress-test/Dockerfile text eol=lf

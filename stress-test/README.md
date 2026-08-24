@@ -30,6 +30,13 @@ profiles keep load and data-cardinality experiments isolated. See
 `doc/stress-test/ledger-query-stress-test-flow.md` and
 `doc/stress-test/ledger-query-stress-test-operations.md`.
 
+Wallet stress tests exercise each write or query API independently. Write runs
+support distributed or hot-wallet cardinality, configurable exact duplicates,
+bounded asynchronous settlement, and wallet/ledger reconciliation. Query runs
+control lookup, hit rate, working set, miss pattern, and owner type. See
+`doc/stress-test/wallet-stress-test-design.md` and
+`doc/stress-test/wallet-stress-test-operations.md`.
+
 ## Fixture Provisioning
 
 `run-smoke.sh` connects directly to the ledger MySQL database before starting
@@ -122,6 +129,19 @@ Set `LEDGER_QUERY_PROFILE`, `LEDGER_QUERY_LOOKUP`, and a unique
 `LEDGER_QUERY_RUN_ID` before running. The complete configuration is documented
 in `doc/stress-test/ledger-query-stress-test-operations.md`.
 
+Wallet write and query stress tests use their standalone Compose files:
+
+```bash
+docker compose -f deploy/docker-compose.wallet-write-stress-test.yml up --build \
+  --abort-on-container-exit --exit-code-from wallet-write-stress-test
+
+docker compose -f deploy/docker-compose.wallet-query-stress-test.yml up --build \
+  --abort-on-container-exit --exit-code-from wallet-query-stress-test
+```
+
+`WALLET_STRESS_TRUNCATE_DB_BEFORE_RUN` and
+`WALLET_STRESS_TRUNCATE_CACHE_BEFORE_RUN` both default to `false`.
+
 ## Configuration
 
 | Variable | Default | Purpose |
@@ -170,6 +190,8 @@ No inbound port is required on the load-generator EC2.
 
 - `scripts/ledger-grpc-smoke.js`: commented k6 workflow and assertions.
 - `scripts/wallet-grpc-smoke.js`: wallet API and async settlement smoke workflow.
+- `scripts/wallet-grpc-write-stress.js`: isolated wallet write capacity and duplicate workload.
+- `scripts/wallet-grpc-query-stress.js`: configurable wallet snapshot query workload.
 - `scripts/ledger-grpc-write-stress.js`: commented distributed write workload.
 - `scripts/ledger-grpc-query-stress.js`: commented query and miss workload.
 - `fixtures/ledger-smoke-fixture.sql`: idempotent Asset and Account fixture.
@@ -181,6 +203,8 @@ No inbound port is required on the load-generator EC2.
 - `fixtures/truncate_ledger_service.sql`: optional full ledger test-data reset.
 - `run-smoke.sh`: waits for MySQL, applies the fixture, then starts k6.
 - `run-wallet-smoke.sh`: provisions both schemas, then starts the wallet smoke.
+- `run-wallet-write-stress.sh`: provisions write fixtures, waits for settlement, and reconciles both schemas.
+- `run-wallet-query-stress.sh`: provisions immutable snapshots and runs query load.
 - `run-write-stress.sh`: provisions, runs a write profile, and reconciles rows.
 - `run-query-stress.sh`: provisions and verifies query fixtures, then runs k6.
 - `Dockerfile`: combines the pinned k6 binary with MySQL 8.4's native client.

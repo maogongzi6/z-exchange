@@ -1,0 +1,43 @@
+-- Required session variables: @run_id, @wallet_count
+
+DROP TEMPORARY TABLE IF EXISTS k6_wallet_number;
+CREATE TEMPORARY TABLE k6_wallet_number (n int NOT NULL PRIMARY KEY);
+
+INSERT INTO k6_wallet_number (n)
+SELECT number_value
+FROM (
+    SELECT
+        ones.n + tens.n * 10 + hundreds.n * 100 + thousands.n * 1000
+        + ten_thousands.n * 10000 + hundred_thousands.n * 100000
+        + millions.n * 1000000 AS number_value
+    FROM
+        (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) ones
+        CROSS JOIN (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) tens
+        CROSS JOIN (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) hundreds
+        CROSS JOIN (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) thousands
+        CROSS JOIN (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) ten_thousands
+        CROSS JOIN (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) hundred_thousands
+        CROSS JOIN (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4) millions
+) generated_numbers
+WHERE number_value < @wallet_count;
+
+INSERT INTO assets (asset_id, asset_type, symbol, decimals)
+VALUES (CONCAT('wa:', @run_id), 1, CONCAT('KW-', @run_id), 2);
+
+INSERT INTO accounts (
+    account_id, service_id, reference_id, category, normal_side,
+    owner_id, owner_type, asset_id, account_status
+)
+SELECT
+    CONCAT('ai:', @run_id, ':', LPAD(n, 7, '0')),
+    2,
+    CONCAT('ar:', @run_id, ':', LPAD(n, 7, '0')),
+    1,
+    1,
+    CONCAT('wo:', @run_id, ':', LPAD(n, 7, '0')),
+    2,
+    CONCAT('wa:', @run_id),
+    1
+FROM k6_wallet_number;
+
+DROP TEMPORARY TABLE k6_wallet_number;
